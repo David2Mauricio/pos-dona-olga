@@ -69,6 +69,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 - `productos.repository.js`: `descontarStock(id, cantidad)`, UPDATE
   condicionado a stock suficiente (0 filas afectadas = sin stock o producto
   inexistente).
+- ADR 0004 sobre el cierre de caja: el monto teórico de efectivo se calcula
+  como `monto_apertura + ventas con TRIM(LOWER(medio_pago)) = 'efectivo'`,
+  deuda técnica intencional mientras no exista un catálogo cerrado de
+  medios de pago (a revisar cuando el cliente lo confirme). El monto
+  teórico y la diferencia contra lo declarado no se persisten, se calculan
+  al vuelo.
+- Módulo de **caja**: `POST /api/caja/apertura`, `PATCH /api/caja/:id/cierre`,
+  `GET /api/caja/:id` (reporte: total de ventas, desglose por medio de
+  pago, monto teórico de efectivo, diferencia), `GET /api/caja/actual`.
+  - Regla de negocio: solo puede haber una sesión de caja abierta a la
+    vez; abrir una segunda mientras hay una abierta responde 409.
+  - Cerrar una sesión inexistente responde 404; cerrar una ya cerrada
+    responde 400.
 
 ### Corregido
 
