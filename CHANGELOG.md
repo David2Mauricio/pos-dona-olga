@@ -112,6 +112,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
   `stockMinimo` opcional.
 - `src/utils/schemas-comunes.js`: `fechaSchema` extraído de
   `ventas.schema.js` para reutilizarse también en inventario.
+- Migración `006_proveedores.sql` y módulo de **proveedores** (alcance
+  mínimo, directorio de contacto sin vincular todavía a productos ni a
+  movimientos de inventario): `POST /api/proveedores`,
+  `GET /api/proveedores` (filtro `activo`), `GET /api/proveedores/:id`,
+  `PATCH /api/proveedores/:id`. `nombre` sin `UNIQUE` (dos proveedores
+  pueden compartir nombre comercial); `nit` opcional pero único cuando se
+  informa, duplicados traducidos a 409. Sin `DELETE`: se desactiva
+  (`activo=false`), mismo criterio que productos.
 
 ### Corregido
 
