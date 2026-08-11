@@ -12,6 +12,7 @@ app.get('/api/health', (req, res) => {
   res.json({ estado: 'ok' });
 });
 
+app.use('/api/categorias', require('./modules/categorias/categorias.routes'));
 app.use('/api/productos', require('./modules/productos/productos.routes'));
 
 // A partir de aquí se irán montando el resto de módulos de negocio.

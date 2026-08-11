@@ -36,6 +36,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
     traduce los códigos de error de `better-sqlite3`
     (`SQLITE_CONSTRAINT_UNIQUE`/`FOREIGNKEY`/`CHECK`) a errores de negocio
     con mensaje claro.
+- Módulo de **categorías** (misma plantilla de 4 capas que productos, alcance
+  mínimo): `POST /api/categorias`, `GET /api/categorias`,
+  `PATCH /api/categorias/:id` (renombrar). Nombre único, duplicados
+  traducidos a 409. Sin `DELETE` por ahora: la FK `ON DELETE RESTRICT` desde
+  `productos` ya impide borrar una categoría en uso, y no hay necesidad de
+  negocio confirmada para borrar una que no lo esté.
+- `src/utils/schemas-comunes.js`: `idParamsSchema` extraído de
+  `productos.schema.js` para reutilizarse también en categorías (y en los
+  módulos que siguen).
 
 ### Corregido
 

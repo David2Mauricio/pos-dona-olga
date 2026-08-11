@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const { idParamsSchema } = require('../../utils/schemas-comunes');
 
 // Los rangos/tipos reflejan las mismas reglas que los CHECK de la migración
 // 002 (precios y stock en enteros no negativos, tipo_venta limitado a los
@@ -63,10 +64,6 @@ const listarProductosQuerySchema = z
       .optional(),
   })
   .strict();
-
-const idParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
-});
 
 const codigoBarrasParamsSchema = z.object({
   codigo: z.string().trim().min(1),
