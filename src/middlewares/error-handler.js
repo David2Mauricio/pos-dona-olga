@@ -19,6 +19,9 @@ function manejadorDeErrores(error, req, res, next) {
 
   res.status(statusCode).json({
     error: esOperacional ? error.message : 'Error interno del servidor',
+    // Código estable opcional (ver AppError) para que el frontend decida
+    // qué UI mostrar sin tener que parsear el mensaje.
+    ...(error.codigo ? { codigo: error.codigo } : {}),
     // El detalle técnico (stack trace) solo se expone en desarrollo.
     ...(env.isProduction ? {} : { detalle: error.stack }),
   });

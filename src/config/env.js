@@ -26,6 +26,10 @@ const envSchema = z.object({
   // de cómo quede configurado el equipo el día de la instalación, no es
   // una constante del sistema.
   NOMBRE_IMPRESORA_COMPARTIDA: z.string().min(1).default('POS58'),
+  // Firma las cookies de sesión (ver ADR 0010). A propósito SIN default:
+  // es un secreto, no una constante — que el proceso truene si falta es
+  // mejor que arrancar con una firma adivinable.
+  SESSION_SECRET: z.string().min(32, 'SESSION_SECRET debe tener al menos 32 caracteres'),
 });
 
 const resultado = envSchema.safeParse(process.env);
@@ -44,6 +48,7 @@ const env = {
   descontarStockAutomatico: resultado.data.DESCONTAR_STOCK_AUTOMATICO,
   diasAlertaVencimiento: resultado.data.DIAS_ALERTA_VENCIMIENTO,
   nombreImpresoraCompartida: resultado.data.NOMBRE_IMPRESORA_COMPARTIDA,
+  sessionSecret: resultado.data.SESSION_SECRET,
 };
 
 module.exports = env;

@@ -4,6 +4,55 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Agregado (Fase 1: autenticación)
+
+- Migración `008_usuarios.sql`: tabla `usuarios` (nombre, usuario único,
+  hash de contraseña, rol fijo `administrador`/`cajero`,
+  `debe_cambiar_password`, activo).
+- ADR 0010: sesiones de servidor (`express-session`, en memoria del
+  proceso) en vez de JWT — un solo proceso, sin servidores distribuidos
+  que sincronizar; `bcryptjs` en vez de `bcrypt` (JS puro, mismo criterio
+  que `better-sqlite3`); dos roles fijos en vez de permisos granulares
+  (sobre-ingeniería para el tamaño real del negocio).
+- `src/auth/`: `POST /api/auth/login` (rate limiting de 5 intentos
+  fallidos por usuario en 15 minutos, con un `Map` en memoria, sin
+  librería externa), `POST /api/auth/logout`, `GET /api/auth/sesion`,
+  `POST /api/auth/cambiar-password`. Middleware `requiereSesion` (aplica
+  a todo `/api/*` excepto `/api/health` y `/api/auth/*`) y `requiereRol`.
+  Mientras `debeCambiarPassword` esté activo, el usuario queda bloqueado
+  del resto del sistema hasta cambiarla.
+- `src/auth/seed-admin.js` (`npm run seed:admin`): crea el administrador
+  inicial con contraseña temporal generada al azar, mostrada por consola
+  una sola vez — nunca hardcodeada. Se niega a correr si ya existe un
+  administrador activo.
+- Módulo de **usuarios** (solo administrador): `POST /api/usuarios`
+  (contraseña temporal generada por el sistema, nunca elegida por quien
+  crea la cuenta), `GET /api/usuarios`, `PATCH /api/usuarios/:id`
+  (rol/activo) — con salvaguarda contra desactivar o cambiarle el rol al
+  único administrador activo.
+- Matriz de permisos aplicada a los módulos existentes: crear/editar
+  productos y categorías, proveedores (módulo completo) y reportes
+  completos quedan solo-administrador; el resto (ventas, caja,
+  inventario, vencimientos, listar productos/categorías) queda para
+  ambos roles. Dos casos no cubiertos por la instrucción original se
+  confirmaron antes de implementar (no se asumieron): proveedores →
+  solo-administrador; el indicador de alertas del mostrador deja de
+  depender de `GET /api/reportes/inventario` (ahora solo-administrador) y
+  pasa a usar `GET /api/inventario/alertas` + `GET /api/vencimientos/alertas`
+  directamente cuando se reconstruya la interfaz (Fase 4).
+- `AppError` gana un tercer parámetro opcional, `codigo` (ej.
+  `SIN_SESION`, `DEBE_CAMBIAR_PASSWORD`, `ROL_INSUFICIENTE`,
+  `RATE_LIMITED`, `CREDENCIALES_INVALIDAS`), incluido en la respuesta de
+  error cuando está presente — para que el frontend distinga
+  programáticamente entre errores con el mismo `statusCode`.
+- `SESSION_SECRET` (variable de entorno nueva, obligatoria, sin valor por
+  defecto — el proceso no arranca sin ella).
+
+**Nota**: la interfaz de mostrador construida antes de esta fase (ADR
+0009) deja de funcionar tal cual con estos cambios (no tiene pantalla de
+login ni maneja sesiones) — comportamiento esperado, la Fase 4 la
+reemplaza por completo.
+
 ### Agregado
 
 - Estructura base del proyecto (Node.js + Express 5).
