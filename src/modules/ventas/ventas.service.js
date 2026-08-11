@@ -90,6 +90,27 @@ function imprimirReciboDeVenta(venta) {
   }
 }
 
+// ADR 0007: el cajón solo se abre cuando el pago es en efectivo — con
+// Nequi, Daviplata o tarjeta no hay billete que guardar, así que abrirlo
+// interrumpiría al cajero sin necesidad. Mismo criterio de comparación
+// tolerante a mayúsculas/espacios que ya usa caja.service.js/reportes
+// (TRIM(LOWER(medioPago))). Mismo try/catch defensivo que
+// imprimirReciboDeVenta: esto corre después del commit, así que un error
+// acá no puede llegar a tumbar la respuesta de una venta ya guardada.
+function abrirCajonSiEsEfectivo(venta) {
+  try {
+    if (venta.medioPago.trim().toLowerCase() !== 'efectivo') {
+      return;
+    }
+
+    impresionService.abrirCajonMonedero().catch((error) => {
+      logger.error(`Error inesperado abriendo el cajón para la venta ${venta.id}: ${error.message}`);
+    });
+  } catch (error) {
+    logger.error(`No se pudo evaluar si abrir el cajón para la venta ${venta.id}: ${error.message}`);
+  }
+}
+
 function crear({ cajaSesionId, tipoPrecio, medioPago, items }) {
   const cajaSesion = repository.obtenerCajaSesionPorId(cajaSesionId);
   if (!cajaSesion) {
@@ -153,8 +174,9 @@ function crear({ cajaSesionId, tipoPrecio, medioPago, items }) {
   const venta = repository.obtenerPorId(ventaId);
 
   // La transacción ya hizo commit acá arriba: lo que pase con la
-  // impresión de ahora en adelante no puede afectar la venta.
+  // impresión o el cajón de ahora en adelante no puede afectar la venta.
   imprimirReciboDeVenta(venta);
+  abrirCajonSiEsEfectivo(venta);
 
   return venta;
 }

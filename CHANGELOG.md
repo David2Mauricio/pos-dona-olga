@@ -174,6 +174,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
   `src/hardware/diagnostico-encoding.js`: herramientas manuales
   permanentes para repetir el diagnóstico de codepage si se cambia de
   impresora en el futuro.
+- Cajón monedero integrado: `abrirCajon()` en `comandos-escpos.js` (pulso
+  `ESC p 0 25 250`, pin confirmado con prueba física aislada mandando un
+  solo pin a la vez — `src/hardware/diagnostico-cajon.js`, herramienta
+  permanente igual que las de codepage) y `abrirCajonMonedero()` en
+  `impresion.service.js` (mismo patrón best-effort que `imprimir()`).
+  `ventas.service.js` lo activa solo cuando `medioPago` es efectivo
+  (`TRIM(LOWER(...))`, mismo criterio que caja/reportes) — Nequi,
+  Daviplata o tarjeta no lo activan. Verificado con conteo explícito de
+  llamadas (no por ausencia de error) que abre en efectivo, no abre en
+  otros medios, y no se reabre al reimprimir. Ver ADR 0007.
 
 ### Corregido
 
@@ -187,3 +197,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
   incorrectas — incluido el nombre del negocio en el encabezado del
   recibo. Diagnosticado empíricamente contra la impresora física antes de
   corregir (ver ADR 0007), no por prueba y error a ciegas.
+- Corrección sobre un diagnóstico anterior, no sobre código: el cajón
+  monedero se había documentado como hardware no funcional (puerto DK
+  dañado). La causa real era el cable en el puerto equivocado del equipo,
+  no un circuito dañado — con el cable en el puerto correcto, el cajón
+  abre sin problema. ADR 0007 y ARCHITECTURE.md corregidos.

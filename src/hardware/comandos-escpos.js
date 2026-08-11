@@ -43,6 +43,16 @@ function negrita(activar) {
   return Buffer.from([ESC, 0x45, activar ? 1 : 0]);
 }
 
+// ESC p 0 25 250: pulso de apertura del cajón monedero, por el pin 2
+// (m=0) — confirmado con prueba física aislada mandando un solo pin a la
+// vez (ver ADR 0007 y diagnostico-cajon.js). t1=25/t2=250 son unidades de
+// 2ms: 50ms de pulso encendido, 500ms apagado, el valor estándar para
+// este comando. NO se manda también el pin 1 "por si acaso" — ya se
+// confirmó cuál es, mandar los dos sería ruido.
+function abrirCajon() {
+  return Buffer.from([ESC, 0x70, 0x00, 25, 250]);
+}
+
 // GS V 1: corte parcial. Muchas impresoras de 58mm baratas no traen
 // cuchilla (son de rasgado manual); si el modelo no la tiene, el comando
 // simplemente no produce ningún efecto visible, sin causar error.
@@ -131,6 +141,7 @@ module.exports = {
   texto,
   negrita,
   cortar,
+  abrirCajon,
   formatearMoneda,
   construirRecibo,
 };

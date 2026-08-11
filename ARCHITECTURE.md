@@ -98,14 +98,12 @@ Confirmado con pruebas físicas reales sobre el equipo del negocio:
   [ADR 0007](./docs/decisiones/0007-impresion-termica-impresora-compartida.md)
   para el método (impresora compartida de Windows, sin librería nativa) y
   la regla de que imprimir nunca bloquea ni revierte una venta.
-- **Cajón monedero: no funcional, fuera de alcance de software.** El
-  puerto DK de la impresora térmica (el que lo controla) está dañado por
-  una caída previa del equipo — confirmado por descarte durante las
-  pruebas físicas (comandos correctos, ambos pines probados, pulso al
-  máximo, sin respuesta). Se opera manualmente con la llave física. Esto
-  es una limitación de hardware, no una funcionalidad pendiente de
-  implementar; se documenta acá para que no se lea como un olvido si
-  alguien revisa el proyecto más adelante.
+- **Cajón monedero**: conectado al puerto DK de la impresora térmica, se
+  abre con el pulso ESC/POS estándar (`abrirCajon()` en
+  `comandos-escpos.js`, pin confirmado con prueba física aislada — ver
+  ADR 0007). Solo se activa cuando el medio de pago de la venta es
+  efectivo; con Nequi, Daviplata o tarjeta no hay billete que guardar, así
+  que no tiene sentido interrumpir al cajero abriéndolo.
 
 ## Nomenclatura
 

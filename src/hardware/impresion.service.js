@@ -4,7 +4,7 @@ const path = require('node:path');
 const { exec } = require('node:child_process');
 const env = require('../config/env');
 const logger = require('../utils/logger');
-const { construirRecibo } = require('./comandos-escpos');
+const { construirRecibo, abrirCajon } = require('./comandos-escpos');
 
 // Esta promesa NUNCA rechaza a propósito: imprimir es una acción posterior
 // a una venta ya confirmada (ver ADR 0007), así que cualquier fallo se
@@ -44,4 +44,11 @@ function imprimirRecibo(venta) {
   return imprimir(construirRecibo(venta));
 }
 
-module.exports = { imprimir, imprimirRecibo };
+// Mismo patrón best-effort que imprimir(): el pulso de apertura viaja por
+// el mismo puerto compartido de la impresora, así que reutiliza imprimir()
+// tal cual — best-effort, nunca rechaza, ya viene con el logeo incluido.
+function abrirCajonMonedero() {
+  return imprimir(abrirCajon());
+}
+
+module.exports = { imprimir, imprimirRecibo, abrirCajonMonedero };

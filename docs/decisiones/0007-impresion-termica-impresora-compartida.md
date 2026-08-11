@@ -66,15 +66,40 @@ nunca una condición para que la venta exista. Concretamente:
   `POST /api/ventas/:id/reimprimir`, que reconstruye el recibo a partir de
   la venta ya guardada.
 
-## Cajón monedero: fuera de alcance de software
+## Cajón monedero: sí funciona — el diagnóstico inicial fue incorrecto
 
-El puerto DK de la impresora térmica (el que controla el cajón monedero)
-está dañado por una caída previa del equipo, confirmado por descarte
-durante las pruebas físicas (comandos correctos, ambos pines probados,
-pulso al máximo, sin respuesta). No es un problema de código: es hardware
-no funcional. El cajón se opera manualmente con la llave física. Se
-documenta en ARCHITECTURE.md como limitación de hardware conocida, no
-como funcionalidad pendiente.
+**Corrección sobre la primera versión de este ADR**: se había documentado
+el cajón como hardware no funcional (puerto DK dañado por una caída
+previa), descartado por eliminación durante las primeras pruebas. Esa
+conclusión era incorrecta — la causa real era que el cable estaba
+conectado al puerto equivocado del equipo, no un circuito dañado. Con el
+cable en el puerto correcto, el cajón abre sin problema.
+
+**Pin confirmado con prueba aislada, no por "mandar los dos por si
+acaso"**: `src/hardware/diagnostico-cajon.js` manda el pulso `ESC p m t1
+t2` a un solo pin a la vez (primero `m=0`, después `m=1` si hiciera
+falta). El pin `0` (el estándar "pin 2" de la mayoría de impresoras
+ESC/POS) disparó el cajón en la primera prueba — confirmado físicamente,
+no asumido. El código de producción manda **solo ese pin**; no tiene
+sentido mandar ambos "por si acaso" una vez se sabe cuál es.
+
+- `comandos-escpos.js`: `abrirCajon()` arma `ESC p 0 25 250` (pin 0,
+  pulso de 50ms encendido / 500ms apagado — valores estándar de este
+  comando).
+- `impresion.service.js`: `abrirCajonMonedero()` reutiliza `imprimir()`
+  tal cual (mismo transporte físico, mismo comportamiento best-effort:
+  nunca rechaza, solo logea si falla).
+
+**Regla de negocio: el cajón solo se abre si el pago fue en efectivo.**
+Con Nequi, Daviplata o tarjeta no hay billete que guardar — abrir el
+cajón en esos casos interrumpiría al cajero sin ninguna razón. La
+condición usa el mismo criterio tolerante ya establecido para `medio_pago`
+en `caja.repository.js`/`reportes.repository.js`
+(`TRIM(LOWER(medioPago)) === 'efectivo'`, ver ADR 0004), aplicada en
+`ventas.service.js` inmediatamente después de `imprimirReciboDeVenta`, en
+el mismo punto posterior al commit de la transacción — nunca antes, por
+la misma razón que la impresión: si el pago ya se hizo, la venta no puede
+depender de que un pulso eléctrico salga bien.
 
 ## Codificación de caracteres: CP850 fijo de fábrica, sin soporte de `ESC t`
 
@@ -133,10 +158,15 @@ adivinar número por número:
 - `diagnostico-encoding.js`: compara lo que produce `iconv-lite` para
   `cp850`/`ibm850` contra los bytes ya confirmados, para descartar la
   librería antes de sospechar de `comandos-escpos.js`.
+- `diagnostico-cajon.js`: manda el pulso de apertura a un solo pin a la
+  vez (`node src/hardware/diagnostico-cajon.js 0` o `1`), para confirmar
+  cuál pin dispara el cajón antes de tocar `comandos-escpos.js` — útil si
+  se instala un segundo punto de venta con otro modelo de impresora/cajón.
 
 Se corren manualmente (`node src/hardware/diagnostico-codepages.js`,
-`node src/hardware/diagnostico-encoding.js`); no forman parte de ningún
-flujo automático de la aplicación.
+`node src/hardware/diagnostico-encoding.js`,
+`node src/hardware/diagnostico-cajon.js <0|1>`); no forman parte de
+ningún flujo automático de la aplicación.
 
 ## Consecuencias
 
