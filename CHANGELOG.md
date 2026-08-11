@@ -24,3 +24,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
   `categoria_id`.
 - ADR sobre precisión numérica: peso en gramos, dinero en pesos COP, y regla
   de redondeo único por línea de venta.
+- Módulo de **productos** (route/controller/service/repository), plantilla
+  para los demás módulos de negocio:
+  - `POST /api/productos`, `GET /api/productos` (filtros `categoriaId` y
+    `activo`), `GET /api/productos/:id`,
+    `GET /api/productos/codigo-barras/:codigo`, `PATCH /api/productos/:id`.
+  - Validación con `zod`: esquemas separados para creación/actualización;
+    `tipoVenta` no se puede modificar después de creado.
+  - El service valida `stock_unidades`/`stock_gramos` contra `tipo_venta` y
+    la existencia de `categoria_id` antes de tocar la base de datos, y
+    traduce los códigos de error de `better-sqlite3`
+    (`SQLITE_CONSTRAINT_UNIQUE`/`FOREIGNKEY`/`CHECK`) a errores de negocio
+    con mensaje claro.
+
+### Corregido
+
+- `src/middlewares/validate.js`: en Express 5, `req.query` es un getter sin
+  setter (se recalcula desde la URL cruda en cada acceso), así que
+  `req.query = datosValidados` fallaba en silencio y el cuerpo validado por
+  zod nunca llegaba al controller. Se corrigió usando
+  `Object.defineProperty` para los tres orígenes (`body`/`params`/`query`).
