@@ -17,6 +17,10 @@ uploads/*
 logs/*
 !logs/.gitkeep
 
+# Backups automáticos de la base de datos (datos reales del negocio)
+backups/*
+!backups/.gitkeep
+
 # Archivos de sistema operativo / editor / herramientas locales
 .DS_Store
 Thumbs.db

@@ -184,6 +184,18 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
   Daviplata o tarjeta no lo activan. Verificado con conteo explícito de
   llamadas (no por ausencia de error) que abre en efectivo, no abre en
   otros medios, y no se reabre al reimprimir. Ver ADR 0007.
+- ADR 0008 y backup automático de SQLite (`src/backup/backup.service.js`,
+  sin ruta HTTP, arrancado una sola vez desde `server.js`): usa
+  `db.backup()` nativo de better-sqlite3 (no `fs.copyFile`, que con WAL
+  activo podría copiar un estado a medio escribir), un backup al iniciar
+  la aplicación + cada 6 horas (`setInterval` simple, sin librería de
+  cron externa), archivos `pos-backup-YYYY-MM-DD-HHmm.sqlite` en
+  `/backups`, y retención de los 14 más recientes (borra los más viejos
+  automáticamente). Todo asíncrono y best-effort: un fallo se logea con
+  el logger central sin tumbar la aplicación, mismo criterio que
+  impresión/cajón (ADR 0007). Verificado abriendo un backup real con
+  better-sqlite3 y leyendo datos reales de él (no solo confirmando que el
+  archivo existe), y probando la retención con 16 backups de prueba.
 
 ### Corregido
 
