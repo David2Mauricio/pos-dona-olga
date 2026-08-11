@@ -4,6 +4,8 @@ const repository = require('./ventas.repository');
 const productosService = require('../productos/productos.service');
 const productosRepository = require('../productos/productos.repository');
 const inventarioRepository = require('../inventario/inventario.repository');
+const impresionService = require('../../hardware/impresion.service');
+const logger = require('../../utils/logger');
 const AppError = require('../../utils/app-error');
 
 // ADR 0002: el redondeo se aplica una sola vez, al calcular el subtotal de
@@ -47,6 +49,45 @@ function descontarStockPorVenta(productoId, cantidad, nombreProducto, ventaId) {
     motivo: 'venta',
     referenciaVentaId: ventaId,
   });
+}
+
+// ventas_items solo guarda productoId (el nombre no es parte del snapshot
+// de venta, ver ADR 0003), pero el recibo sí necesita mostrar nombre y
+// saber si el producto es por peso o por unidad para formatear la
+// cantidad. Se usa el repository directo (no el service) porque acá no
+// hace falta ninguna validación de negocio, solo leer datos para mostrar
+// — y porque no queremos que un producto inexistente lance un 404 que
+// tumbe la impresión (ver más abajo).
+function enriquecerConDatosDeProducto(venta) {
+  return {
+    ...venta,
+    items: venta.items.map((item) => {
+      const producto = productosRepository.obtenerPorId(item.productoId);
+      return {
+        ...item,
+        nombreProducto: producto ? producto.nombre : `Producto #${item.productoId}`,
+        tipoVentaProducto: producto ? producto.tipoVenta : 'unidad',
+      };
+    }),
+  };
+}
+
+// ADR 0007: imprimir es una acción POSTERIOR a la venta, nunca parte de
+// ella. Fire-and-forget a propósito (no se hace `await` de esta función
+// donde se llama): la venta ya se guardó, así que el cliente HTTP no debe
+// esperar a que la impresora termine (o falle) para recibir su respuesta.
+// El try/catch de acá es una segunda red de seguridad — impresionService
+// ya está escrito para no rechazar nunca — por si un error inesperado
+// ocurriera antes de ese punto (ej. armando el recibo).
+function imprimirReciboDeVenta(venta) {
+  try {
+    const ventaParaImprimir = enriquecerConDatosDeProducto(venta);
+    impresionService.imprimirRecibo(ventaParaImprimir).catch((error) => {
+      logger.error(`Error inesperado imprimiendo el recibo de la venta ${venta.id}: ${error.message}`);
+    });
+  } catch (error) {
+    logger.error(`No se pudo preparar el recibo de la venta ${venta.id} para imprimir: ${error.message}`);
+  }
 }
 
 function crear({ cajaSesionId, tipoPrecio, medioPago, items }) {
@@ -109,7 +150,13 @@ function crear({ cajaSesionId, tipoPrecio, medioPago, items }) {
   });
 
   const ventaId = crearVentaTransaccional();
-  return repository.obtenerPorId(ventaId);
+  const venta = repository.obtenerPorId(ventaId);
+
+  // La transacción ya hizo commit acá arriba: lo que pase con la
+  // impresión de ahora en adelante no puede afectar la venta.
+  imprimirReciboDeVenta(venta);
+
+  return venta;
 }
 
 function obtenerPorId(id) {
@@ -124,4 +171,10 @@ function listar(filtros) {
   return repository.listar(filtros);
 }
 
-module.exports = { crear, obtenerPorId, listar };
+function reimprimir(id) {
+  const venta = obtenerPorId(id); // 404 si no existe
+  imprimirReciboDeVenta(venta);
+  return venta;
+}
+
+module.exports = { crear, obtenerPorId, listar, reimprimir };

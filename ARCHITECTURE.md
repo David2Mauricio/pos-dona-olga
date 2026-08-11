@@ -84,6 +84,29 @@ sin dependencias externas. En desarrollo también imprime en consola.
 Se guardan como archivo en `/uploads`; la base de datos solo guarda el nombre
 del archivo, nunca el binario.
 
+## Hardware
+
+Confirmado con pruebas físicas reales sobre el equipo del negocio:
+
+- **Lector de código de barras**: HID (funciona como teclado), sin driver
+  ni integración de backend propia. El único requisito ya existe:
+  `GET /api/productos/codigo-barras/:codigo`. La captura del input vive en
+  la interfaz de mostrador (paso 12 del plan, todavía sin construir).
+- **Impresora térmica**: `src/hardware/` (no sigue el patrón de capas de
+  los módulos de negocio — son funciones puras + un comando de sistema,
+  sin base de datos de por medio). Ver
+  [ADR 0007](./docs/decisiones/0007-impresion-termica-impresora-compartida.md)
+  para el método (impresora compartida de Windows, sin librería nativa) y
+  la regla de que imprimir nunca bloquea ni revierte una venta.
+- **Cajón monedero: no funcional, fuera de alcance de software.** El
+  puerto DK de la impresora térmica (el que lo controla) está dañado por
+  una caída previa del equipo — confirmado por descarte durante las
+  pruebas físicas (comandos correctos, ambos pines probados, pulso al
+  máximo, sin respuesta). Se opera manualmente con la llave física. Esto
+  es una limitación de hardware, no una funcionalidad pendiente de
+  implementar; se documenta acá para que no se lea como un olvido si
+  alguien revisa el proyecto más adelante.
+
 ## Nomenclatura
 
 - `camelCase` → variables y funciones

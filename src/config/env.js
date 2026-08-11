@@ -22,6 +22,10 @@ const envSchema = z.object({
   // Umbral configurable de "próximo a vencer" (ver ADR 0006): no es un
   // dato que el cliente haya definido, así que no se fija en el código.
   DIAS_ALERTA_VENCIMIENTO: z.coerce.number().int().positive().default(3),
+  // Nombre de la impresora compartida de Windows (ver ADR 0007): depende
+  // de cómo quede configurado el equipo el día de la instalación, no es
+  // una constante del sistema.
+  NOMBRE_IMPRESORA_COMPARTIDA: z.string().min(1).default('POS58'),
 });
 
 const resultado = envSchema.safeParse(process.env);
@@ -39,6 +43,7 @@ const env = {
   dbPath: path.resolve(process.cwd(), resultado.data.DB_PATH),
   descontarStockAutomatico: resultado.data.DESCONTAR_STOCK_AUTOMATICO,
   diasAlertaVencimiento: resultado.data.DIAS_ALERTA_VENCIMIENTO,
+  nombreImpresoraCompartida: resultado.data.NOMBRE_IMPRESORA_COMPARTIDA,
 };
 
 module.exports = env;

@@ -8,5 +8,6 @@ const router = Router();
 router.post('/', validar(crearVentaSchema, 'body'), controller.crear);
 router.get('/', validar(listarVentasQuerySchema, 'query'), controller.listar);
 router.get('/:id', validar(idParamsSchema, 'params'), controller.obtenerPorId);
+router.post('/:id/reimprimir', validar(idParamsSchema, 'params'), controller.reimprimir);
 
 module.exports = router;

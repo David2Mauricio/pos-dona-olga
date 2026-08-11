@@ -15,4 +15,9 @@ function listar(req, res) {
   res.json(ventas);
 }
 
-module.exports = { crear, obtenerPorId, listar };
+function reimprimir(req, res) {
+  const venta = ventasService.reimprimir(req.params.id);
+  res.json(venta);
+}
+
+module.exports = { crear, obtenerPorId, listar, reimprimir };

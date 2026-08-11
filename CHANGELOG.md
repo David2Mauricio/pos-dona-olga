@@ -145,6 +145,27 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
     estimación de venta potencial, no valorización contable), más
     `productosStockBajo` y `lotesPorVencer` reutilizando los services de
     inventario y vencimientos en vez de duplicar su lógica.
+- Hardware confirmado con pruebas físicas reales: lector de código de
+  barras (HID, sin integración de backend adicional — usa
+  `GET /api/productos/codigo-barras/:codigo` ya existente); impresora
+  térmica compartida en Windows como `POS58`; cajón monedero **no
+  funcional** (puerto DK dañado, confirmado por descarte), fuera de
+  alcance de software, documentado en ARCHITECTURE.md.
+- ADR 0007 e integración de impresión térmica: `src/hardware/` (funciones
+  puras + comando de sistema, sin base de datos ni patrón CRUD).
+  - `comandos-escpos.js`: arma buffers ESC/POS a mano
+    (inicializar/texto/negrita/cortar/`construirRecibo`), formato de 32
+    caracteres de ancho, sin librería con compilación nativa (misma razón
+    que `better-sqlite3` sobre un driver que la necesitara).
+  - `impresion.service.js`: escribe el buffer a archivo temporal y lo
+    envía con `copy /b` hacia `\\localhost\${NOMBRE_IMPRESORA_COMPARTIDA}`
+    (variable de entorno nueva, default `'POS58'`). Su promesa nunca
+    rechaza — cualquier error se logea con el logger central.
+  - `ventas.service.js` llama a `imprimirReciboDeVenta` **después** de que
+    la transacción de venta ya hizo commit, sin `await` (fire-and-forget):
+    una venta nunca falla ni se revierte por un problema de impresión.
+  - Nuevo endpoint `POST /api/ventas/:id/reimprimir` (404 si la venta no
+    existe).
 
 ### Corregido
 
