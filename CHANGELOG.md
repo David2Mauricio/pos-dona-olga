@@ -120,6 +120,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
   pueden compartir nombre comercial); `nit` opcional pero único cuando se
   informa, duplicados traducidos a 409. Sin `DELETE`: se desactiva
   (`activo=false`), mismo criterio que productos.
+- ADR 0006 sobre lotes de vencimiento: registro informativo y de alerta,
+  desacoplado del stock general de `productos` (sin FIFO automático,
+  fuera de alcance a propósito). `cantidad` es un snapshot al registrar
+  el lote, no se resincroniza con el stock. Umbral de "próximo a vencer"
+  configurable vía `DIAS_ALERTA_VENCIMIENTO` (default `3`).
+- Migración `007_lotes_vencimiento.sql`: tabla `lotes_vencimiento`, con
+  índices en `producto_id` y `fecha_vencimiento`.
+- Módulo de **vencimientos**: `POST /api/vencimientos/lotes`,
+  `GET /api/vencimientos/lotes` (filtros `productoId`, `activo`),
+  `PATCH /api/vencimientos/lotes/:id` (corregir cantidad/fecha o marcar
+  `activo=false` al agotarse/descartarse — `productoId` no es
+  actualizable), `GET /api/vencimientos/alertas` (agrupa en `vencidos` y
+  `porVencer`, calculado al vuelo contra la fecha actual).
 
 ### Corregido
 

@@ -19,6 +19,9 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .default('true')
     .transform((valor) => valor === 'true'),
+  // Umbral configurable de "próximo a vencer" (ver ADR 0006): no es un
+  // dato que el cliente haya definido, así que no se fija en el código.
+  DIAS_ALERTA_VENCIMIENTO: z.coerce.number().int().positive().default(3),
 });
 
 const resultado = envSchema.safeParse(process.env);
@@ -35,6 +38,7 @@ const env = {
   isProduction: resultado.data.NODE_ENV === 'production',
   dbPath: path.resolve(process.cwd(), resultado.data.DB_PATH),
   descontarStockAutomatico: resultado.data.DESCONTAR_STOCK_AUTOMATICO,
+  diasAlertaVencimiento: resultado.data.DIAS_ALERTA_VENCIMIENTO,
 };
 
 module.exports = env;
