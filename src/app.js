@@ -1,10 +1,24 @@
+const path = require('node:path');
 const express = require('express');
+const compression = require('compression');
 const AppError = require('./utils/app-error');
 const manejadorDeErrores = require('./middlewares/error-handler');
 
 const app = express();
 
+// Comprime respuestas de texto (HTML/CSS/JS/JSON) — sin esto, Lighthouse
+// marca ~32KiB de ahorro perdido en la interfaz de mostrador. No aplica a
+// los .woff2 de public/fonts/ (ya vienen comprimidos, compression los
+// detecta y no los toca dos veces).
+app.use(compression());
+
 app.use(express.json());
+
+// Interfaz de mostrador (SPA estática) y fotos de producto. Van antes de
+// las rutas /api: si el archivo no existe, express.static simplemente
+// sigue a la siguiente ruta (no interfiere con la API).
+app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Endpoint simple para confirmar que el servidor está vivo y respondiendo.
 // Útil para pruebas manuales ahora y para un futuro chequeo de salud local.

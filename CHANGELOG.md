@@ -196,6 +196,34 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
   impresión/cajón (ADR 0007). Verificado abriendo un backup real con
   better-sqlite3 y leyendo datos reales de él (no solo confirmando que el
   archivo existe), y probando la retención con 16 backups de prueba.
+- ADR 0009 e **interfaz de mostrador** (`public/`, HTML/CSS/JS vanilla,
+  módulos ES por responsabilidad, sin build ni framework): SPA de una
+  sola página, sin ningún recurso por CDN (fuentes Fraunces/Public Sans
+  autohospedadas como `.woff2`, licencia SIL OFL 1.1 verificada; íconos
+  SVG inline escritos a mano, sin emojis ni librerías de íconos).
+  - Paleta cálida (claro/oscuro) verificada con la fórmula de contraste
+    WCAG real antes de usarse, y de nuevo con `axe-core` contra el DOM
+    renderizado: 0 violaciones WCAG 2.0/2.1 A+AA en ambos temas.
+  - Captura del lector de código de barras HID por velocidad entre
+    teclas (sin campo dedicado), búsqueda manual con filtro en cliente
+    (sin inventar un endpoint de búsqueda que no existe en el backend),
+    carrito que replica los cálculos de `ventas.service.js` (ADR 0002 y
+    0003) para que el total en pantalla coincida con lo que se cobra,
+    panel de caja que bloquea la venta si no hay sesión abierta, alertas
+    de stock bajo/vencimientos reutilizando `GET /api/reportes/inventario`,
+    toggle de tema persistido en `localStorage` sin parpadeo (aplicado
+    antes del primer paint).
+  - Impresión y apertura de cajón siguen siendo best-effort del backend
+    (ADR 0007): la interfaz confirma la venta apenas `POST /api/ventas`
+    responde, sin esperar nada más.
+  - Verificado con tres herramientas independientes (ninguna quedó como
+    dependencia del proyecto): Puppeteer (Chrome real, flujo completo de
+    principio a fin, 31/31), Lighthouse (Performance 99, Accessibility
+    100, Best Practices 100, SEO 100), y `axe-core`.
+  - `compression` (gzip) como dependencia nueva, agregada tras la primera
+    auditoría Lighthouse; los 5 archivos CSS se combinaron en uno solo
+    (`estilos.css`, con comentarios de sección) para reducir peticiones
+    que bloquean el render.
 
 ### Corregido
 
@@ -214,3 +242,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
   dañado). La causa real era el cable en el puerto equivocado del equipo,
   no un circuito dañado — con el cable en el puerto correcto, el cajón
   abre sin problema. ADR 0007 y ARCHITECTURE.md corregidos.
+- `render.js` (interfaz de mostrador): la cantidad de productos por peso
+  usaba `<input type="number">`, que el navegador rechaza en silencio si
+  se escribe con coma decimal (el estándar HTML solo acepta punto,
+  aunque la convención colombiana —y el resto del sistema, incluido el
+  recibo— use coma). El peso editado nunca se aplicaba y el total
+  quedaba mal. Encontrado probando el flujo completo con Chrome real
+  (Puppeteer), no asumido. Se cambió a `type="text"` con
+  `inputmode="decimal"` para ese campo específico.

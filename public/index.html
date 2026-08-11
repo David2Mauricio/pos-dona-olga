@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Doña Olga — Punto de venta</title>
+<meta name="description" content="Sistema de punto de venta de Avícola y Salsamentaria Doña Olga" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+<script>
+  // Aplica el tema guardado ANTES de que se pinte cualquier CSS —
+  // evita el parpadeo de cargar en claro y saltar a oscuro un instante
+  // después. theme.js (módulo, se ejecuta más tarde) solo sincroniza el
+  // ícono del botón con lo que ya quedó aplicado acá.
+  (function aplicarTemaInicial() {
+    try {
+      var guardado = localStorage.getItem('pos-dona-olga:tema');
+      var prefiereOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var tema = guardado || (prefiereOscuro ? 'oscuro' : 'claro');
+      document.documentElement.setAttribute('data-tema', tema);
+    } catch (error) {
+      // localStorage inaccesible (modo privado, política del navegador):
+      // se queda con el tema claro por defecto, no es un error fatal.
+    }
+  })();
+</script>
+
+<link rel="preload" href="/fonts/public-sans-400.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/fonts/fraunces-700.woff2" as="font" type="font/woff2" crossorigin />
+
+<!-- Un solo archivo (tokens+base+layout+componentes+animaciones, con
+     comentarios de sección) en vez de 5 <link> separados — menos
+     peticiones que bloquean el render (ver auditoría Lighthouse). -->
+<link rel="stylesheet" href="/css/estilos.css" />
+</head>
+<body>
+<div id="app">
+  <header class="cabecera">
+    <span class="cabecera__marca">Doña Olga</span>
+
+    <p id="estado-caja" class="cabecera__caja" data-estado="cerrada">Verificando caja…</p>
+
+    <nav class="cabecera__acciones" aria-label="Acciones generales">
+      <div class="cabecera__alertas-contenedor">
+        <button id="boton-alertas" type="button" class="boton-icono" aria-haspopup="true" aria-expanded="false" aria-label="Alertas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M12 3.5 21.5 20h-19L12 3.5z" />
+            <path d="M12 9.5v4.2" />
+            <circle cx="12" cy="16.8" r="0.9" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
+        <div id="panel-alertas" class="panel-alertas" role="region" aria-label="Alertas de inventario" hidden></div>
+      </div>
+
+      <button id="boton-tema" type="button" class="boton-icono" aria-label="Cambiar tema">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M20 13.2A8.5 8.5 0 1 1 10.8 4a7 7 0 0 0 9.2 9.2z" />
+        </svg>
+      </button>
+    </nav>
+  </header>
+
+  <main class="contenido">
+    <section class="panel-productos" aria-labelledby="titulo-productos">
+      <h2 id="titulo-productos" class="visualmente-oculto">Buscar y agregar productos</h2>
+
+      <div class="busqueda">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20.5 20.5l-4.3-4.3" />
+        </svg>
+        <label for="input-busqueda" class="visualmente-oculto">Buscar producto por nombre</label>
+        <input id="input-busqueda" type="search" placeholder="Buscar producto por nombre…" autocomplete="off" />
+      </div>
+
+      <!-- El lector de código de barras no tiene campo propio (ver
+           barcode-scanner.js): esta región anuncia el resultado de cada
+           escaneo para quien use lector de pantalla, ya que de otro modo
+           el escaneo es invisible. -->
+      <div id="anuncio-lector" class="visualmente-oculto" role="status" aria-live="polite"></div>
+
+      <div id="grilla-productos" class="grilla-productos" aria-label="Resultados de productos"></div>
+    </section>
+
+    <aside class="panel-carrito" aria-label="Carrito de venta">
+      <h2 class="visualmente-oculto">Carrito de venta</h2>
+
+      <ul id="lista-carrito" class="lista-carrito"></ul>
+
+      <div class="carrito__resumen">
+        <div class="campo">
+          <label for="select-tipo-precio">Tipo de precio</label>
+          <select id="select-tipo-precio">
+            <option value="publico">Público</option>
+            <option value="mayorista">Mayorista</option>
+          </select>
+        </div>
+
+        <div class="carrito__total">
+          <span>Total</span>
+          <span id="total-carrito" class="total numero">$0</span>
+        </div>
+
+        <div class="campo">
+          <label for="select-medio-pago">Medio de pago</label>
+          <select id="select-medio-pago">
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="nequi">Nequi</option>
+            <option value="daviplata">Daviplata</option>
+          </select>
+        </div>
+
+        <button id="boton-cobrar" type="button" class="boton-primario" disabled>Cobrar</button>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div id="overlay-caja-cerrada" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-overlay-caja" hidden>
+  <div class="overlay__panel">
+    <svg class="overlay__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <rect x="5" y="11" width="14" height="9" rx="1.8" />
+      <path d="M8 11V7.5a4 4 0 0 1 8 0V11" />
+    </svg>
+    <h2 id="titulo-overlay-caja">Abrí la caja para empezar a vender</h2>
+    <p>Necesitás abrir una sesión de caja antes de registrar ventas.</p>
+    <form id="formulario-abrir-caja">
+      <div class="campo">
+        <label for="input-monto-apertura">Monto inicial en caja</label>
+        <input id="input-monto-apertura" type="number" inputmode="numeric" min="0" step="1" required />
+      </div>
+      <button type="submit" class="boton-primario">Abrir caja</button>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="/js/main.js"></script>
+</body>
+</html>
