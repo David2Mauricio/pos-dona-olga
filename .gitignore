@@ -1,0 +1,24 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno (contienen configuración local, nunca se versionan)
+.env
+
+# Base de datos SQLite (datos reales del negocio, no van al repo)
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Fotos de producto subidas por el usuario
+uploads/*
+!uploads/.gitkeep
+
+# Logs de la aplicación
+logs/*
+!logs/.gitkeep
+
+# Archivos de sistema operativo / editor / herramientas locales
+.DS_Store
+Thumbs.db
+.vscode/
+.claude/
