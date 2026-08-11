@@ -17,3 +17,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 - Endpoint `GET /api/health` para verificar que el servidor está vivo.
 - Documentación base: README, ARCHITECTURE, y primer ADR sobre la arquitectura
   general del proyecto.
+- Migración `002_categorias_y_productos.sql`: tablas `categorias` y
+  `productos`, con peso en gramos y precios en pesos COP (ambos enteros),
+  CHECK constraints para que `stock_unidades`/`stock_gramos` sean exclusivos
+  según `tipo_venta`, `codigo_barras` único y opcional, e índice en
+  `categoria_id`.
+- ADR sobre precisión numérica: peso en gramos, dinero en pesos COP, y regla
+  de redondeo único por línea de venta.

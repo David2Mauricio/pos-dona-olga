@@ -41,6 +41,16 @@ levantar un servidor HTTP.
   `002_...`), aplicadas por `src/db/migrate.js` y registradas en la tabla
   `schema_migrations`. Ver [ADR 0001](./docs/decisiones/0001-monolito-modular-y-sqlite.md).
 
+## Precisión numérica
+
+- Peso: **entero en gramos** (nunca `REAL`/kilos con decimales).
+- Dinero: **entero en pesos COP** (sin centavos).
+- El cálculo de una línea de venta por peso (`precio_por_kg * gramos / 1000`)
+  puede dar un resultado con decimales aunque los dos operandos sean enteros.
+  El redondeo (`Math.round`) se aplica **una única vez, al final**, dentro del
+  service de ventas — nunca en pasos intermedios ni en el repository.
+  Ver [ADR 0002](./docs/decisiones/0002-precision-numerica-peso-y-dinero.md).
+
 ## Validación
 
 `zod` en middleware, antes del controller (`src/middlewares/validate.js`). El
