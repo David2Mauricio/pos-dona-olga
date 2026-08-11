@@ -3,6 +3,7 @@ const env = require('../../config/env');
 const repository = require('./ventas.repository');
 const productosService = require('../productos/productos.service');
 const productosRepository = require('../productos/productos.repository');
+const inventarioRepository = require('../inventario/inventario.repository');
 const AppError = require('../../utils/app-error');
 
 // ADR 0002: el redondeo se aplica una sola vez, al calcular el subtotal de
@@ -27,11 +28,25 @@ function resolverPrecioAplicado(producto, tipoPrecio) {
 // Aislada a propósito (ver ADR 0003): es la única función que toca stock,
 // y es la que se apaga con DESCONTAR_STOCK_AUTOMATICO el día que la dueña
 // confirme si quiere manejo manual. No calcula precios ni valida nada más.
-function descontarStockPorVenta(productoId, cantidad, nombreProducto) {
+//
+// ADR 0005: además de descontar, registra el movimiento de inventario
+// correspondiente (tipo='salida', motivo='venta') dentro de la misma
+// transacción — todo cambio de stock pasa por el ledger, sin excepción,
+// y las ventas no son la excepción solo porque llegaron primero.
+function descontarStockPorVenta(productoId, cantidad, nombreProducto, ventaId) {
   const filasAfectadas = productosRepository.descontarStock(productoId, cantidad);
   if (filasAfectadas === 0) {
     throw new AppError(`Stock insuficiente para "${nombreProducto}"`, 409);
   }
+
+  inventarioRepository.crearMovimiento({
+    productoId,
+    tipo: 'salida',
+    cantidad: -cantidad,
+    stockResultante: null,
+    motivo: 'venta',
+    referenciaVentaId: ventaId,
+  });
 }
 
 function crear({ cajaSesionId, tipoPrecio, medioPago, items }) {
@@ -86,7 +101,7 @@ function crear({ cajaSesionId, tipoPrecio, medioPago, items }) {
       });
 
       if (env.descontarStockAutomatico) {
-        descontarStockPorVenta(item.producto.id, item.cantidad, item.producto.nombre);
+        descontarStockPorVenta(item.producto.id, item.cantidad, item.producto.nombre, ventaId);
       }
     }
 

@@ -29,6 +29,7 @@ const crearProductoSchema = z
     stockGramos: stockSchema.nullish(),
     fotoNombreArchivo: fotoNombreArchivoSchema.nullish(),
     activo: z.boolean().default(true),
+    stockMinimo: stockSchema.nullish(),
   })
   .strict();
 
@@ -48,6 +49,7 @@ const actualizarProductoSchema = z
     stockGramos: stockSchema.nullish(),
     fotoNombreArchivo: fotoNombreArchivoSchema.nullish(),
     activo: z.boolean(),
+    stockMinimo: stockSchema.nullish(),
   })
   .partial()
   .strict()

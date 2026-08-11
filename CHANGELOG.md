@@ -82,6 +82,36 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
     vez; abrir una segunda mientras hay una abierta responde 409.
   - Cerrar una sesión inexistente responde 404; cerrar una ya cerrada
     responde 400.
+- Migración `004_movimientos_inventario.sql`: tabla `movimientos_inventario`
+  como ledger único de todo cambio de stock, con `cantidad` como delta
+  firmado (positivo/negativo) y `stock_resultante` poblado solo en
+  ajustes. CHECK cruzado de signo según `tipo`, y de
+  `referencia_venta_id` según `motivo`.
+- Migración `005_stock_minimo_productos.sql`: agrega `stock_minimo`
+  (nullable) a `productos` — mientras sea `NULL`, el producto nunca genera
+  alerta.
+- ADR 0005 sobre movimientos de inventario: todo cambio de stock pasa por
+  el ledger (incluidas las ventas), `ajuste` fija un valor absoluto de
+  stock en vez de sumar/restar, y `stock_minimo` es un umbral opcional por
+  producto sin valor por defecto inventado.
+- Módulo de **inventario**: `POST /api/inventario/movimientos` (discrimina
+  por `tipo` con `z.discriminatedUnion`: `entrada`/`salida` reciben
+  `cantidad`, `ajuste` recibe `stockNuevo`), `GET /api/inventario/movimientos`
+  (filtros `productoId`, `desde`/`hasta`), `GET /api/inventario/alertas`.
+  - El service relee el stock actual **dentro** de la transacción para
+    calcular el delta de un ajuste (no antes de abrirla), mismo estándar
+    de atomicidad que ventas.
+  - Rechaza (400) intentos de crear manualmente un movimiento con
+    `motivo='venta'`: ese motivo solo lo genera `ventas.service.js`.
+- `ventas.service.js` ahora registra el movimiento de inventario
+  (`tipo='salida'`, `motivo='venta'`, `referencia_venta_id`) dentro de la
+  misma transacción que descuenta stock, gateado por
+  `DESCONTAR_STOCK_AUTOMATICO`.
+- `productos.repository.js`: `aumentarStock` y `fijarStock`, junto al ya
+  existente `descontarStock`. `PATCH`/`POST /api/productos` aceptan
+  `stockMinimo` opcional.
+- `src/utils/schemas-comunes.js`: `fechaSchema` extraído de
+  `ventas.schema.js` para reutilizarse también en inventario.
 
 ### Corregido
 

@@ -1,5 +1,5 @@
 const { z } = require('zod');
-const { idParamsSchema } = require('../../utils/schemas-comunes');
+const { idParamsSchema, fechaSchema } = require('../../utils/schemas-comunes');
 
 const itemSchema = z
   .object({
@@ -16,9 +16,6 @@ const crearVentaSchema = z
     items: z.array(itemSchema).min(1, 'La venta debe tener al menos un item'),
   })
   .strict();
-
-const FORMATO_FECHA = /^\d{4}-\d{2}-\d{2}$/;
-const fechaSchema = z.string().regex(FORMATO_FECHA, 'Formato esperado: YYYY-MM-DD');
 
 const listarVentasQuerySchema = z
   .object({

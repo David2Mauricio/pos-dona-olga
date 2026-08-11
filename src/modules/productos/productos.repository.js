@@ -18,6 +18,7 @@ function mapearFila(fila) {
     stockGramos: fila.stock_gramos,
     fotoNombreArchivo: fila.foto_nombre_archivo,
     activo: fila.activo === 1,
+    stockMinimo: fila.stock_minimo,
     creadoEn: fila.creado_en,
     actualizadoEn: fila.actualizado_en,
   };
@@ -36,6 +37,7 @@ const COLUMNA_POR_CAMPO = {
   stockGramos: 'stock_gramos',
   fotoNombreArchivo: 'foto_nombre_archivo',
   activo: 'activo',
+  stockMinimo: 'stock_minimo',
 };
 
 function crear(producto) {
@@ -44,11 +46,11 @@ function crear(producto) {
       `INSERT INTO productos (
          categoria_id, nombre, tipo_venta, codigo_barras,
          precio_publico, precio_mayorista, stock_unidades, stock_gramos,
-         foto_nombre_archivo, activo
+         foto_nombre_archivo, activo, stock_minimo
        ) VALUES (
          @categoriaId, @nombre, @tipoVenta, @codigoBarras,
          @precioPublico, @precioMayorista, @stockUnidades, @stockGramos,
-         @fotoNombreArchivo, @activo
+         @fotoNombreArchivo, @activo, @stockMinimo
        )`
     )
     .run({
@@ -62,6 +64,7 @@ function crear(producto) {
       stockGramos: producto.stockGramos ?? null,
       fotoNombreArchivo: producto.fotoNombreArchivo ?? null,
       activo: producto.activo ? 1 : 0,
+      stockMinimo: producto.stockMinimo ?? null,
     });
 
   return obtenerPorId(resultado.lastInsertRowid);
@@ -154,6 +157,41 @@ function descontarStock(id, cantidad) {
   return resultado.changes;
 }
 
+// Suma `cantidad` (siempre positiva) a la columna de stock que corresponda
+// según tipo_venta. No necesita guarda de suficiencia: aumentar stock
+// nunca puede fallar por falta de stock.
+function aumentarStock(id, cantidad) {
+  const resultado = db
+    .prepare(
+      `UPDATE productos
+       SET
+         stock_unidades = CASE WHEN tipo_venta = 'unidad' THEN stock_unidades + @cantidad ELSE stock_unidades END,
+         stock_gramos = CASE WHEN tipo_venta = 'peso' THEN stock_gramos + @cantidad ELSE stock_gramos END,
+         actualizado_en = datetime('now')
+       WHERE id = @id`
+    )
+    .run({ id, cantidad });
+
+  return resultado.changes;
+}
+
+// Fija la columna de stock que corresponda a un valor absoluto (usado por
+// los ajustes de inventario, ver ADR 0005): no suma ni resta, reemplaza.
+function fijarStock(id, valorAbsoluto) {
+  const resultado = db
+    .prepare(
+      `UPDATE productos
+       SET
+         stock_unidades = CASE WHEN tipo_venta = 'unidad' THEN @valorAbsoluto ELSE stock_unidades END,
+         stock_gramos = CASE WHEN tipo_venta = 'peso' THEN @valorAbsoluto ELSE stock_gramos END,
+         actualizado_en = datetime('now')
+       WHERE id = @id`
+    )
+    .run({ id, valorAbsoluto });
+
+  return resultado.changes;
+}
+
 module.exports = {
   crear,
   obtenerPorId,
@@ -162,4 +200,6 @@ module.exports = {
   listar,
   actualizar,
   descontarStock,
+  aumentarStock,
+  fijarStock,
 };

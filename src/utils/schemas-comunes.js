@@ -8,4 +8,10 @@ const idParamsSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
-module.exports = { idParamsSchema };
+// Filtro de rango de fechas por query string ("desde"/"hasta"), repetido
+// igual en ventas e inventario. YYYY-MM-DD simple: los repositories que lo
+// usan comparan como texto contra columnas *_en tipo 'YYYY-MM-DD HH:MM:SS'.
+const FORMATO_FECHA = /^\d{4}-\d{2}-\d{2}$/;
+const fechaSchema = z.string().regex(FORMATO_FECHA, 'Formato esperado: YYYY-MM-DD');
+
+module.exports = { idParamsSchema, fechaSchema };
