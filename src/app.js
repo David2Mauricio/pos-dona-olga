@@ -19,6 +19,7 @@ app.use('/api/caja', require('./modules/caja/caja.routes'));
 app.use('/api/inventario', require('./modules/inventario/inventario.routes'));
 app.use('/api/proveedores', require('./modules/proveedores/proveedores.routes'));
 app.use('/api/vencimientos', require('./modules/vencimientos/vencimientos.routes'));
+app.use('/api/reportes', require('./modules/reportes/reportes.routes'));
 
 // A partir de aquí se irán montando el resto de módulos de negocio.
 

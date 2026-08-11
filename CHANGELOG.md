@@ -133,6 +133,18 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
   `activo=false` al agotarse/descartarse — `productoId` no es
   actualizable), `GET /api/vencimientos/alertas` (agrupa en `vencidos` y
   `porVencer`, calculado al vuelo contra la fecha actual).
+- Módulo de **reportes** (solo lectura, sin migración ni tablas nuevas):
+  - `GET /api/reportes/ventas` (`desde`/`hasta` obligatorios, `cajaSesionId`
+    opcional, rechaza `desde > hasta`): totales, desglose por medio de pago
+    (mismo criterio `TRIM(LOWER(medio_pago))` que caja) y top 10 productos
+    por `subtotal` acumulado.
+  - `GET /api/reportes/inventario`: valor estimado del inventario
+    (`stock_actual × precio_publico`, con conversión ÷1000 para productos
+    por peso — el precio es por kilo pero el stock está en gramos, mismo
+    criterio del ADR 0002 — y una nota explícita aclarando que es
+    estimación de venta potencial, no valorización contable), más
+    `productosStockBajo` y `lotesPorVencer` reutilizando los services de
+    inventario y vencimientos en vez de duplicar su lógica.
 
 ### Corregido
 
