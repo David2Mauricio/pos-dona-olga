@@ -21,6 +21,8 @@ function mapearItem(fila) {
     cantidad: fila.cantidad,
     precioUnitarioAplicado: fila.precio_unitario_aplicado,
     subtotal: fila.subtotal,
+    precioModificado: fila.precio_modificado === 1,
+    motivoAjuste: fila.motivo_ajuste,
   };
 }
 
@@ -44,11 +46,28 @@ function crear({ cajaSesionId, tipoPrecio, medioPago, total }) {
   return resultado.lastInsertRowid;
 }
 
-function crearItem({ ventaId, productoId, cantidad, precioUnitarioAplicado, subtotal }) {
+function crearItem({
+  ventaId,
+  productoId,
+  cantidad,
+  precioUnitarioAplicado,
+  subtotal,
+  precioModificado,
+  motivoAjuste,
+}) {
   db.prepare(
-    `INSERT INTO ventas_items (venta_id, producto_id, cantidad, precio_unitario_aplicado, subtotal)
-     VALUES (@ventaId, @productoId, @cantidad, @precioUnitarioAplicado, @subtotal)`
-  ).run({ ventaId, productoId, cantidad, precioUnitarioAplicado, subtotal });
+    `INSERT INTO ventas_items
+       (venta_id, producto_id, cantidad, precio_unitario_aplicado, subtotal, precio_modificado, motivo_ajuste)
+     VALUES (@ventaId, @productoId, @cantidad, @precioUnitarioAplicado, @subtotal, @precioModificado, @motivoAjuste)`
+  ).run({
+    ventaId,
+    productoId,
+    cantidad,
+    precioUnitarioAplicado,
+    subtotal,
+    precioModificado: precioModificado ? 1 : 0,
+    motivoAjuste: motivoAjuste ?? null,
+  });
 }
 
 function obtenerPorId(id) {

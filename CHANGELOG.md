@@ -4,6 +4,25 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Agregado (Fase 2: trazabilidad de precios)
+
+- Migración `009_trazabilidad_precios_venta.sql`: columnas `precio_modificado`
+  (bandera) y `motivo_ajuste` (texto) en `ventas_items`.
+- ADR 0011: por qué es una bandera + motivo y no una segunda columna de
+  precio (`precio_unitario_aplicado` ya es el snapshot del precio
+  realmente cobrado, con o sin ajuste); por qué la consistencia
+  motivo↔bandera se valida en la aplicación y no con un `CHECK` cruzado en
+  SQLite (mismo límite de `ALTER TABLE ADD COLUMN` ya documentado en la
+  migración 005); por qué el ajuste no queda restringido a administrador
+  ni a ningún rango de precio.
+- `POST /api/ventas`: cada item admite opcionalmente `precioUnitarioOverride`
+  (reemplaza el precio de catálogo para esa línea) y `motivoAjuste`
+  (obligatorio si y solo si viene el override — `ventas.schema.js` lo
+  valida con un `.refine()`). `GET /api/ventas/:id` expone `precioModificado`
+  y `motivoAjuste` en cada item.
+- El recibo térmico no necesitó cambios: ya imprimía `precioUnitarioAplicado`,
+  que refleja el precio ajustado automáticamente.
+
 ### Agregado (Fase 1: autenticación)
 
 - Migración `008_usuarios.sql`: tabla `usuarios` (nombre, usuario único,

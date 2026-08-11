@@ -131,14 +131,28 @@ function crear({ cajaSesionId, tipoPrecio, medioPago, items }) {
       throw new AppError(`El producto "${producto.nombre}" está inactivo y no se puede vender`, 400);
     }
 
-    const precioUnitarioAplicado = resolverPrecioAplicado(producto, tipoPrecio);
+    // Fase 2 (ver ADR 0011): precioUnitarioOverride, si viene, reemplaza el
+    // precio de catálogo — ya validado en el schema que venga siempre
+    // acompañado de motivoAjuste. El subtotal se calcula igual en ambos
+    // casos, sobre el precio que efectivamente se va a cobrar.
+    const precioUnitarioAplicado =
+      item.precioUnitarioOverride !== undefined
+        ? item.precioUnitarioOverride
+        : resolverPrecioAplicado(producto, tipoPrecio);
     const subtotal = calcularSubtotal({
       tipoVenta: producto.tipoVenta,
       precioUnitarioAplicado,
       cantidad: item.cantidad,
     });
 
-    return { producto, cantidad: item.cantidad, precioUnitarioAplicado, subtotal };
+    return {
+      producto,
+      cantidad: item.cantidad,
+      precioUnitarioAplicado,
+      subtotal,
+      precioModificado: item.precioUnitarioOverride !== undefined,
+      motivoAjuste: item.motivoAjuste,
+    };
   });
 
   // Suma de subtotales YA redondeados, no "sumar y redondear al final"
@@ -160,6 +174,8 @@ function crear({ cajaSesionId, tipoPrecio, medioPago, items }) {
         cantidad: item.cantidad,
         precioUnitarioAplicado: item.precioUnitarioAplicado,
         subtotal: item.subtotal,
+        precioModificado: item.precioModificado,
+        motivoAjuste: item.motivoAjuste,
       });
 
       if (env.descontarStockAutomatico) {

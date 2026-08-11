@@ -1,12 +1,21 @@
 const { z } = require('zod');
 const { idParamsSchema, fechaSchema } = require('../../utils/schemas-comunes');
 
+// Fase 2 (ver ADR 0011): un item puede cobrarse a un precio distinto del
+// catálogo, pero solo si trae su justificación — nunca uno sin el otro.
+// z.strictObject + .refine en vez de dos schemas separados porque el resto
+// del item (productoId, cantidad) es idéntico en ambos casos.
 const itemSchema = z
   .object({
     productoId: z.number().int().positive(),
     cantidad: z.number().int().positive('La cantidad debe ser mayor a cero'),
+    precioUnitarioOverride: z.number().int().nonnegative().optional(),
+    motivoAjuste: z.string().trim().min(1, 'El motivo del ajuste no puede estar vacío').optional(),
   })
-  .strict();
+  .strict()
+  .refine((item) => (item.precioUnitarioOverride === undefined) === (item.motivoAjuste === undefined), {
+    message: 'motivoAjuste es obligatorio cuando se envía precioUnitarioOverride, y no debe enviarse si no hay override',
+  });
 
 const crearVentaSchema = z
   .object({
