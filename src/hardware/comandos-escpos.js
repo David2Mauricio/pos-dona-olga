@@ -3,8 +3,17 @@
 // "qué se manda a la impresora" de "cómo se manda" es lo que permite
 // cambiar el método de transporte (ver ADR 0007) sin tocar este archivo.
 
+const iconv = require('iconv-lite');
+
 const ESC = 0x1b;
 const GS = 0x1d;
+
+// Tabla de caracteres FIJA de fábrica de esta impresora (confirmada con
+// diagnóstico físico en test-codepages.js): CP850, sin importar qué se le
+// mande con ESC t — el comando no tiene ningún efecto en este modelo, así
+// que no se envía (ver más abajo). Todo el texto tiene que codificarse a
+// mano en CP850 antes de convertirse en bytes.
+const CODEPAGE_IMPRESORA = 'cp850';
 
 // Ancho típico de una impresora térmica de 58mm en modo texto (Font A).
 const ANCHO_TICKET = 32;
@@ -19,18 +28,15 @@ const NOMBRE_NEGOCIO_LINEA_1 = 'Avícola y Salsamentaria';
 const NOMBRE_NEGOCIO_LINEA_2 = 'Doña Olga';
 
 function inicializar() {
-  return Buffer.concat([
-    Buffer.from([ESC, 0x40]), // ESC @: reset de la impresora
-    // ESC t 16: selecciona codepage (16 suele ser Windows-1252 en clones
-    // ESC/POS compatibles Epson). Mejor esfuerzo para que tildes y "ñ" se
-    // vean bien — no hay forma de confirmar esto sin la impresora física
-    // delante, hay que verificarlo visualmente (ver ADR 0007).
-    Buffer.from([ESC, 0x74, 16]),
-  ]);
+  // Solo ESC @ (reset). Se probó ESC t con varios valores (0-5, 16-19)
+  // contra la impresora física y no cambia nada: este modelo ignora el
+  // comando y usa siempre su tabla de fábrica (CP850). Mandarlo sería
+  // ruido sin efecto — ver ADR 0007.
+  return Buffer.from([ESC, 0x40]);
 }
 
 function texto(cadena) {
-  return Buffer.from(`${cadena}\n`, 'latin1');
+  return iconv.encode(`${cadena}\n`, CODEPAGE_IMPRESORA);
 }
 
 function negrita(activar) {

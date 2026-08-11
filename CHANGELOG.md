@@ -166,6 +166,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
     una venta nunca falla ni se revierte por un problema de impresión.
   - Nuevo endpoint `POST /api/ventas/:id/reimprimir` (404 si la venta no
     existe).
+- `iconv-lite` como dependencia nueva (JS puro, sin compilación nativa)
+  para codificar el texto del recibo a CP850, la tabla de caracteres fija
+  de fábrica de la impresora física (diagnosticada empíricamente, ver
+  ADR 0007 — el comando `ESC t` no tiene ningún efecto en este modelo).
+- `src/hardware/diagnostico-codepages.js` y
+  `src/hardware/diagnostico-encoding.js`: herramientas manuales
+  permanentes para repetir el diagnóstico de codepage si se cambia de
+  impresora en el futuro.
 
 ### Corregido
 
@@ -174,3 +182,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
   `req.query = datosValidados` fallaba en silencio y el cuerpo validado por
   zod nunca llegaba al controller. Se corrigió usando
   `Object.defineProperty` para los tres orígenes (`body`/`params`/`query`).
+- `comandos-escpos.js`: `texto()` codificaba con `'latin1'` en vez de
+  `'cp850'` (la tabla real de la impresora), lo que imprimía tildes y `ñ`
+  incorrectas — incluido el nombre del negocio en el encabezado del
+  recibo. Diagnosticado empíricamente contra la impresora física antes de
+  corregir (ver ADR 0007), no por prueba y error a ciegas.

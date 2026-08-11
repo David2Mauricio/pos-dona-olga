@@ -76,16 +76,74 @@ no funcional. El cajón se opera manualmente con la llave física. Se
 documenta en ARCHITECTURE.md como limitación de hardware conocida, no
 como funcionalidad pendiente.
 
+## Codificación de caracteres: CP850 fijo de fábrica, sin soporte de `ESC t`
+
+La primera versión de este ADR mandaba `ESC t 16` como "mejor esfuerzo" de
+selección de codepage, sin poder verificarlo contra hardware real. Con la
+impresora física delante, se diagnosticó empíricamente en vez de seguir
+adivinando: `src/hardware/diagnostico-codepages.js` imprimió los mismos 12
+bytes crudos (la zona donde viven las vocales acentuadas y la `ñ`) bajo 10
+valores distintos de `ESC t n` (0-5, 16-19). **Las 10 líneas salieron
+idénticas** — el comando no tiene ningún efecto en este modelo, y la
+impresora usa siempre su tabla fija de fábrica: **CP850**, confirmado
+porque esos mismos bytes ya imprimían á/é/í/ó/ú/ñ/Ñ correctamente sin
+ningún comando de selección.
+
+En consecuencia:
+
+- `inicializar()` ya **no** manda `ESC t` — no tiene efecto en este
+  hardware, es ruido.
+- Todo el texto se codifica a CP850 con `iconv-lite`
+  (`iconv.encode(cadena, 'cp850')`), dentro de la función `texto()` de
+  `comandos-escpos.js` — el único punto por el que pasa cualquier texto
+  antes de convertirse en bytes. `iconv-lite` es JS puro (sin
+  compilación nativa), consistente con la misma razón del resto de este
+  ADR.
+
+**Bug encontrado y corregido en el proceso — advertencia para quien toque
+este archivo más adelante:** la primera implementación de `texto()`
+codificaba con `'latin1'`, no con `'cp850'`. Son tablas completamente
+distintas para los caracteres acentuados (el byte de `á` es `0xE1` en
+Latin-1 pero `0xA0` en CP850, la tabla real de esta impresora). El síntoma
+era exactamente el reportado: tildes y `ñ` mal impresas, mientras números
+y texto sin acentos se veían perfectos, porque ASCII puro es idéntico en
+ambas tablas — lo que hizo parecer, al principio, que el problema era el
+comando `ESC t` y no la codificación del texto en sí. **Si en el futuro
+el ticket vuelve a imprimir tildes mal, lo primero que hay que revisar es
+que `texto()` siga usando `CODEPAGE_IMPRESORA` (`'cp850'`) y que ningún
+texto nuevo se arme con `Buffer.from(str, ...)` directo sin pasar por
+`texto()`/`iconv.encode`.**
+
+Antes de tocar el código se descartó `iconv-lite` como sospechoso:
+`src/hardware/diagnostico-encoding.js` compara los bytes que produce la
+librería para `cp850`/`ibm850` contra los valores ya confirmados en el
+diagnóstico físico, y coinciden exactos — la librería nunca fue el
+problema, era la elección de codec en `texto()`.
+
+## Herramientas de diagnóstico (para el próximo cambio de impresora)
+
+Si en el futuro se reemplaza esta impresora por otro modelo o clon, es
+probable que su tabla de caracteres fija sea distinta. Quedan dos scripts
+permanentes en `src/hardware/` para repetir este mismo diagnóstico sin
+adivinar número por número:
+
+- `diagnostico-codepages.js`: imprime la misma cadena de bytes crudos bajo
+  10 valores de `ESC t n`, para leer directo del papel cuál (si alguno)
+  corresponde a la tabla real de la impresora nueva.
+- `diagnostico-encoding.js`: compara lo que produce `iconv-lite` para
+  `cp850`/`ibm850` contra los bytes ya confirmados, para descartar la
+  librería antes de sospechar de `comandos-escpos.js`.
+
+Se corren manualmente (`node src/hardware/diagnostico-codepages.js`,
+`node src/hardware/diagnostico-encoding.js`); no forman parte de ningún
+flujo automático de la aplicación.
+
 ## Consecuencias
 
-- No hay garantía de codepage entre lo que este proyecto envía (texto
-  codificado como Latin-1/CP1252) y lo que la impresora interpreta
-  internamente para tildes y `ñ`. Se envía `ESC t 16` al inicializar
-  (selección de codepage, comúnmente Windows-1252 en impresoras
-  compatibles ESC/POS) como mejor esfuerzo, pero debe verificarse
-  visualmente contra la impresora física — no hay forma de confirmar esto
-  sin el hardware delante.
 - Si en el futuro se cambia de impresora o de método de conexión (ej. USB
   directo sin compartir por Windows), el único archivo que debería
   cambiar es `src/hardware/impresion.service.js`; `comandos-escpos.js`
   (los comandos en sí) no depende de cómo se transporta el buffer.
+- Si la impresora nueva usa una tabla de caracteres distinta a CP850,
+  `CODEPAGE_IMPRESORA` en `comandos-escpos.js` es el único valor que
+  debería cambiar (previo diagnóstico con las herramientas de arriba).
