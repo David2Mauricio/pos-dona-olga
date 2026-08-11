@@ -45,6 +45,30 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 - `src/utils/schemas-comunes.js`: `idParamsSchema` extraído de
   `productos.schema.js` para reutilizarse también en categorías (y en los
   módulos que siguen).
+- Migración `003_caja_y_ventas.sql`: tablas `caja_sesiones` (con CHECK
+  cruzado estado↔cerrada_en↔monto_cierre), `ventas` y `ventas_items`.
+  `caja_sesiones` completa aunque el módulo de caja todavía no existe (ver
+  ADR 0003).
+- ADR 0003 sobre las decisiones provisionales de ventas: dependencia a
+  `caja_sesiones` sin módulo de caja, `tipo_precio` sin módulo de clientes,
+  snapshot de `precio_unitario_aplicado`, y descuento de stock reversible
+  por variable de entorno.
+- Módulo de **ventas**: `POST /api/ventas`, `GET /api/ventas` (filtros
+  `cajaSesionId`, `desde`/`hasta`), `GET /api/ventas/:id` (con items).
+  - El service resuelve cada item (precio según `tipoPrecio`, con fallback
+    a `precio_publico` si el producto no tiene `precio_mayorista`), calcula
+    subtotales con redondeo único por línea (ADR 0002) y rechaza productos
+    inexistentes o inactivos, todo antes de escribir en la base de datos.
+  - Crear venta + items + descuento de stock es una transacción atómica
+    (`db.transaction`) definida en `ventas.service.js`, que orquesta el
+    repository de ventas y el de productos — sin romper la separación de
+    capas (ver ARCHITECTURE.md y ADR 0003).
+  - El descuento de stock vive aislado en `descontarStockPorVenta` y se
+    activa/desactiva con la variable de entorno
+    `DESCONTAR_STOCK_AUTOMATICO` (pendiente de confirmación de la dueña).
+- `productos.repository.js`: `descontarStock(id, cantidad)`, UPDATE
+  condicionado a stock suficiente (0 filas afectadas = sin stock o producto
+  inexistente).
 
 ### Corregido
 

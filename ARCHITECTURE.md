@@ -29,6 +29,13 @@ Una ruta **nunca** toca la base de datos directamente, y un repository **nunca**
 conoce `req`/`res`. Esto es lo que permite, por ejemplo, probar un service sin
 levantar un servidor HTTP.
 
+Un service puede orquestar **más de un repository** cuando una operación de
+negocio lo requiere (ej. crear una venta implica escribir en el repository de
+ventas y descontar stock a través del repository de productos, todo dentro de
+una misma transacción definida en `ventas.service.js`). Sigue siendo el
+service quien decide y coordina; el repository de productos no sabe que
+existe el módulo de ventas. Ver [ADR 0003](./docs/decisiones/0003-ventas-dependencias-provisionales.md).
+
 ## Base de datos
 
 - SQLite vía `better-sqlite3` (API síncrona, sin ORM pesado).

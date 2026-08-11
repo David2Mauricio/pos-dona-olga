@@ -127,6 +127,33 @@ function actualizar(id, cambios) {
   return obtenerPorId(id);
 }
 
+// Descuenta `cantidad` de la columna de stock que corresponda según
+// tipo_venta (stock_unidades o stock_gramos), en una sola sentencia
+// atómica. El WHERE exige stock suficiente, así que la fila no se toca
+// si no alcanza: 0 filas afectadas es la señal de "no había suficiente"
+// (o de que el producto no existe), sin necesidad de una transacción
+// propia de este repository — la transacción la define quien orquesta
+// esta llamada (ver ventas.service.js).
+function descontarStock(id, cantidad) {
+  const resultado = db
+    .prepare(
+      `UPDATE productos
+       SET
+         stock_unidades = CASE WHEN tipo_venta = 'unidad' THEN stock_unidades - @cantidad ELSE stock_unidades END,
+         stock_gramos = CASE WHEN tipo_venta = 'peso' THEN stock_gramos - @cantidad ELSE stock_gramos END,
+         actualizado_en = datetime('now')
+       WHERE id = @id
+         AND (
+           (tipo_venta = 'unidad' AND stock_unidades >= @cantidad)
+           OR
+           (tipo_venta = 'peso' AND stock_gramos >= @cantidad)
+         )`
+    )
+    .run({ id, cantidad });
+
+  return resultado.changes;
+}
+
 module.exports = {
   crear,
   obtenerPorId,
@@ -134,4 +161,5 @@ module.exports = {
   existeCategoria,
   listar,
   actualizar,
+  descontarStock,
 };
