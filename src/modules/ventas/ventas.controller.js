@@ -20,4 +20,9 @@ function reimprimir(req, res) {
   res.json(venta);
 }
 
-module.exports = { crear, obtenerPorId, listar, reimprimir };
+function anular(req, res) {
+  const venta = ventasService.anular(req.params.id, req.body.motivoAnulacion);
+  res.json(venta);
+}
+
+module.exports = { crear, obtenerPorId, listar, reimprimir, anular };

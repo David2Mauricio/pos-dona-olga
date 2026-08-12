@@ -4,6 +4,33 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Agregado (Fase 3: vuelto y anulación)
+
+- Migración `010_vuelto_y_anulacion_ventas.sql`: columnas `monto_recibido`,
+  `estado` (`'activa'`/`'anulada'`, default `'activa'`), `motivo_anulacion`
+  y `anulada_en` en `ventas`.
+- `POST /api/ventas`: admite `montoRecibido` cuando el medio de pago es
+  efectivo (comparación tolerante a mayúsculas/espacios); obligatorio y
+  debe cubrir el total en ese caso, y rechazado si el medio de pago no es
+  efectivo. `GET /api/ventas`/`GET /api/ventas/:id` exponen `montoRecibido`
+  y `vuelto` (este último calculado al leer, nunca guardado — ver ADR 0012).
+- `PATCH /api/ventas/:id/anular` (solo administrador): marca la venta como
+  anulada con motivo obligatorio, y repone el inventario exactamente según
+  los movimientos reales que esa venta había generado (no según el flag
+  `DESCONTAR_STOCK_AUTOMATICO` actual, que pudo cambiar desde entonces). Una
+  venta ya anulada no se puede volver a anular.
+- Las ventas anuladas siguen visibles en `GET /api/ventas`/`GET /api/ventas/:id`
+  (no se borran), pero quedan excluidas de los totales agregados:
+  `GET /api/reportes/ventas`, `GET /api/reportes/inventario` (indirectamente,
+  vía top de productos) y `GET /api/caja/:id` / cálculo de monto teórico en
+  efectivo al cerrar caja.
+- ADR 0012: por qué el vuelto se deriva y no se guarda; por qué la
+  compensación de inventario lee los movimientos reales en vez de asumir el
+  flag actual; por qué el movimiento de reposición no puede llevar
+  `referencia_venta_id` (CHECK de la migración 004) y por qué el id de la
+  venta queda en el texto del motivo en su lugar; por qué anular es
+  solo-administrador a diferencia del override de precios de la Fase 2.
+
 ### Agregado (Fase 2: trazabilidad de precios)
 
 - Migración `009_trazabilidad_precios_venta.sql`: columnas `precio_modificado`

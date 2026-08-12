@@ -40,6 +40,18 @@ function obtenerPorId(id) {
   return mapearFila(fila);
 }
 
+// Fase 3 (ver ADR 0012): usado al anular una venta, para saber exactamente
+// qué se descontó y por cuánto — nunca se asume a partir del flag
+// DESCONTAR_STOCK_AUTOMATICO *actual*, que pudo cambiar entre la venta y su
+// anulación. El motivo='venta' ya está garantizado por el CHECK de la
+// migración 004 (referencia_venta_id solo existe junto con motivo='venta').
+function listarPorReferenciaVenta(ventaId) {
+  return db
+    .prepare('SELECT * FROM movimientos_inventario WHERE referencia_venta_id = ?')
+    .all(ventaId)
+    .map(mapearFila);
+}
+
 function listar({ productoId, desde, hasta } = {}) {
   const condiciones = [];
   const parametros = {};
@@ -101,6 +113,7 @@ function obtenerAlertas() {
 module.exports = {
   crearMovimiento,
   obtenerPorId,
+  listarPorReferenciaVenta,
   listar,
   obtenerAlertas,
 };

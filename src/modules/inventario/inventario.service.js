@@ -16,6 +16,17 @@ function crear(datos) {
     );
   }
 
+  // Fase 3 (ver ADR 0012): mismo criterio que 'venta' — el prefijo
+  // "Anulación de venta #" solo lo genera ventas.service.js al anular una
+  // venta real, para reponer exactamente lo que esa venta había
+  // descontado.
+  if (datos.motivo.trim().toLowerCase().startsWith('anulación de venta')) {
+    throw new AppError(
+      "Los motivos que empiezan con 'Anulación de venta' se generan automáticamente al anular una venta; no se pueden crear manualmente",
+      400
+    );
+  }
+
   // Existencia del producto (404 si no existe) y su nombre para mensajes
   // de error: esto no necesita ser atómico con la escritura, ni nombre ni
   // tipoVenta cambian a mitad de la operación.

@@ -111,13 +111,24 @@ function abrirCajonSiEsEfectivo(venta) {
   }
 }
 
-function crear({ cajaSesionId, tipoPrecio, medioPago, items }) {
+function crear({ cajaSesionId, tipoPrecio, medioPago, montoRecibido, items }) {
   const cajaSesion = repository.obtenerCajaSesionPorId(cajaSesionId);
   if (!cajaSesion) {
     throw new AppError(`No existe una sesión de caja con id ${cajaSesionId}`, 400);
   }
   if (cajaSesion.estado !== 'abierta') {
     throw new AppError(`La sesión de caja ${cajaSesionId} no está abierta`, 400);
+  }
+
+  // Fase 3 (ver ADR 0012): el vuelto solo tiene sentido en efectivo — con
+  // Nequi, Daviplata o tarjeta el cliente paga el monto exacto. Mismo
+  // criterio tolerante a mayúsculas/espacios que abrirCajonSiEsEfectivo.
+  const esEfectivo = medioPago.trim().toLowerCase() === 'efectivo';
+  if (esEfectivo && montoRecibido === undefined) {
+    throw new AppError('montoRecibido es obligatorio cuando el medio de pago es efectivo', 400);
+  }
+  if (!esEfectivo && montoRecibido !== undefined) {
+    throw new AppError('montoRecibido solo aplica cuando el medio de pago es efectivo', 400);
   }
 
   // Resolver cada item ANTES de abrir la transacción: obtenerPorId ya
@@ -159,13 +170,19 @@ function crear({ cajaSesionId, tipoPrecio, medioPago, items }) {
   // (ADR 0002).
   const total = itemsCalculados.reduce((acumulado, item) => acumulado + item.subtotal, 0);
 
+  // El total recién queda definido acá arriba, así que esta validación no
+  // puede vivir en el schema (ver ventas.schema.js).
+  if (esEfectivo && montoRecibido < total) {
+    throw new AppError(`El monto recibido (${montoRecibido}) es menor al total de la venta (${total})`, 400);
+  }
+
   // La transacción vive acá porque el service es quien orquesta más de un
   // repository (ventas y productos) — ver ADR 0003 y ARCHITECTURE.md.
   // Si algo falla en cualquier punto (incluido el descuento de stock),
   // better-sqlite3 revierte todo: no queda venta, ni items, ni stock
   // descontado a medias.
   const crearVentaTransaccional = db.transaction(() => {
-    const ventaId = repository.crear({ cajaSesionId, tipoPrecio, medioPago, total });
+    const ventaId = repository.crear({ cajaSesionId, tipoPrecio, medioPago, total, montoRecibido });
 
     for (const item of itemsCalculados) {
       repository.crearItem({
@@ -197,6 +214,48 @@ function crear({ cajaSesionId, tipoPrecio, medioPago, items }) {
   return venta;
 }
 
+// Fase 3 (ver ADR 0012): repone exactamente lo que la venta descontó,
+// leyendo los movimientos 'venta' ya existentes (referenciaVentaId=ventaId)
+// en vez de asumir a partir del flag DESCONTAR_STOCK_AUTOMATICO actual —
+// que pudo cambiar desde que se creó la venta. Si no hay movimientos (el
+// flag estaba apagado en ese momento), no hay nada que compensar.
+//
+// El motivo del movimiento de reposición no puede llevar referenciaVentaId
+// (el CHECK de la migración 004 solo permite esa FK junto con
+// motivo='venta'), así que el id de la venta anulada queda en el texto del
+// motivo en su lugar — ver ADR 0012.
+function compensarStockPorAnulacion(ventaId) {
+  const movimientosOriginales = inventarioRepository.listarPorReferenciaVenta(ventaId);
+
+  for (const movimiento of movimientosOriginales) {
+    const cantidadARestituir = Math.abs(movimiento.cantidad);
+    productosRepository.aumentarStock(movimiento.productoId, cantidadARestituir);
+    inventarioRepository.crearMovimiento({
+      productoId: movimiento.productoId,
+      tipo: 'entrada',
+      cantidad: cantidadARestituir,
+      stockResultante: null,
+      motivo: `Anulación de venta #${ventaId}`,
+      referenciaVentaId: null,
+    });
+  }
+}
+
+function anular(id, motivoAnulacion) {
+  const venta = obtenerPorId(id); // 404 si no existe
+  if (venta.estado === 'anulada') {
+    throw new AppError(`La venta ${id} ya está anulada`, 400);
+  }
+
+  const anularTransaccional = db.transaction(() => {
+    repository.anular(id, motivoAnulacion);
+    compensarStockPorAnulacion(id);
+  });
+
+  anularTransaccional();
+  return repository.obtenerPorId(id);
+}
+
 function obtenerPorId(id) {
   const venta = repository.obtenerPorId(id);
   if (!venta) {
@@ -215,4 +274,4 @@ function reimprimir(id) {
   return venta;
 }
 
-module.exports = { crear, obtenerPorId, listar, reimprimir };
+module.exports = { crear, obtenerPorId, listar, reimprimir, anular };

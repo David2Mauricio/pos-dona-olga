@@ -4,9 +4,13 @@ const db = require('../../config/database');
 // mismo criterio que ventas.repository.js e inventario.repository.js.
 // `prefijo` es el alias de tabla a usar cuando la consulta hace JOIN (ver
 // obtenerTopProductos) y necesita distinguir de qué tabla son las columnas.
+//
+// Fase 3 (ver ADR 0012): estado='activa' acá también, para que ninguno de
+// los tres reportes que usan este filtro (totales, desglose por medio de
+// pago, top productos) cuente una venta anulada.
 function construirFiltro({ desde, hasta, cajaSesionId }, prefijo = '') {
   const p = prefijo ? `${prefijo}.` : '';
-  const condiciones = [`${p}creada_en >= @desde`, `${p}creada_en <= @hasta`];
+  const condiciones = [`${p}creada_en >= @desde`, `${p}creada_en <= @hasta`, `${p}estado = 'activa'`];
   const parametros = { desde, hasta: `${hasta} 23:59:59` };
 
   if (cajaSesionId !== undefined) {

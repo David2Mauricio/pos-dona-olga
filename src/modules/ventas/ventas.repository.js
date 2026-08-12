@@ -9,6 +9,16 @@ function mapearVenta(fila) {
     tipoPrecio: fila.tipo_precio,
     total: fila.total,
     medioPago: fila.medio_pago,
+    // Fase 3 (ver ADR 0012): vuelto no se guarda como columna propia — es
+    // monto_recibido - total, y ambos ya están disponibles acá. Guardar un
+    // tercer valor derivado abriría la puerta a que quede inconsistente si
+    // alguno de los otros dos cambiara (no deberían, pero es la misma razón
+    // por la que ADR 0011 no duplica el precio ajustado).
+    montoRecibido: fila.monto_recibido,
+    vuelto: fila.monto_recibido !== null ? fila.monto_recibido - fila.total : null,
+    estado: fila.estado,
+    motivoAnulacion: fila.motivo_anulacion,
+    anuladaEn: fila.anulada_en,
     creadaEn: fila.creada_en,
   };
 }
@@ -35,15 +45,26 @@ function obtenerCajaSesionPorId(id) {
   return db.prepare('SELECT id, estado FROM caja_sesiones WHERE id = ?').get(id);
 }
 
-function crear({ cajaSesionId, tipoPrecio, medioPago, total }) {
+function crear({ cajaSesionId, tipoPrecio, medioPago, total, montoRecibido }) {
   const resultado = db
     .prepare(
-      `INSERT INTO ventas (caja_sesion_id, tipo_precio, medio_pago, total)
-       VALUES (@cajaSesionId, @tipoPrecio, @medioPago, @total)`
+      `INSERT INTO ventas (caja_sesion_id, tipo_precio, medio_pago, total, monto_recibido)
+       VALUES (@cajaSesionId, @tipoPrecio, @medioPago, @total, @montoRecibido)`
     )
-    .run({ cajaSesionId, tipoPrecio, medioPago, total });
+    .run({ cajaSesionId, tipoPrecio, medioPago, total, montoRecibido: montoRecibido ?? null });
 
   return resultado.lastInsertRowid;
+}
+
+// Fase 3 (ver ADR 0012): estado='activa' es el default de la columna, así
+// que no hace falta un `crear` con estado explícito. anular() es la única
+// transición de estado que existe hoy — no hay "reactivar".
+function anular(id, motivoAnulacion) {
+  db.prepare(
+    `UPDATE ventas
+     SET estado = 'anulada', motivo_anulacion = @motivoAnulacion, anulada_en = datetime('now')
+     WHERE id = @id`
+  ).run({ id, motivoAnulacion });
 }
 
 function crearItem({
@@ -117,6 +138,7 @@ module.exports = {
   obtenerCajaSesionPorId,
   crear,
   crearItem,
+  anular,
   obtenerPorId,
   listar,
 };

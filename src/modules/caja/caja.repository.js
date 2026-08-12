@@ -44,9 +44,13 @@ function cerrar(id, montoCierre) {
   return obtenerPorId(id);
 }
 
+// Fase 3 (ver ADR 0012): una venta anulada nunca formó parte real del
+// dinero en caja (o se revirtió), así que las tres consultas de acá abajo
+// excluyen estado='anulada'. La venta sigue existiendo y visible en
+// GET /api/ventas — solo deja de sumar en los agregados.
 function obtenerTotalVentas(cajaSesionId) {
   return db
-    .prepare('SELECT COALESCE(SUM(total), 0) AS total FROM ventas WHERE caja_sesion_id = ?')
+    .prepare("SELECT COALESCE(SUM(total), 0) AS total FROM ventas WHERE caja_sesion_id = ? AND estado = 'activa'")
     .get(cajaSesionId).total;
 }
 
@@ -58,7 +62,7 @@ function obtenerTotalEfectivo(cajaSesionId) {
     .prepare(
       `SELECT COALESCE(SUM(total), 0) AS total
        FROM ventas
-       WHERE caja_sesion_id = ? AND TRIM(LOWER(medio_pago)) = 'efectivo'`
+       WHERE caja_sesion_id = ? AND estado = 'activa' AND TRIM(LOWER(medio_pago)) = 'efectivo'`
     )
     .get(cajaSesionId).total;
 }
@@ -68,7 +72,7 @@ function obtenerDesglosePorMedioPago(cajaSesionId) {
     .prepare(
       `SELECT TRIM(LOWER(medio_pago)) AS medioPago, SUM(total) AS total, COUNT(*) AS cantidadVentas
        FROM ventas
-       WHERE caja_sesion_id = ?
+       WHERE caja_sesion_id = ? AND estado = 'activa'
        GROUP BY TRIM(LOWER(medio_pago))
        ORDER BY total DESC`
     )
