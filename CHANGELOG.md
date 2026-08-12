@@ -4,6 +4,27 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Agregado (Fase 4 / Bloque 1: sesión en la interfaz de mostrador)
+
+- `public/js/auth.js` (nuevo): pantalla de login reutilizando el patrón
+  overlay ya existente (`#overlay-login`, mismo mecanismo que
+  `overlay-caja-cerrada`), con sub-estado de cambio de contraseña
+  obligatorio y logout.
+- `public/js/api.js`: `ErrorApi` gana un campo `codigo` (el que ya
+  devolvía el backend desde Fase 1); hook central `onSesionExpirada` en
+  `peticion()` — cualquier 401 `SIN_SESION` de cualquier módulo dispara el
+  mismo flujo (incluida una sesión que vence a mitad de una venta), sin
+  que cada call site tenga que chequearlo.
+- `main.js`: la carga inicial ya no pide productos/caja/alertas a ciegas
+  antes de saber si hay sesión — corrige el bug donde cualquier 401 de
+  sesión se mostraba como "No se pudo conectar con el servidor".
+- Fix no pedido explícitamente, hallado en la auditoría: el indicador de
+  alertas usaba `GET /api/reportes/inventario` (solo-administrador desde
+  Fase 1), lo que le daba 403 a un cajero. Ahora usa
+  `GET /api/inventario/alertas` + `GET /api/vencimientos/alertas` (ambos
+  de ambos roles), tal como ya había anticipado el ADR 0010.
+- ADR 0013 (en progreso, se amplía en los próximos bloques de Fase 4).
+
 ### Agregado (Fase 3: vuelto y anulación)
 
 - Migración `010_vuelto_y_anulacion_ventas.sql`: columnas `monto_recibido`,

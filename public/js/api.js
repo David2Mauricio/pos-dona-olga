@@ -5,11 +5,22 @@
 const BASE = '/api';
 
 export class ErrorApi extends Error {
-  constructor(mensaje, status, detalles) {
+  constructor(mensaje, status, codigo, detalles) {
     super(mensaje);
     this.status = status;
+    this.codigo = codigo;
     this.detalles = detalles;
   }
+}
+
+// Registrado por auth.js (ver Fase 4, Bloque 1): se dispara cuando CUALQUIER
+// llamada de CUALQUIER módulo recibe un 401 con codigo SIN_SESION — cubre
+// tanto la carga inicial sin sesión como una sesión que vence a mitad de
+// una venta. api.js no toca el DOM directamente (sigue siendo un cliente
+// delgado); solo avisa, quien decide qué mostrar es auth.js.
+let onSesionExpirada = null;
+export function registrarOnSesionExpirada(callback) {
+  onSesionExpirada = callback;
 }
 
 async function peticion(ruta, opciones = {}) {
@@ -21,7 +32,10 @@ async function peticion(ruta, opciones = {}) {
   const cuerpo = await respuesta.json().catch(() => null);
 
   if (!respuesta.ok) {
-    throw new ErrorApi(cuerpo?.error || 'Error de comunicación con el servidor', respuesta.status, cuerpo?.detalles);
+    if (respuesta.status === 401 && cuerpo?.codigo === 'SIN_SESION' && onSesionExpirada) {
+      onSesionExpirada();
+    }
+    throw new ErrorApi(cuerpo?.error || 'Error de comunicación con el servidor', respuesta.status, cuerpo?.codigo, cuerpo?.detalles);
   }
 
   return cuerpo;
@@ -39,6 +53,12 @@ async function peticionOpcional(ruta, opciones) {
 }
 
 export const api = {
+  login: (usuario, password) => peticion('/auth/login', { method: 'POST', body: JSON.stringify({ usuario, password }) }),
+  logout: () => peticion('/auth/logout', { method: 'POST' }),
+  obtenerSesion: () => peticion('/auth/sesion'),
+  cambiarPassword: (passwordActual, passwordNueva) =>
+    peticion('/auth/cambiar-password', { method: 'POST', body: JSON.stringify({ passwordActual, passwordNueva }) }),
+
   obtenerCajaActual: () => peticionOpcional('/caja/actual'),
   abrirCaja: (montoApertura) => peticion('/caja/apertura', { method: 'POST', body: JSON.stringify({ montoApertura }) }),
 
@@ -47,5 +67,9 @@ export const api = {
 
   crearVenta: (datos) => peticion('/ventas', { method: 'POST', body: JSON.stringify(datos) }),
 
-  obtenerReporteInventario: () => peticion('/reportes/inventario'),
+  // Reemplaza a GET /api/reportes/inventario (quedó solo-administrador
+  // desde Fase 1, ver ADR 0010): estos dos endpoints son de ambos roles,
+  // que es lo que necesita el indicador de alertas del mostrador.
+  obtenerAlertasInventario: () => peticion('/inventario/alertas'),
+  obtenerAlertasVencimientos: () => peticion('/vencimientos/alertas'),
 };

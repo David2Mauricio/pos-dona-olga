@@ -53,6 +53,12 @@ export const iconoCandado = `
 
 export const iconoCerrar = iconoQuitar;
 
+export const iconoSalir = `
+<svg ${ATRIBUTOS_BASE}>
+  <path d="M15 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8" />
+  <path d="M10 12h11M17 8l4 4-4 4" />
+</svg>`;
+
 // Placeholder para producto sin foto: un paquete envuelto en papel de
 // carnicería, no un ícono de "imagen rota" ni un cuadro gris genérico.
 export const iconoPaqueteVacio = `

@@ -295,6 +295,12 @@ img {
   gap: 0.5rem;
 }
 
+.cabecera__usuario {
+  font-size: 0.85rem;
+  color: var(--color-texto-muted);
+  white-space: nowrap;
+}
+
 .cabecera__alertas-contenedor {
   position: relative;
 }

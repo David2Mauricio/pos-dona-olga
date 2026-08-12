@@ -4,6 +4,7 @@ import { iniciarTema } from './theme.js';
 import { iniciarLectorCodigoBarras } from './barcode-scanner.js';
 import { renderizarGrillaProductos, renderizarCarrito, actualizarEstadoCaja, renderizarAlertas, mostrarToast } from './render.js';
 import { debounce } from './utils.js';
+import { iniciarAuth } from './auth.js';
 
 const elementoEstadoCaja = document.getElementById('estado-caja');
 const botonTema = document.getElementById('boton-tema');
@@ -180,12 +181,18 @@ async function cargarProductos() {
   renderizarBusquedaActual();
 }
 
-// --- Alertas (reutiliza el reporte de inventario ya construido: no hay
-// razón para llamar dos endpoints separados si uno ya trae todo). ---
+// --- Alertas ---
+// Fase 4/Bloque 1: GET /api/reportes/inventario quedó solo-administrador
+// desde Fase 1 (ADR 0010), así que un cajero recibiría 403 ahí. Se arma el
+// mismo shape que renderizarAlertas ya espera a partir de los dos
+// endpoints de alertas (de ambos roles), sin tocar render.js.
 
 async function cargarAlertas() {
-  const reporte = await api.obtenerReporteInventario();
-  renderizarAlertas({ reporte, mapaProductos, botonAlertas, panelAlertas });
+  const [productosStockBajo, lotesPorVencer] = await Promise.all([
+    api.obtenerAlertasInventario(),
+    api.obtenerAlertasVencimientos(),
+  ]);
+  renderizarAlertas({ reporte: { productosStockBajo, lotesPorVencer }, mapaProductos, botonAlertas, panelAlertas });
 }
 
 botonAlertas.addEventListener('click', () => {
@@ -206,17 +213,37 @@ document.addEventListener('keydown', (evento) => {
 });
 
 // --- Arranque ---
+// Fase 4/Bloque 1: antes de esto, iniciar() pedía productos/caja/alertas
+// sin saber si había sesión — todas esas llamadas volvían 401 y el catch
+// genérico las disfrazaba de "no se pudo conectar" (ver ADR 0013). Ahora
+// nada del mostrador se pide hasta que iniciarAuth confirme una sesión
+// lista (ver auth.js); una sesión que vence a mitad de uso la resuelve el
+// hook central de api.js (registrarOnSesionExpirada), no este bloque.
 
 iniciarTema(botonTema);
 reRenderizarCarrito();
 
-async function iniciar() {
+async function iniciarMostrador() {
   try {
     await cargarProductos(); // primero: renderizarAlertas necesita mapaProductos ya listo
     await Promise.all([verificarCaja(), cargarAlertas()]);
   } catch (error) {
+    // Acá sí puede ser un error de red real (el servidor no respondió) —
+    // ya no absorbe 401 de sesión, eso lo maneja auth.js antes de llegar acá.
     mostrarToast('No se pudo conectar con el servidor. Verificá que esté corriendo.', 'error');
   }
 }
 
-iniciar();
+iniciarAuth({
+  alListo: () => {
+    iniciarMostrador();
+  },
+  alCerrarSesion: () => {
+    productosActivos = [];
+    mapaProductos = new Map();
+    cajaSesionActual = null;
+    carrito.vaciar();
+    ultimoIdAgregado = null;
+    reRenderizarCarrito();
+  },
+});
