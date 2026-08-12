@@ -7,6 +7,7 @@ import { debounce, formatearMoneda } from './utils.js';
 import { iniciarAuth, obtenerUsuarioActual } from './auth.js';
 import { iniciarHistorial, abrirHistorial } from './historial.js';
 import { abrirCatalogo } from './catalogo.js';
+import { iniciarCierreCaja, establecerCajaSesionId } from './cierre-caja.js';
 
 const elementoEstadoCaja = document.getElementById('estado-caja');
 const botonTema = document.getElementById('boton-tema');
@@ -36,6 +37,7 @@ let productosActivos = [];
 let mapaProductos = new Map();
 let cajaSesionActual = null;
 let ultimoIdAgregado = null;
+let cierreCajaEnProceso = false;
 
 // Quita tildes/diéresis para que buscar "polllo" o "pechuga" encuentre
 // resultados sin importar si el cajero escribe los acentos o no.
@@ -133,7 +135,7 @@ function montoRecibidoAlcanza() {
 }
 
 function actualizarEstadoBotonCobrar() {
-  botonCobrar.disabled = carrito.estaVacio() || !cajaSesionActual || !montoRecibidoAlcanza();
+  botonCobrar.disabled = carrito.estaVacio() || !cajaSesionActual || !montoRecibidoAlcanza() || cierreCajaEnProceso;
 }
 
 selectMedioPago.addEventListener('change', () => {
@@ -222,6 +224,7 @@ botonCobrar.addEventListener('click', async () => {
 async function verificarCaja() {
   cajaSesionActual = await api.obtenerCajaActual();
   actualizarEstadoCaja(elementoEstadoCaja, cajaSesionActual);
+  establecerCajaSesionId(cajaSesionActual?.id ?? null);
   overlayCaja.hidden = Boolean(cajaSesionActual);
   actualizarEstadoBotonCobrar();
 }
@@ -326,6 +329,24 @@ navItems.forEach((boton) => {
 
 iniciarHistorial({ obtenerUsuarioActual });
 
+// Cierre de caja (ver ADR 0013): mientras el overlay de cierre está
+// abierto, "Cobrar" queda bloqueado (mismo criterio que sin caja abierta)
+// para que el monto teórico no pueda cambiar entre que se cuenta el
+// efectivo y se confirma. Al cerrar el overlay (cancelar o confirmar con
+// éxito) se vuelve a chequear el estado real de la caja — si el cierre
+// se confirmó, verificarCaja() ya no encuentra sesión abierta y el
+// overlay de "caja cerrada" existente se muestra solo.
+iniciarCierreCaja({
+  alAbrir: () => {
+    cierreCajaEnProceso = true;
+    actualizarEstadoBotonCobrar();
+  },
+  alCerrar: () => {
+    cierreCajaEnProceso = false;
+    verificarCaja();
+  },
+});
+
 // Historial, Productos e Indicadores son solo-administrador en la UI — la
 // protección real de Historial es el 403 ROL_INSUFICIENTE que el backend
 // ya devuelve en PATCH /api/ventas/:id/anular (verificado en Bloque 2);
@@ -365,6 +386,8 @@ iniciarAuth({
     productosActivos = [];
     mapaProductos = new Map();
     cajaSesionActual = null;
+    cierreCajaEnProceso = false;
+    establecerCajaSesionId(null);
     carrito.vaciar();
     ultimoIdAgregado = null;
     reRenderizarCarrito();

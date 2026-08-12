@@ -394,12 +394,31 @@ img {
   z-index: 20;
 }
 
+/* Ahora es un <button> (antes <p>): abre el cierre de caja cuando hay una
+   sesión abierta (ver cierre-caja.js). Reset de estilos nativos de botón
+   para que siga viéndose como el indicador de texto que ya era. */
 .cabecera__caja {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   font-size: 0.9rem;
   color: var(--color-texto-muted);
+  background: transparent;
+  border: none;
+  padding: 0;
+  min-height: 44px;
+}
+
+.cabecera__caja:not(:disabled) {
+  cursor: pointer;
+}
+
+.cabecera__caja:not(:disabled):hover {
+  color: var(--color-texto);
+}
+
+.cabecera__caja:disabled {
+  cursor: default;
 }
 
 .cabecera__caja[data-estado='abierta']::before {
@@ -810,6 +829,52 @@ img {
   min-height: 44px;
   display: flex;
   align-items: center;
+}
+
+/* --- Cierre de caja --- */
+
+.cierre-caja__resumen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  background: var(--color-fondo);
+  border-radius: var(--radio-chico);
+}
+
+.cierre-caja__fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--color-texto-muted);
+  font-size: 0.9rem;
+}
+
+.cierre-caja__desglose {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-left: 0.75rem;
+}
+
+.cierre-caja__fila--destacada {
+  padding-top: 0.5rem;
+  margin-top: 0.25rem;
+  border-top: 1px solid var(--color-borde);
+  color: var(--color-texto);
+  font-weight: 700;
+}
+
+.cierre-caja__diferencia {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+}
+
+.cierre-caja__diferencia[hidden] {
+  display: none;
 }
 
 /* ============================================================

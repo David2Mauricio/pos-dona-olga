@@ -2,7 +2,7 @@
 
 ## Estado
 
-En progreso — este ADR se amplía a medida que se cierra cada pieza de la Fase 4. Bloque 1 (sesión), Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, navegación persistente) y la sección de Gestión de Productos y Categorías cerrados; Bloque 3 (KPIs) y Cierre de Caja pendientes.
+En progreso — este ADR se amplía a medida que se cierra cada pieza de la Fase 4. Bloque 1 (sesión), Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, navegación persistente), Gestión de Productos y Categorías, y Cierre de Caja cerrados; Bloque 3 (KPIs) pendiente — con esto el sistema cubre el 100% de los módulos de backend construidos.
 
 ## Contexto
 
@@ -138,6 +138,30 @@ Todo el DOM se construye con `createElement`/`textContent`, nunca `innerHTML` in
 ### Verificación
 
 Suite Puppeteer contra Chrome real (20/20): categoría creada y renombrada reflejándose en el listado; alta de producto (tipo unidad) con los campos correctos visibles/ocultos; buscador por nombre filtrando en cliente; edición confirmando que tipo de venta y stock quedan ocultos y que activo sí se puede togglear; alta de producto tipo "peso" con conversión real de "2,5" (texto, coma decimal) a 2500 gramos verificada contra el backend; sección e ítem de nav ocultos para cajero; y el 403 `ROL_INSUFICIENTE` verificado contra el backend igual que en las secciones anteriores. axe-core: 0 violaciones en 6 combinaciones (listado de productos/categorías, ambos formularios abiertos, alta en modo peso, ambos temas). Lighthouse sobre el mostrador autenticado: 98/100/100/100, sin cambios. Datos de prueba (3 categorías, 4 productos, usuario cajero) eliminados de la base real al terminar.
+
+## Sección: Cierre de Caja
+
+Segunda y última de las dos secciones agregadas a la cola. Auditoría de `caja.routes.js`, `caja.schema.js`, `caja.service.js`, `caja.repository.js` antes de escribir código.
+
+### Hallazgos de la auditoría
+
+- `PATCH /api/caja/:id/cierre` es de **ambos roles** — a diferencia de anular una venta o crear un movimiento manual de inventario, acá quien cierra cierra su propio turno y el cálculo de la diferencia lo hace el backend de forma transparente; no hay una vía para que el cajero lo manipule a su favor. Confirmado con el cliente antes de implementar.
+- El backend ya calcula `montoTeoricoEfectivo` y `diferencia` (`caja.service.js`: `diferencia: montoCierre - montoTeoricoEfectivo`) — mismo criterio que `vuelto` (ADR 0012) y `ticketPromedio`: el frontend no resta nada, solo muestra lo que ya viene.
+- `GET /api/caja/:id` expone además `totalVentas` y `desglosePorMedioPago`, disponibles en cualquier momento (sesión abierta o cerrada).
+
+### Bloqueo del mostrador durante el cierre
+
+Decisión (mi criterio, confirmado con el cliente antes de implementar): mientras el overlay de cierre está abierto, "Cobrar" queda bloqueado — mismo bloqueo total que ya existe para "sin caja abierta", no un bloqueo parcial. Razón: `montoTeoricoEfectivo` se recalcula en el momento exacto del `PATCH`; si se permitieran ventas en efectivo mientras alguien cuenta el cajón físicamente, el monto contado quedaría desactualizado respecto al teórico que el backend calcula al confirmar, generando una `diferencia` que refleja un desfase de tiempo, no un error real de caja. Esto además es lo que hace confiable la **vista previa de la diferencia** que se muestra mientras se escribe el conteo (antes de confirmar): es aritmética simple hecha en el cliente (`montoContado - montoTeorico`, ambos ya obtenidos del backend), pero solo es válida porque no puede haber cambiado nada de por medio — la venta bloqueada garantiza eso.
+
+`estado-caja` pasó de ser un `<p>` a un `<button>` (reset de estilos nativos para que se siga viendo igual) — es la entrada al flujo de cierre cuando hay una sesión abierta.
+
+### "Sobra $X" / "Falta $X", no solo el signo
+
+Pedido explícito del cliente: la diferencia se etiqueta como "Sobra $X" o "Falta $X" según el signo (y "Cuadra" si es 0), no un número con signo suelto — más rápido de leer al cerrar un turno. Color semántico: éxito si cuadra, peligro tanto si sobra como si falta (ambos son desviaciones que ameritan revisión, nunca el navy de marca).
+
+### Verificación
+
+Suite Puppeteer contra Chrome real (15/15) cubriendo los tres escenarios pedidos explícitamente: diferencia en 0 ("Cuadra", badge de éxito), sobrante ("Sobra $5.000", badge de peligro), y faltante ("Falta $3.000"). Además: "Cobrar" bloqueado mientras el overlay está abierto (con un producto real en el carrito, no solo verificado en abstracto) y bloqueado también después de confirmar (por falta de caja, ya no por el cierre); tras confirmar, el overlay de "caja cerrada" aparece solo, sin código nuevo; cancelar el cierre deja la sesión abierta; y verificación directa contra el backend de que un cajero puede cerrar su propia caja (200, no 403). axe-core: 0 violaciones en 4 combinaciones (mostrador con caja abierta, overlay de cierre con y sin diferencia visible, ambos temas). Lighthouse sin cambios (login 98/100/96/100, mostrador 98/100/100/100). Datos de prueba (producto, categoría, sesiones de caja, usuario cajero) eliminados de la base real al terminar.
 
 ## Bloque 3
 

@@ -61,6 +61,8 @@ export const api = {
 
   obtenerCajaActual: () => peticionOpcional('/caja/actual'),
   abrirCaja: (montoApertura) => peticion('/caja/apertura', { method: 'POST', body: JSON.stringify({ montoApertura }) }),
+  obtenerReporteCaja: (id) => peticion(`/caja/${id}`),
+  cerrarCaja: (id, montoCierre) => peticion(`/caja/${id}/cierre`, { method: 'PATCH', body: JSON.stringify({ montoCierre }) }),
 
   listarProductosActivos: () => peticion('/productos?activo=true'),
   buscarProductoPorCodigoBarras: (codigo) => peticionOpcional(`/productos/codigo-barras/${encodeURIComponent(codigo)}`),

@@ -4,6 +4,25 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Agregado (Fase 4: Cierre de Caja)
+
+- El indicador "Caja abierta · $X" en la barra de contexto pasa a ser un
+  botón: abre el flujo de cierre (ambos roles — quien cierra cierra su
+  propio turno y el cálculo lo hace el backend, sin margen para manipularlo).
+- Resumen antes de cerrar: total de ventas, desglose por medio de pago,
+  monto teórico en efectivo — todo ya calculado por el backend
+  (`caja.service.js`), mismo criterio que vuelto/ticketPromedio.
+- La diferencia se etiqueta "Sobra $X" / "Falta $X" / "Cuadra" (no un
+  número con signo suelto), en color de éxito o peligro — nunca el navy
+  de marca.
+- Mientras el cierre está en proceso, "Cobrar" queda bloqueado (mismo
+  bloqueo total que sin caja abierta) — evita que una venta en efectivo
+  cambie el monto teórico entre que se cuenta el efectivo y se confirma.
+- `public/js/cierre-caja.js` (nuevo), métodos nuevos en `api.js`.
+- ADR 0013 ampliado. Con esta sección más las anteriores, la interfaz
+  cubre el 100% de los módulos de backend construidos (salvo el panel de
+  KPIs, Bloque 3, todavía pendiente).
+
 ### Agregado (Fase 4: gestión de Productos y Categorías)
 
 - Nueva sección "Productos" en la sidebar (solo administrador), con dos

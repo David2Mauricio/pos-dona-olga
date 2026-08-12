@@ -112,7 +112,7 @@
 
   <div id="contenido-principal">
     <header class="cabecera-contexto">
-      <p id="estado-caja" class="cabecera__caja" data-estado="cerrada">Verificando caja…</p>
+      <button id="estado-caja" type="button" class="cabecera__caja" data-estado="cerrada" disabled>Verificando caja…</button>
 
       <div class="cabecera__alertas-contenedor">
         <button id="boton-alertas" type="button" class="boton-icono" aria-haspopup="true" aria-expanded="false" aria-label="Alertas">
@@ -362,6 +362,42 @@
       <div class="overlay__acciones">
         <button type="submit" class="boton-primario">Guardar</button>
         <button type="button" id="boton-cancelar-categoria" class="boton-secundario">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="overlay-cierre-caja" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-cierre-caja" hidden>
+  <div class="overlay__panel overlay__panel--ancho">
+    <h2 id="titulo-cierre-caja">Cerrar caja</h2>
+    <p>Mientras este cierre esté abierto, no se pueden registrar nuevas ventas — así el monto teórico no cambia entre que contás el efectivo y confirmás.</p>
+
+    <div class="cierre-caja__resumen">
+      <div class="cierre-caja__fila">
+        <span>Total ventas</span>
+        <span id="cierre-total-ventas" class="numero">$0</span>
+      </div>
+      <div id="cierre-desglose" class="cierre-caja__desglose"></div>
+      <div class="cierre-caja__fila cierre-caja__fila--destacada">
+        <span>Monto teórico en efectivo</span>
+        <span id="cierre-monto-teorico" class="numero">$0</span>
+      </div>
+    </div>
+
+    <form id="formulario-cierre-caja">
+      <div class="campo">
+        <label for="input-monto-cierre">Efectivo contado físicamente</label>
+        <input id="input-monto-cierre" type="number" inputmode="numeric" min="0" step="1" required />
+      </div>
+
+      <div class="cierre-caja__diferencia" id="cierre-diferencia-contenedor" hidden>
+        <span>Diferencia</span>
+        <span id="cierre-diferencia-badge" class="badge-alerta"></span>
+      </div>
+
+      <div class="overlay__acciones">
+        <button type="submit" class="boton-primario">Confirmar cierre</button>
+        <button type="button" id="boton-cancelar-cierre" class="boton-secundario">Cancelar</button>
       </div>
     </form>
   </div>
