@@ -66,6 +66,9 @@ export const api = {
   buscarProductoPorCodigoBarras: (codigo) => peticionOpcional(`/productos/codigo-barras/${encodeURIComponent(codigo)}`),
 
   crearVenta: (datos) => peticion('/ventas', { method: 'POST', body: JSON.stringify(datos) }),
+  listarVentas: ({ desde, hasta }) => peticion(`/ventas?desde=${desde}&hasta=${hasta}`),
+  anularVenta: (id, motivoAnulacion) =>
+    peticion(`/ventas/${id}/anular`, { method: 'PATCH', body: JSON.stringify({ motivoAnulacion }) }),
 
   // Reemplaza a GET /api/reportes/inventario (quedó solo-administrador
   // desde Fase 1, ver ADR 0010): estos dos endpoints son de ambos roles,

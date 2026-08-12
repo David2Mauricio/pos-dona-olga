@@ -3,8 +3,9 @@ import { carrito } from './cart.js';
 import { iniciarTema } from './theme.js';
 import { iniciarLectorCodigoBarras } from './barcode-scanner.js';
 import { renderizarGrillaProductos, renderizarCarrito, actualizarEstadoCaja, renderizarAlertas, mostrarToast } from './render.js';
-import { debounce } from './utils.js';
-import { iniciarAuth } from './auth.js';
+import { debounce, formatearMoneda } from './utils.js';
+import { iniciarAuth, obtenerUsuarioActual } from './auth.js';
+import { iniciarHistorial, abrirHistorial } from './historial.js';
 
 const elementoEstadoCaja = document.getElementById('estado-caja');
 const botonTema = document.getElementById('boton-tema');
@@ -17,7 +18,13 @@ const listaCarrito = document.getElementById('lista-carrito');
 const totalCarrito = document.getElementById('total-carrito');
 const selectTipoPrecio = document.getElementById('select-tipo-precio');
 const selectMedioPago = document.getElementById('select-medio-pago');
+const campoMontoRecibido = document.getElementById('campo-monto-recibido');
+const inputMontoRecibido = document.getElementById('input-monto-recibido');
+const filaVuelto = document.getElementById('fila-vuelto');
+const vueltoCarrito = document.getElementById('vuelto-carrito');
 const botonCobrar = document.getElementById('boton-cobrar');
+const appRoot = document.getElementById('app');
+const botonHistorial = document.getElementById('boton-historial');
 const overlayCaja = document.getElementById('overlay-caja-cerrada');
 const formularioAbrirCaja = document.getElementById('formulario-abrir-caja');
 const inputMontoApertura = document.getElementById('input-monto-apertura');
@@ -62,9 +69,18 @@ function reRenderizarCarrito() {
       carrito.quitarProducto(productoId);
       reRenderizarCarrito();
     },
+    alAjustarPrecio: (productoId, precio, motivo) => {
+      carrito.establecerOverride(productoId, precio, motivo);
+      reRenderizarCarrito();
+    },
+    alQuitarAjuste: (productoId) => {
+      carrito.quitarOverride(productoId);
+      reRenderizarCarrito();
+    },
     idRecienAgregado: ultimoIdAgregado,
   });
-  botonCobrar.disabled = carrito.estaVacio() || !cajaSesionActual;
+  actualizarVuelto();
+  actualizarEstadoBotonCobrar();
 }
 
 function agregarProductoAlCarrito(producto) {
@@ -77,6 +93,55 @@ function agregarProductoAlCarrito(producto) {
 selectTipoPrecio.addEventListener('change', () => {
   carrito.establecerTipoPrecio(selectTipoPrecio.value);
   reRenderizarCarrito();
+});
+
+// --- Vuelto (Fase 3, ver ADR 0012/0013) ---
+// Mismo criterio tolerante a mayúsculas/espacios que usa el backend para
+// reconocer 'efectivo' (no hay catálogo cerrado de medios de pago, ADR 0004).
+function esEfectivo() {
+  return selectMedioPago.value.trim().toLowerCase() === 'efectivo';
+}
+
+function actualizarVisibilidadMontoRecibido() {
+  const mostrar = esEfectivo();
+  campoMontoRecibido.hidden = !mostrar;
+  filaVuelto.hidden = !mostrar;
+  if (!mostrar) inputMontoRecibido.value = '';
+}
+
+function actualizarVuelto() {
+  if (!esEfectivo()) {
+    vueltoCarrito.textContent = formatearMoneda(0);
+    return;
+  }
+  const montoRecibido = Number.parseInt(inputMontoRecibido.value, 10);
+  const total = carrito.obtenerTotal();
+  const vuelto = Number.isFinite(montoRecibido) ? montoRecibido - total : 0;
+  vueltoCarrito.textContent = formatearMoneda(Math.max(vuelto, 0));
+}
+
+// Validación en cliente ADEMÁS de la que ya existe en el backend (nunca en
+// vez de) — acá solo evita un viaje al servidor que se sabe de antemano
+// que va a rechazar; ventas.service.js sigue siendo quien decide de verdad.
+function montoRecibidoAlcanza() {
+  if (!esEfectivo()) return true;
+  const montoRecibido = Number.parseInt(inputMontoRecibido.value, 10);
+  return Number.isFinite(montoRecibido) && montoRecibido >= carrito.obtenerTotal();
+}
+
+function actualizarEstadoBotonCobrar() {
+  botonCobrar.disabled = carrito.estaVacio() || !cajaSesionActual || !montoRecibidoAlcanza();
+}
+
+selectMedioPago.addEventListener('change', () => {
+  actualizarVisibilidadMontoRecibido();
+  actualizarVuelto();
+  actualizarEstadoBotonCobrar();
+});
+
+inputMontoRecibido.addEventListener('input', () => {
+  actualizarVuelto();
+  actualizarEstadoBotonCobrar();
 });
 
 // --- Búsqueda manual (filtro en cliente sobre los productos activos ya
@@ -123,17 +188,21 @@ botonCobrar.addEventListener('click', async () => {
     // backend (ver ADR 0007): esta venta ya quedó registrada apenas la
     // respuesta llega, sin importar si imprimir tarda o falla — por eso
     // el éxito se confirma acá, no se espera nada más.
-    await api.crearVenta({
+    const venta = await api.crearVenta({
       cajaSesionId: cajaSesionActual.id,
       tipoPrecio: carrito.obtenerTipoPrecio(),
       medioPago: selectMedioPago.value,
+      ...(esEfectivo() ? { montoRecibido: Number.parseInt(inputMontoRecibido.value, 10) } : {}),
       items: carrito.obtenerItemsParaVenta(),
     });
 
-    mostrarToast('Venta registrada con éxito');
+    mostrarToast(
+      venta.vuelto !== null ? `Venta registrada — vuelto: ${formatearMoneda(venta.vuelto)}` : 'Venta registrada con éxito'
+    );
     carrito.vaciar();
     ultimoIdAgregado = null;
     selectTipoPrecio.value = 'publico';
+    inputMontoRecibido.value = '';
     reRenderizarCarrito();
     cargarProductos();
     cargarAlertas();
@@ -141,7 +210,7 @@ botonCobrar.addEventListener('click', async () => {
     mostrarToast(mensajeDeError(error), 'error');
   } finally {
     botonCobrar.textContent = textoOriginal;
-    botonCobrar.disabled = carrito.estaVacio() || !cajaSesionActual;
+    actualizarEstadoBotonCobrar();
   }
 });
 
@@ -151,7 +220,7 @@ async function verificarCaja() {
   cajaSesionActual = await api.obtenerCajaActual();
   actualizarEstadoCaja(elementoEstadoCaja, cajaSesionActual);
   overlayCaja.hidden = Boolean(cajaSesionActual);
-  botonCobrar.disabled = carrito.estaVacio() || !cajaSesionActual;
+  actualizarEstadoBotonCobrar();
 }
 
 formularioAbrirCaja.addEventListener('submit', async (evento) => {
@@ -221,7 +290,24 @@ document.addEventListener('keydown', (evento) => {
 // hook central de api.js (registrarOnSesionExpirada), no este bloque.
 
 iniciarTema(botonTema);
+actualizarVisibilidadMontoRecibido();
 reRenderizarCarrito();
+
+// Fase 4/Bloque 2 (ver ADR 0012/0013): historial es solo-administrador en
+// la UI — la protección real es el 403 ROL_INSUFICIENTE que el backend ya
+// devuelve en PATCH /api/ventas/:id/anular, esto solo evita mostrar una
+// acción que un cajero igual no podría completar.
+botonHistorial.addEventListener('click', () => {
+  appRoot.hidden = true;
+  abrirHistorial();
+});
+
+iniciarHistorial({
+  obtenerUsuarioActual,
+  alCerrar: () => {
+    appRoot.hidden = false;
+  },
+});
 
 async function iniciarMostrador() {
   try {
@@ -235,10 +321,12 @@ async function iniciarMostrador() {
 }
 
 iniciarAuth({
-  alListo: () => {
+  alListo: (usuario) => {
+    botonHistorial.hidden = usuario.rol !== 'administrador';
     iniciarMostrador();
   },
   alCerrarSesion: () => {
+    botonHistorial.hidden = true;
     productosActivos = [];
     mapaProductos = new Map();
     cajaSesionActual = null;

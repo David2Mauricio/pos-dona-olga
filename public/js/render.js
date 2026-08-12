@@ -3,7 +3,7 @@
 // insertan siempre con textContent, nunca con innerHTML interpolado:
 // aunque el backend es propio y confiable, es el hábito correcto.
 
-import { iconoQuitar, iconoPaqueteVacio, iconoAlerta, iconoCheck } from './icons.js';
+import { iconoQuitar, iconoPaqueteVacio, iconoAlerta, iconoCheck, iconoEditar } from './icons.js';
 import { formatearMoneda, gramosAKilosTexto, kilosTextoAGramos } from './utils.js';
 import { carrito } from './cart.js';
 
@@ -85,7 +85,15 @@ function tieneStockBajo(producto) {
   return stockActual < producto.stockMinimo;
 }
 
-export function renderizarCarrito({ contenedorLista, elementoTotal, alCambiarCantidad, alQuitar, idRecienAgregado }) {
+export function renderizarCarrito({
+  contenedorLista,
+  elementoTotal,
+  alCambiarCantidad,
+  alQuitar,
+  alAjustarPrecio,
+  alQuitarAjuste,
+  idRecienAgregado,
+}) {
   const items = carrito.obtenerItems();
   contenedorLista.innerHTML = '';
 
@@ -97,7 +105,7 @@ export function renderizarCarrito({ contenedorLista, elementoTotal, alCambiarCan
   } else {
     items.forEach((item) => {
       contenedorLista.appendChild(
-        crearFilaCarrito(item, alCambiarCantidad, alQuitar, item.producto.id === idRecienAgregado)
+        crearFilaCarrito(item, alCambiarCantidad, alQuitar, alAjustarPrecio, alQuitarAjuste, item.producto.id === idRecienAgregado)
       );
     });
   }
@@ -112,7 +120,7 @@ export function renderizarCarrito({ contenedorLista, elementoTotal, alCambiarCan
   elementoTotal.classList.add('total--actualizado');
 }
 
-function crearFilaCarrito(item, alCambiarCantidad, alQuitar, esNuevo) {
+function crearFilaCarrito(item, alCambiarCantidad, alQuitar, alAjustarPrecio, alQuitarAjuste, esNuevo) {
   const esPeso = item.producto.tipoVenta === 'peso';
   const li = document.createElement('li');
   li.className = esNuevo ? 'item-carrito item-carrito--nuevo' : 'item-carrito';
@@ -125,10 +133,38 @@ function crearFilaCarrito(item, alCambiarCantidad, alQuitar, esNuevo) {
   nombre.textContent = item.producto.nombre;
   info.appendChild(nombre);
 
-  const precioUnitario = document.createElement('p');
-  precioUnitario.className = 'item-carrito__precio-unitario numero';
-  precioUnitario.textContent = esPeso ? `${formatearMoneda(item.precioUnitario)}/kg` : formatearMoneda(item.precioUnitario);
-  info.appendChild(precioUnitario);
+  // Fase 2 (ver ADR 0011/0013): con override, se muestra el precio de
+  // catálogo tachado junto al nuevo, más un badge — para que quede claro
+  // de un vistazo que esa línea no se está cobrando al precio de lista.
+  const filaPrecio = document.createElement('p');
+  filaPrecio.className = 'item-carrito__precio-unitario';
+
+  if (item.precioModificado) {
+    const tipoPrecio = carrito.obtenerTipoPrecio();
+    const precioCatalogo =
+      tipoPrecio === 'mayorista' ? item.producto.precioMayorista ?? item.producto.precioPublico : item.producto.precioPublico;
+
+    const original = document.createElement('span');
+    original.className = 'item-carrito__precio-original numero';
+    original.textContent = esPeso ? `${formatearMoneda(precioCatalogo)}/kg` : formatearMoneda(precioCatalogo);
+    filaPrecio.appendChild(original);
+  }
+
+  const precioActual = document.createElement('span');
+  precioActual.className = 'numero';
+  precioActual.textContent = esPeso ? `${formatearMoneda(item.precioUnitario)}/kg` : formatearMoneda(item.precioUnitario);
+  filaPrecio.appendChild(precioActual);
+
+  if (item.precioModificado) {
+    const badge = document.createElement('span');
+    badge.className = 'badge-alerta';
+    badge.textContent = 'Precio ajustado';
+    badge.title = item.motivoAjuste;
+    filaPrecio.appendChild(badge);
+  }
+
+  info.appendChild(filaPrecio);
+  info.appendChild(crearAjustePrecio(item, alAjustarPrecio, alQuitarAjuste));
 
   const detalle = document.createElement('div');
   detalle.className = 'item-carrito__detalle';
@@ -186,6 +222,94 @@ function crearFilaCarrito(item, alCambiarCantidad, alQuitar, esNuevo) {
   return li;
 }
 
+// Fase 2 (ver ADR 0011/0013): botón + mini-formulario inline (no un
+// overlay, para no cortar el flujo de cobro) para fijar o quitar un
+// override de precio en esa línea. El toggle de abrir/cerrar el
+// formulario es DOM directo (mismo criterio que el panel de alertas), no
+// dispara un re-render del carrito — solo confirmar/quitar el ajuste sí,
+// porque ahí cambia el precio/subtotal real.
+function crearAjustePrecio(item, alAjustarPrecio, alQuitarAjuste) {
+  const contenedor = document.createElement('div');
+  contenedor.className = 'item-carrito__ajuste';
+
+  const botonAbrir = document.createElement('button');
+  botonAbrir.type = 'button';
+  botonAbrir.className = 'item-carrito__ajuste-boton';
+  botonAbrir.innerHTML = iconoEditar;
+  const textoBoton = document.createElement('span');
+  textoBoton.textContent = item.precioModificado ? 'Editar ajuste' : 'Ajustar precio';
+  botonAbrir.appendChild(textoBoton);
+
+  const idPrecio = `ajuste-precio-${item.producto.id}`;
+  const idMotivo = `ajuste-motivo-${item.producto.id}`;
+
+  const formulario = document.createElement('form');
+  formulario.className = 'item-carrito__ajuste-form';
+  formulario.hidden = true;
+
+  const campoPrecio = document.createElement('div');
+  campoPrecio.className = 'campo';
+  const labelPrecio = document.createElement('label');
+  labelPrecio.setAttribute('for', idPrecio);
+  labelPrecio.textContent = 'Precio ajustado';
+  const inputPrecio = document.createElement('input');
+  inputPrecio.id = idPrecio;
+  inputPrecio.type = 'number';
+  inputPrecio.min = '0';
+  inputPrecio.inputMode = 'numeric';
+  inputPrecio.required = true;
+  inputPrecio.value = item.precioModificado ? String(item.precioUnitario) : '';
+  campoPrecio.append(labelPrecio, inputPrecio);
+
+  const campoMotivo = document.createElement('div');
+  campoMotivo.className = 'campo';
+  const labelMotivo = document.createElement('label');
+  labelMotivo.setAttribute('for', idMotivo);
+  labelMotivo.textContent = 'Motivo del ajuste';
+  const inputMotivo = document.createElement('input');
+  inputMotivo.id = idMotivo;
+  inputMotivo.type = 'text';
+  inputMotivo.required = true;
+  inputMotivo.value = item.motivoAjuste ?? '';
+  campoMotivo.append(labelMotivo, inputMotivo);
+
+  const acciones = document.createElement('div');
+  acciones.className = 'item-carrito__ajuste-acciones';
+
+  const botonGuardar = document.createElement('button');
+  botonGuardar.type = 'submit';
+  botonGuardar.className = 'boton-secundario';
+  botonGuardar.textContent = 'Guardar';
+  acciones.appendChild(botonGuardar);
+
+  if (item.precioModificado) {
+    const botonQuitarAjuste = document.createElement('button');
+    botonQuitarAjuste.type = 'button';
+    botonQuitarAjuste.className = 'boton-secundario';
+    botonQuitarAjuste.textContent = 'Quitar ajuste';
+    botonQuitarAjuste.addEventListener('click', () => alQuitarAjuste(item.producto.id));
+    acciones.appendChild(botonQuitarAjuste);
+  }
+
+  formulario.append(campoPrecio, campoMotivo, acciones);
+
+  botonAbrir.addEventListener('click', () => {
+    formulario.hidden = !formulario.hidden;
+    if (!formulario.hidden) inputPrecio.focus();
+  });
+
+  formulario.addEventListener('submit', (evento) => {
+    evento.preventDefault();
+    const precio = Number.parseInt(inputPrecio.value, 10);
+    const motivo = inputMotivo.value.trim();
+    if (!(precio >= 0) || !motivo) return;
+    alAjustarPrecio(item.producto.id, precio, motivo);
+  });
+
+  contenedor.append(botonAbrir, formulario);
+  return contenedor;
+}
+
 export function actualizarEstadoCaja(elemento, sesion) {
   if (sesion) {
     elemento.dataset.estado = 'abierta';
@@ -217,8 +341,10 @@ export function renderizarAlertas({ reporte, mapaProductos, botonAlertas, panelA
 
   panelAlertas.innerHTML = '';
   panelAlertas.appendChild(crearSeccionAlertas('Stock bajo', stockBajo, (producto) => {
-    const disponible = producto.tipoVenta === 'peso' ? producto.stockGramos : producto.stockUnidades;
-    return `${disponible}/${producto.stockMinimo}`;
+    // GET /api/inventario/alertas ya devuelve stockActual resuelto según
+    // tipoVenta (ver inventario.repository.js) — no hace falta (ni existe)
+    // un stockGramos/stockUnidades separado en esta forma de la respuesta.
+    return `${producto.stockActual}/${producto.stockMinimo}`;
   }, 'Ningún producto por debajo de su mínimo.'));
 
   const lotes = [

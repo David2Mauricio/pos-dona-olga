@@ -4,6 +4,41 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Cambiado (Fase 4 / Bloque 2: paleta navy/blanco/gris)
+
+- Paleta cálida del ADR 0009 (crema/vino, Fraunces + Public Sans)
+  reemplazada por navy/blanco/gris con Montserrat (400/500/700/800) +
+  IBM Plex Mono (400/500/600/700, específicamente para precios/pesos/
+  totales/vueltos). Contraste WCAG real verificado (16 combinaciones,
+  0 fallos) y confirmado con capturas de pantalla reales en ambos temas.
+- Dos bugs preexistentes encontrados y corregidos durante la verificación
+  visual (ninguno causado por la paleta): el badge de "Stock bajo" leía
+  un campo (`stockGramos`/`stockUnidades`) que no existe en la respuesta
+  de `GET /api/inventario/alertas` (el campo real es `stockActual`); y un
+  formulario oculto con `hidden` seguía visible por una regla de autor
+  (`display: flex`) que gana contra el `[hidden]` del navegador sin
+  importar especificidad — corregido con overrides `[hidden]` explícitos
+  en cada punto donde un elemento se alterna así.
+- Lighthouse: login sin sesión 99/100/96/100 (96 = 401 esperado en carga
+  anónima, no un bug); mostrador autenticado 98/100/100/100. axe-core:
+  0 violaciones en las 4 combinaciones (login/mostrador × claro/oscuro).
+
+### Agregado (Fase 4 / Bloque 2: trazabilidad de precios y anulación en el flujo de venta)
+
+- Override de precio por ítem en el carrito (`public/js/cart.js`,
+  `render.js`): mini-formulario inline (precio + motivo obligatorio) que
+  replica la regla del backend (el override, si existe, siempre gana
+  sobre el precio de catálogo, independiente de Público/Mayorista).
+- Vuelto: campo "Monto recibido" (solo visible si el medio de pago es
+  efectivo) con validación en cliente además de la del backend, y vuelto
+  calculado en vivo antes de confirmar el cobro.
+- `public/js/historial.js` (nuevo): vista de historial de ventas del día,
+  separada del mostrador, con anulación (motivo obligatorio) visible solo
+  para administrador — la protección real sigue siendo el 403
+  `ROL_INSUFICIENTE` del backend, verificado explícitamente contra el
+  endpoint sin pasar por la UI.
+- ADR 0013 ampliado con ambos bloques.
+
 ### Agregado (Fase 4 / Bloque 1: sesión en la interfaz de mostrador)
 
 - `public/js/auth.js` (nuevo): pantalla de login reutilizando el patrón

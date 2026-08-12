@@ -8,30 +8,42 @@
 // la venta) — esto es solo para que el total en pantalla coincida con lo
 // que se va a cobrar de verdad, no una fuente de verdad paralela.
 
-let items = []; // [{ producto, cantidad }]
+let items = []; // [{ producto, cantidad, override: null | { precioUnitarioOverride, motivoAjuste } }]
 let tipoPrecio = 'publico';
 
-function calcularPrecioUnitario(producto) {
-  if (tipoPrecio === 'mayorista') {
-    return producto.precioMayorista ?? producto.precioPublico;
+// Fase 2 (ver ADR 0011/0013): un override es un precio absoluto que el
+// cajero fija para esa línea — no depende de tipoPrecio ni lo reemplaza
+// para el resto del carrito, sigue vigente aunque después se cambie
+// Público/Mayorista (igual criterio que el backend: el override, si
+// existe, siempre gana sobre resolverPrecioAplicado).
+function calcularPrecioUnitarioItem(item) {
+  if (item.override) {
+    return item.override.precioUnitarioOverride;
   }
-  return producto.precioPublico;
+  if (tipoPrecio === 'mayorista') {
+    return item.producto.precioMayorista ?? item.producto.precioPublico;
+  }
+  return item.producto.precioPublico;
 }
 
-function calcularSubtotal(producto, cantidad) {
-  const precioUnitario = calcularPrecioUnitario(producto);
+function calcularSubtotal(producto, cantidad, precioUnitario) {
   const divisor = producto.tipoVenta === 'peso' ? 1000 : 1;
   return Math.round((precioUnitario * cantidad) / divisor);
 }
 
 export const carrito = {
   obtenerItems() {
-    return items.map((item) => ({
-      producto: item.producto,
-      cantidad: item.cantidad,
-      precioUnitario: calcularPrecioUnitario(item.producto),
-      subtotal: calcularSubtotal(item.producto, item.cantidad),
-    }));
+    return items.map((item) => {
+      const precioUnitario = calcularPrecioUnitarioItem(item);
+      return {
+        producto: item.producto,
+        cantidad: item.cantidad,
+        precioUnitario,
+        subtotal: calcularSubtotal(item.producto, item.cantidad, precioUnitario),
+        precioModificado: item.override !== null,
+        motivoAjuste: item.override?.motivoAjuste ?? null,
+      };
+    });
   },
 
   // Cantidad inicial razonable al agregar desde la búsqueda/lector: 1kg
@@ -43,7 +55,7 @@ export const carrito = {
       existente.cantidad += producto.tipoVenta === 'peso' ? 1000 : 1;
       return;
     }
-    items.push({ producto, cantidad: producto.tipoVenta === 'peso' ? 1000 : 1 });
+    items.push({ producto, cantidad: producto.tipoVenta === 'peso' ? 1000 : 1, override: null });
   },
 
   actualizarCantidad(productoId, nuevaCantidad) {
@@ -54,6 +66,16 @@ export const carrito = {
 
   quitarProducto(productoId) {
     items = items.filter((item) => item.producto.id !== productoId);
+  },
+
+  establecerOverride(productoId, precioUnitarioOverride, motivoAjuste) {
+    const item = items.find((i) => i.producto.id === productoId);
+    if (item) item.override = { precioUnitarioOverride, motivoAjuste };
+  },
+
+  quitarOverride(productoId) {
+    const item = items.find((i) => i.producto.id === productoId);
+    if (item) item.override = null;
   },
 
   establecerTipoPrecio(nuevo) {
@@ -77,8 +99,20 @@ export const carrito = {
     tipoPrecio = 'publico';
   },
 
-  // Shape exacto que espera POST /api/ventas.
+  // Shape exacto que espera POST /api/ventas (ventas.schema.js): solo
+  // incluye precioUnitarioOverride/motivoAjuste cuando el item tiene un
+  // override — el schema del backend rechaza uno sin el otro, y también
+  // rechaza mandarlos como null/undefined explícitos junto a los demás
+  // campos si .strict() los ve de más, así que se omiten por completo
+  // cuando no aplican en vez de mandarlos en null.
   obtenerItemsParaVenta() {
-    return items.map((item) => ({ productoId: item.producto.id, cantidad: item.cantidad }));
+    return items.map((item) => {
+      const base = { productoId: item.producto.id, cantidad: item.cantidad };
+      if (item.override) {
+        base.precioUnitarioOverride = item.override.precioUnitarioOverride;
+        base.motivoAjuste = item.override.motivoAjuste;
+      }
+      return base;
+    });
   },
 };

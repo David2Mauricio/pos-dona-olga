@@ -2,49 +2,54 @@
    TOKENS — paleta, tipografía, espaciado, movimiento (temas)
    ============================================================ */
 /*
-  Tokens de diseño. Paleta verificada con la fórmula de contraste WCAG
-  real antes de usarse (no a ojo) — ver docs/decisiones/0009-interfaz-mostrador.md.
-  El tema por defecto es claro; [data-tema="oscuro"] en <html> lo invierte.
-  Ambos set de tokens quedan siempre definidos (nunca solo uno "por si
-  acaso"), para que cambiar de tema sea instantáneo sin recalcular nada.
+  Tokens de diseño. Paleta navy/blanco/gris (reemplaza la cálida del ADR
+  0009 — ver ADR 0013) verificada con la fórmula de contraste WCAG real
+  antes de usarse (no a ojo): 16 combinaciones (texto normal ≥4.5:1,
+  componentes de UI ≥3:1), cero fallos. El tema por defecto es claro;
+  [data-tema="oscuro"] en <html> lo invierte. Ambos set de tokens quedan
+  siempre definidos (nunca solo uno "por si acaso"), para que cambiar de
+  tema sea instantáneo sin recalcular nada.
 */
 
 :root {
   /* Superficies */
-  --color-fondo: #faf6f0;
+  --color-fondo: #f5f6f8;
   --color-superficie: #ffffff;
-  --color-borde: #e4dacd;
-  --color-borde-fuerte: #cdbfac;
+  --color-borde: #e1e4e9;
+  --color-borde-fuerte: #8c95a3;
 
   /* Texto */
-  --color-texto: #1f1815;
-  --color-texto-muted: #6b5d54;
+  --color-texto: #12151c;
+  --color-texto-muted: #57606b;
   --color-texto-sobre-acento: #ffffff;
   --color-texto-sobre-alerta: #ffffff;
 
-  /* Marca */
-  --color-acento: #8b2635;
-  --color-acento-hover: #711e2b;
-  --color-acento-suave: #f3e0e2;
+  /* Marca (navy) */
+  --color-acento: #14315d;
+  --color-acento-hover: #0d2140;
+  --color-acento-suave: #e6ecf5;
 
   /* Semántico: SIEMPRE distinto del acento de marca, para no confundir
      "esto es importante para el negocio" con "esto necesita atención". */
   --color-alerta: #8a5a0f;
   --color-alerta-suave: #f3e6cf;
 
-  --color-exito: #2f6b3f;
-  --color-exito-suave: #e1efe3;
+  --color-exito: #1e7a34;
+  --color-exito-suave: #e1f0e4;
   --color-peligro: #b3261e;
   --color-peligro-suave: #fbe3e1;
 
-  /* Tipografía */
-  --fuente-display: 'Fraunces', Georgia, serif;
-  --fuente-ui: 'Public Sans', system-ui, sans-serif;
+  /* Tipografía: Montserrat para títulos/UI general, IBM Plex Mono
+     específicamente para números (precios, pesos, totales, vueltos,
+     códigos de barras) — legibilidad y alineación bajo presión, no
+     personalidad. */
+  --fuente-ui: 'Montserrat', system-ui, sans-serif;
+  --fuente-numerica: 'IBM Plex Mono', 'Courier New', monospace;
 
   /* Espaciado y forma */
   --radio: 10px;
   --radio-chico: 6px;
-  --sombra: 0 1px 2px rgba(31, 24, 21, 0.06), 0 2px 8px rgba(31, 24, 21, 0.06);
+  --sombra: 0 1px 2px rgba(18, 21, 28, 0.06), 0 2px 8px rgba(18, 21, 28, 0.06);
 
   /* Movimiento */
   --duracion-rapida: 120ms;
@@ -54,19 +59,19 @@
 }
 
 :root[data-tema='oscuro'] {
-  --color-fondo: #1a1512;
-  --color-superficie: #241d18;
-  --color-borde: #3a2e26;
-  --color-borde-fuerte: #4d3d32;
+  --color-fondo: #0a0c10;
+  --color-superficie: #14171d;
+  --color-borde: #262b33;
+  --color-borde-fuerte: #5e6673;
 
-  --color-texto: #f5ede4;
-  --color-texto-muted: #c2b3a6;
-  --color-texto-sobre-acento: #1a1512;
-  --color-texto-sobre-alerta: #1a1512;
+  --color-texto: #f2f4f7;
+  --color-texto-muted: #9aa3b2;
+  --color-texto-sobre-acento: #0a0c10;
+  --color-texto-sobre-alerta: #0a0c10;
 
-  --color-acento: #e0596b;
-  --color-acento-hover: #ea7a89;
-  --color-acento-suave: #3a2026;
+  --color-acento: #5b8dd9;
+  --color-acento-hover: #7fa8e3;
+  --color-acento-suave: #142131;
 
   --color-alerta: #e3a548;
   --color-alerta-suave: #3a2f18;
@@ -83,17 +88,17 @@
    theme.js corra), respeta la preferencia del sistema operativo. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema='claro']):not([data-tema='oscuro']) {
-    --color-fondo: #1a1512;
-    --color-superficie: #241d18;
-    --color-borde: #3a2e26;
-    --color-borde-fuerte: #4d3d32;
-    --color-texto: #f5ede4;
-    --color-texto-muted: #c2b3a6;
-    --color-texto-sobre-acento: #1a1512;
-    --color-texto-sobre-alerta: #1a1512;
-    --color-acento: #e0596b;
-    --color-acento-hover: #ea7a89;
-    --color-acento-suave: #3a2026;
+    --color-fondo: #0a0c10;
+    --color-superficie: #14171d;
+    --color-borde: #262b33;
+    --color-borde-fuerte: #5e6673;
+    --color-texto: #f2f4f7;
+    --color-texto-muted: #9aa3b2;
+    --color-texto-sobre-acento: #0a0c10;
+    --color-texto-sobre-alerta: #0a0c10;
+    --color-acento: #5b8dd9;
+    --color-acento-hover: #7fa8e3;
+    --color-acento-suave: #142131;
     --color-alerta: #e3a548;
     --color-alerta-suave: #3a2f18;
     --color-exito: #7fce93;
@@ -111,36 +116,57 @@
    font-display: swap evita FOIT — el texto se ve de inmediato con la
    fuente de sistema y salta a la definitiva cuando carga. */
 @font-face {
-  font-family: 'Fraunces';
-  src: url('/fonts/fraunces-500.woff2') format('woff2');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Fraunces';
-  src: url('/fonts/fraunces-700.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Public Sans';
-  src: url('/fonts/public-sans-400.woff2') format('woff2');
+  font-family: 'Montserrat';
+  src: url('/fonts/montserrat-400.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: 'Public Sans';
-  src: url('/fonts/public-sans-600.woff2') format('woff2');
+  font-family: 'Montserrat';
+  src: url('/fonts/montserrat-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/fonts/montserrat-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/fonts/montserrat-800.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('/fonts/ibm-plex-mono-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('/fonts/ibm-plex-mono-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('/fonts/ibm-plex-mono-600.woff2') format('woff2');
   font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: 'Public Sans';
-  src: url('/fonts/public-sans-700.woff2') format('woff2');
+  font-family: 'IBM Plex Mono';
+  src: url('/fonts/ibm-plex-mono-700.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -171,18 +197,20 @@ body {
 h1,
 h2,
 h3 {
-  font-family: var(--fuente-display);
-  font-weight: 600;
+  font-family: var(--fuente-ui);
+  font-weight: 700;
   line-height: 1.2;
   margin: 0;
 }
 
-/* Los números (precios, cantidades, totales) usan cifras tabulares: un
-   cajero lee estos valores actualizándose en vivo, y que cada dígito
-   ocupe el mismo ancho evita que el texto "tiemble" al cambiar. */
+/* Los números (precios, cantidades, totales) van en IBM Plex Mono: cifras
+   monoespaciadas y tabulares — un cajero lee estos valores actualizándose
+   en vivo, y que cada dígito ocupe el mismo ancho evita que el texto
+   "tiemble" al cambiar. Legibilidad bajo presión, no personalidad. */
 .numero,
 .precio,
 .total {
+  font-family: var(--fuente-numerica);
   font-variant-numeric: tabular-nums;
 }
 
@@ -243,6 +271,14 @@ img {
   min-height: 100vh;
 }
 
+/* Mismo bug de especificidad que .overlay__panel form[hidden] (ver ADR
+   0013): una regla de autor con display siempre gana contra el [hidden]
+   del navegador — hay que pedirlo explícito para cada vista que se
+   alterna con #app (historial, KPIs). */
+#app[hidden] {
+  display: none;
+}
+
 .cabecera {
   display: flex;
   align-items: center;
@@ -256,8 +292,8 @@ img {
 }
 
 .cabecera__marca {
-  font-family: var(--fuente-display);
-  font-weight: 700;
+  font-family: var(--fuente-ui);
+  font-weight: 800;
   font-size: 1.25rem;
   white-space: nowrap;
 }
@@ -317,6 +353,16 @@ img {
   flex-direction: column;
   gap: 1rem;
   margin-top: 1.25rem;
+}
+
+/* Bug encontrado en Fase 4 (ver ADR 0013): con dos <form> dentro del mismo
+   overlay (login + cambio de contraseña, alternados con [hidden]), la
+   regla de arriba (una clase + un tipo) pesa más que el [hidden] del
+   navegador (un solo atributo) y lo gana — el formulario "oculto" seguía
+   viéndose. No pasaba antes porque overlay-caja-cerrada solo tenía un
+   <form>, nunca alternado. */
+.overlay__panel form[hidden] {
+  display: none;
 }
 
 .overlay__panel p {
@@ -401,7 +447,7 @@ img {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  font-family: var(--fuente-display);
+  font-family: var(--fuente-ui);
 }
 
 .carrito__total .total {
@@ -412,7 +458,7 @@ img {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(26, 21, 18, 0.55);
+  background: rgba(10, 12, 16, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -431,6 +477,99 @@ img {
   max-width: 420px;
   width: 100%;
   box-shadow: var(--sombra);
+}
+
+/* --- Vista secundaria (historial, KPIs): pantalla completa alternada con
+   #app por `hidden`, mismo mecanismo que los overlays pero sin backdrop
+   — es una vista propia, no un modal sobre el mostrador. --- */
+.vista-secundaria {
+  min-height: 100vh;
+  padding: 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.vista-secundaria[hidden] {
+  display: none;
+}
+
+.vista-secundaria__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.lista-historial {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.historial__vacio {
+  color: var(--color-texto-muted);
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.historial__fila {
+  display: grid;
+  grid-template-columns: 5rem 1fr 8rem 6rem auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+}
+
+.historial__fila--anulada {
+  opacity: 0.7;
+}
+
+.historial__hora {
+  color: var(--color-texto-muted);
+}
+
+.historial__total {
+  font-weight: 700;
+  text-align: right;
+}
+
+.historial__accion {
+  position: relative;
+  justify-self: end;
+}
+
+.historial__anular-form {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 10;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+  box-shadow: var(--sombra);
+}
+
+.historial__anular-form[hidden] {
+  display: none;
+}
+
+.historial__anular-acciones {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.historial__anular-acciones .boton-secundario {
+  min-height: 36px;
+  padding: 0 0.75rem;
+  font-size: 0.85rem;
 }
 
 /* ============================================================
@@ -456,7 +595,7 @@ img {
   padding: 0 1.25rem;
   border-radius: var(--radio-chico);
   border: 1px solid transparent;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 1rem;
   transition: background-color var(--duracion-rapida) var(--easing), transform var(--duracion-rapida) var(--easing);
 }
@@ -539,7 +678,7 @@ img {
 .campo label {
   font-size: 0.85rem;
   color: var(--color-texto-muted);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .campo input,
@@ -636,8 +775,8 @@ img {
 }
 
 .tarjeta-producto__nombre {
-  font-family: var(--fuente-display);
-  font-weight: 600;
+  font-family: var(--fuente-ui);
+  font-weight: 500;
   font-size: 0.95rem;
   line-height: 1.25;
 }
@@ -666,6 +805,17 @@ img {
   width: fit-content;
 }
 
+/* Variantes semánticas del mismo badge (ver historial de ventas). */
+.badge-alerta--exito {
+  background: var(--color-exito-suave);
+  color: var(--color-exito);
+}
+
+.badge-alerta--peligro {
+  background: var(--color-peligro-suave);
+  color: var(--color-peligro);
+}
+
 /* --- Fila del carrito --- */
 
 .item-carrito {
@@ -684,8 +834,8 @@ img {
 }
 
 .item-carrito__nombre {
-  font-family: var(--fuente-display);
-  font-weight: 600;
+  font-family: var(--fuente-ui);
+  font-weight: 500;
   font-size: 0.95rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -693,9 +843,74 @@ img {
 }
 
 .item-carrito__precio-unitario {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 0.75rem;
   color: var(--color-texto-muted);
   margin: 0.15rem 0 0;
+}
+
+.item-carrito__precio-original {
+  text-decoration: line-through;
+  color: var(--color-texto-muted);
+}
+
+/* --- Ajuste de precio (Fase 2, ver ADR 0011/0013) --- */
+
+.item-carrito__ajuste {
+  margin-top: 0.35rem;
+}
+
+.item-carrito__ajuste-boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--color-acento);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.item-carrito__ajuste-boton svg {
+  width: 14px;
+  height: 14px;
+}
+
+.item-carrito__ajuste-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+}
+
+/* Mismo bug de especificidad que .overlay__panel form[hidden] (ver ADR
+   0013): una regla de autor con display:flex siempre gana contra el
+   [hidden] del navegador, sin importar especificidad — hay que pedirlo
+   explícito. */
+.item-carrito__ajuste-form[hidden] {
+  display: none;
+}
+
+.item-carrito__ajuste-form .campo input {
+  min-height: 36px;
+}
+
+.item-carrito__ajuste-acciones {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.item-carrito__ajuste-acciones .boton-secundario {
+  min-height: 36px;
+  padding: 0 0.75rem;
+  font-size: 0.85rem;
 }
 
 .item-carrito__detalle {
@@ -820,7 +1035,7 @@ img {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-weight: 600;
+  font-weight: 500;
   box-shadow: var(--sombra);
   z-index: 60;
 }
