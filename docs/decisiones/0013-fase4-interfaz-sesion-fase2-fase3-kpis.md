@@ -2,7 +2,7 @@
 
 ## Estado
 
-En progreso — este ADR se amplía a medida que se cierra cada bloque de la Fase 4. Bloque 1 (sesión) y Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, y reestructuración a navegación persistente) cerrados; Bloque 3 pendiente.
+En progreso — este ADR se amplía a medida que se cierra cada pieza de la Fase 4. Bloque 1 (sesión), Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, navegación persistente) y la sección de Gestión de Productos y Categorías cerrados; Bloque 3 (KPIs) y Cierre de Caja pendientes.
 
 ## Contexto
 
@@ -112,6 +112,32 @@ Aun con la cadena de altura corregida (`#lista-carrito` sin overflow real, `clie
 ### Verificación
 
 Suite Puppeteer contra Chrome real (18/18) cubriendo el flujo completo pedido explícitamente (no solo la sidebar aislada): login → sidebar con las 4 secciones correctas por rol → navegar a Historial y volver a Mostrador vía sidebar → tema/badge/salir funcionando desde su nueva ubicación → logout → login como cajero confirmando Historial/Indicadores ocultos e Inventario visible → verificación directa contra el backend de que `POST /api/inventario/movimientos` rechaza a un cajero con 403 `ROL_INSUFICIENTE` mientras `GET` sí le responde 200. Lighthouse: login 98/100/96/100 (96 = 401 esperado, no un bug), mostrador 98/100/100/100 — sin cambios respecto a antes de la reestructuración. axe-core: 0 violaciones en 5 combinaciones (login × mostrador × historial, ambos temas) tras corregir la regresión real encontrada.
+
+## Sección: Gestión de Productos y Categorías
+
+Primera de las dos secciones agregadas a la cola después de la navegación persistente. Se auditó el contrato real (`productos.routes.js`, `productos.schema.js`, `productos.service.js`, `categorias.routes.js`, `categorias.schema.js`) antes de escribir código, sin asumir nada.
+
+### Hallazgos de la auditoría
+
+- Crear/editar producto y categoría: **solo administrador**. Listar: ambos roles. Sección entera oculta para cajero en la sidebar (gestión completa no tiene sentido para un cajero, que ya tiene su propio buscador en el mostrador).
+- **No hay borrado** — ni de productos ni de categorías. "Desactivar" un producto es `PATCH` con `activo:false`; una categoría no tiene ningún mecanismo de baja, así que la pregunta de "¿se puede borrar una categoría con productos activos?" no aplica: no se puede borrar, punto.
+- `tipoVenta` es inmutable después de crear — el schema de `PATCH` ni lo acepta.
+- **No existe ningún endpoint de subida de fotos** (`grep` de `multer`/`upload` en todo `src/`: sin resultados). `fotoNombreArchivo` es texto plano; el backend asume que el archivo ya está en `uploads/`. Confirmado con el cliente: **no se construye nada de fotos en esta pasada** (ni campo de texto ni upload) — queda documentado como gap conocido, no resuelto acá.
+- **Hallazgo señalado antes de construir la UI, no descubierto después**: `PATCH /api/productos/:id` permite editar `stockUnidades`/`stockGramos` directo, sin pasar por `movimientos_inventario` — contradice el principio explícito del ADR 0005 ("todo cambio de stock pasa por el ledger, sin excepción"). Es comportamiento ya existente del backend, no algo introducido acá. Decisión (confirmada): el formulario de **edición** no expone stock como campo editable — corregir stock de un producto activo es tarea de un movimiento de `ajuste` (Inventario, todavía no construido), no de este formulario. El formulario de **alta** sí pide stock inicial (un producto nuevo no tiene historial que romper).
+
+### Diseño
+
+`public/js/catalogo.js` (nuevo, mismo patrón que `historial.js`: módulo autocontenido, propio DOM, propias llamadas). Una sola sección en la sidebar ("Productos") con dos pestañas internas — Productos y Categorías — en vez de dos secciones separadas: categorías es demasiado simple (crear + renombrar, nada más) para justificar su propio lugar en la navegación.
+
+Formulario de producto (mismo para alta/edición, campos condicionales por contexto):
+- **Alta**: categoría, nombre, tipo de venta, código de barras (opcional), precio público, precio mayorista (opcional), stock inicial (unidades o kg según tipo de venta — el campo cambia de tipo/etiqueta en vivo al elegir tipo de venta, reutilizando `kilosTextoAGramos`/`gramosAKilosTexto` de `utils.js`, mismo criterio que el peso en el carrito), stock mínimo (opcional).
+- **Edición**: igual, sin tipo de venta ni stock (ver hallazgo arriba), con el toggle de activo/inactivo agregado.
+
+Todo el DOM se construye con `createElement`/`textContent`, nunca `innerHTML` interpolado con datos de la API — mismo criterio de seguridad que ya establecía `render.js`.
+
+### Verificación
+
+Suite Puppeteer contra Chrome real (20/20): categoría creada y renombrada reflejándose en el listado; alta de producto (tipo unidad) con los campos correctos visibles/ocultos; buscador por nombre filtrando en cliente; edición confirmando que tipo de venta y stock quedan ocultos y que activo sí se puede togglear; alta de producto tipo "peso" con conversión real de "2,5" (texto, coma decimal) a 2500 gramos verificada contra el backend; sección e ítem de nav ocultos para cajero; y el 403 `ROL_INSUFICIENTE` verificado contra el backend igual que en las secciones anteriores. axe-core: 0 violaciones en 6 combinaciones (listado de productos/categorías, ambos formularios abiertos, alta en modo peso, ambos temas). Lighthouse sobre el mostrador autenticado: 98/100/100/100, sin cambios. Datos de prueba (3 categorías, 4 productos, usuario cajero) eliminados de la base real al terminar.
 
 ## Bloque 3
 

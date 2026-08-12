@@ -61,6 +61,15 @@
         </button>
       </li>
       <li>
+        <button id="nav-productos" type="button" class="nav-lateral__item" data-vista="productos" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M20.5 12.5L12 21 3.5 12.5V6a2 2 0 0 1 2-2H12l8.5 8.5z" />
+            <circle cx="8" cy="8" r="1.1" fill="currentColor" stroke="none" />
+          </svg>
+          <span>Productos</span>
+        </button>
+      </li>
+      <li>
         <button id="nav-indicadores" type="button" class="nav-lateral__item" data-vista="indicadores" hidden disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <path d="M4 20V10M11 20V4M18 20v-7" />
@@ -194,6 +203,43 @@
       <div id="lista-historial" class="lista-historial"></div>
     </section>
 
+    <section id="vista-productos" class="vista vista-secundaria" aria-labelledby="titulo-vista-productos" data-vista-contenido hidden>
+      <header class="vista-secundaria__cabecera">
+        <h2 id="titulo-vista-productos">Productos</h2>
+        <button id="boton-nuevo-producto" type="button" class="boton-primario">+ Nuevo producto</button>
+      </header>
+
+      <div class="catalogo__tabs" role="tablist">
+        <button id="tab-productos" type="button" class="catalogo__tab catalogo__tab--activo" role="tab" aria-selected="true" aria-controls="panel-productos-lista">Productos</button>
+        <button id="tab-categorias" type="button" class="catalogo__tab" role="tab" aria-selected="false" aria-controls="panel-categorias-lista">Categorías</button>
+      </div>
+
+      <div id="panel-productos-lista" role="tabpanel">
+        <div class="catalogo__filtros">
+          <label for="input-buscar-productos" class="visualmente-oculto">Buscar producto por nombre</label>
+          <input id="input-buscar-productos" type="search" placeholder="Buscar por nombre…" autocomplete="off" />
+
+          <label for="select-filtro-categoria" class="visualmente-oculto">Filtrar por categoría</label>
+          <select id="select-filtro-categoria"><option value="">Todas las categorías</option></select>
+
+          <label for="select-filtro-activo" class="visualmente-oculto">Filtrar por estado</label>
+          <select id="select-filtro-activo">
+            <option value="">Todos los estados</option>
+            <option value="true">Activos</option>
+            <option value="false">Inactivos</option>
+          </select>
+        </div>
+        <div id="tabla-productos" class="catalogo__tabla" role="region" aria-label="Listado de productos" tabindex="0"></div>
+      </div>
+
+      <div id="panel-categorias-lista" role="tabpanel" hidden>
+        <div class="catalogo__filtros">
+          <button id="boton-nueva-categoria" type="button" class="boton-secundario">+ Nueva categoría</button>
+        </div>
+        <div id="tabla-categorias" class="catalogo__tabla" role="region" aria-label="Listado de categorías" tabindex="0"></div>
+      </div>
+    </section>
+
     <section id="vista-indicadores" class="vista vista-proximamente" aria-labelledby="titulo-vista-indicadores" data-vista-contenido hidden>
       <div class="vista-proximamente__contenido">
         <svg class="vista-proximamente__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -250,6 +296,73 @@
         <input id="input-password-nueva" type="password" autocomplete="new-password" minlength="8" required />
       </div>
       <button type="submit" class="boton-primario">Guardar y continuar</button>
+    </form>
+  </div>
+</div>
+
+<div id="overlay-form-producto" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-form-producto" hidden>
+  <div class="overlay__panel overlay__panel--ancho">
+    <h2 id="titulo-form-producto">Nuevo producto</h2>
+    <form id="formulario-producto">
+      <div class="campo">
+        <label for="input-producto-categoria">Categoría</label>
+        <select id="input-producto-categoria" required></select>
+      </div>
+      <div class="campo">
+        <label for="input-producto-nombre">Nombre</label>
+        <input id="input-producto-nombre" type="text" required />
+      </div>
+      <div class="campo" id="campo-producto-tipo-venta">
+        <label for="input-producto-tipo-venta">Tipo de venta</label>
+        <select id="input-producto-tipo-venta" required>
+          <option value="unidad">Unidad</option>
+          <option value="peso">Peso</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="input-producto-codigo-barras">Código de barras (opcional)</label>
+        <input id="input-producto-codigo-barras" type="text" />
+      </div>
+      <div class="campo">
+        <label for="input-producto-precio-publico">Precio público</label>
+        <input id="input-producto-precio-publico" type="number" inputmode="numeric" min="0" step="1" required />
+      </div>
+      <div class="campo">
+        <label for="input-producto-precio-mayorista">Precio mayorista (opcional)</label>
+        <input id="input-producto-precio-mayorista" type="number" inputmode="numeric" min="0" step="1" />
+      </div>
+      <div class="campo" id="campo-producto-stock">
+        <label for="input-producto-stock" id="label-producto-stock">Stock inicial</label>
+        <input id="input-producto-stock" type="number" inputmode="numeric" min="0" step="1" required />
+      </div>
+      <div class="campo">
+        <label for="input-producto-stock-minimo" id="label-producto-stock-minimo">Stock mínimo para alerta (opcional)</label>
+        <input id="input-producto-stock-minimo" type="text" inputmode="decimal" />
+      </div>
+      <div class="campo campo--switch" id="campo-producto-activo" hidden>
+        <label for="input-producto-activo">Producto activo</label>
+        <input id="input-producto-activo" type="checkbox" />
+      </div>
+      <div class="overlay__acciones">
+        <button type="submit" class="boton-primario">Guardar</button>
+        <button type="button" id="boton-cancelar-producto" class="boton-secundario">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="overlay-form-categoria" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-form-categoria" hidden>
+  <div class="overlay__panel">
+    <h2 id="titulo-form-categoria">Nueva categoría</h2>
+    <form id="formulario-categoria">
+      <div class="campo">
+        <label for="input-categoria-nombre">Nombre</label>
+        <input id="input-categoria-nombre" type="text" required />
+      </div>
+      <div class="overlay__acciones">
+        <button type="submit" class="boton-primario">Guardar</button>
+        <button type="button" id="boton-cancelar-categoria" class="boton-secundario">Cancelar</button>
+      </div>
     </form>
   </div>
 </div>

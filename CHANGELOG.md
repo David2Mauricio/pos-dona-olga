@@ -4,6 +4,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Agregado (Fase 4: gestión de Productos y Categorías)
+
+- Nueva sección "Productos" en la sidebar (solo administrador), con dos
+  pestañas: Productos (listado con búsqueda/filtro por categoría/estado,
+  alta, edición) y Categorías (listado, alta, renombrar — no hay borrado
+  de ninguna de las dos entidades en el backend).
+- Formulario de producto condicional por contexto: alta pide tipo de
+  venta y stock inicial; edición no expone ninguno de los dos (tipo de
+  venta es inmutable en el backend; stock, si se editara acá, evitaría el
+  ledger de `movimientos_inventario` — ver ADR 0005 — así que corregir
+  stock de un producto activo queda para un futuro movimiento de ajuste,
+  no para este formulario).
+- Sin manejo de fotos en esta pasada (confirmado con el cliente): no
+  existe endpoint de subida en el backend, documentado como gap conocido.
+- `public/js/catalogo.js` (nuevo), métodos nuevos en `api.js`.
+- ADR 0013 ampliado con la auditoría completa del contrato.
+
 ### Cambiado (Fase 4 / Bloque 2: navegación persistente y fixes)
 
 - Interfaz reestructurada de "un botón suelto por sección en el header"

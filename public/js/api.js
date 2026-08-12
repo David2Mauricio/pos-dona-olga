@@ -65,6 +65,22 @@ export const api = {
   listarProductosActivos: () => peticion('/productos?activo=true'),
   buscarProductoPorCodigoBarras: (codigo) => peticionOpcional(`/productos/codigo-barras/${encodeURIComponent(codigo)}`),
 
+  // Gestión de catálogo (Fase 4, ver ADR 0013) — admin-only en el backend
+  // para crear/actualizar, ambos roles para listar (ver productos.routes.js).
+  listarProductosCatalogo: ({ categoriaId, activo } = {}) => {
+    const parametros = new URLSearchParams();
+    if (categoriaId) parametros.set('categoriaId', categoriaId);
+    if (activo !== undefined) parametros.set('activo', String(activo));
+    const query = parametros.toString();
+    return peticion(`/productos${query ? `?${query}` : ''}`);
+  },
+  crearProducto: (datos) => peticion('/productos', { method: 'POST', body: JSON.stringify(datos) }),
+  actualizarProducto: (id, cambios) => peticion(`/productos/${id}`, { method: 'PATCH', body: JSON.stringify(cambios) }),
+
+  listarCategorias: () => peticion('/categorias'),
+  crearCategoria: (nombre) => peticion('/categorias', { method: 'POST', body: JSON.stringify({ nombre }) }),
+  actualizarCategoria: (id, nombre) => peticion(`/categorias/${id}`, { method: 'PATCH', body: JSON.stringify({ nombre }) }),
+
   crearVenta: (datos) => peticion('/ventas', { method: 'POST', body: JSON.stringify(datos) }),
   listarVentas: ({ desde, hasta }) => peticion(`/ventas?desde=${desde}&hasta=${hasta}`),
   anularVenta: (id, motivoAnulacion) =>

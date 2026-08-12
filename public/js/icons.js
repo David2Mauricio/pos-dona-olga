@@ -90,6 +90,12 @@ export const iconoIndicadores = `
   <path d="M2.5 20h19" />
 </svg>`;
 
+export const iconoProductos = `
+<svg ${ATRIBUTOS_BASE}>
+  <path d="M20.5 12.5L12 21 3.5 12.5V6a2 2 0 0 1 2-2H12l8.5 8.5z" />
+  <circle cx="8" cy="8" r="1.1" fill="currentColor" stroke="none" />
+</svg>`;
+
 export const iconoInventario = `
 <svg ${ATRIBUTOS_BASE}>
   <path d="M3.5 8L12 3.5 20.5 8 12 12.5 3.5 8z" />

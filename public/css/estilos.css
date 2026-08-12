@@ -690,6 +690,128 @@ img {
   font-size: 0.85rem;
 }
 
+/* --- Catálogo (productos/categorías) --- */
+
+.catalogo__tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--color-borde);
+  margin-bottom: 1rem;
+}
+
+.catalogo__tab {
+  min-height: 44px;
+  padding: 0 1rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-texto-muted);
+  font-weight: 500;
+  margin-bottom: -1px;
+}
+
+.catalogo__tab--activo {
+  color: var(--color-acento);
+  border-bottom-color: var(--color-acento);
+  font-weight: 700;
+}
+
+.catalogo__filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.catalogo__filtros input[type='search'] {
+  flex: 1;
+  min-width: 200px;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border-radius: var(--radio-chico);
+  border: 1px solid var(--color-borde-fuerte);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+}
+
+.catalogo__filtros select {
+  min-height: 44px;
+  padding: 0 0.6rem;
+  border-radius: var(--radio-chico);
+  border: 1px solid var(--color-borde-fuerte);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+}
+
+.catalogo__tabla {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.catalogo__fila {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 5.5rem 1fr 5rem 6rem auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+}
+
+.catalogo__fila--inactivo {
+  opacity: 0.6;
+}
+
+.catalogo__fila--categoria {
+  grid-template-columns: 1fr auto;
+}
+
+.catalogo__fila-nombre {
+  font-weight: 500;
+}
+
+.catalogo__fila-muted {
+  color: var(--color-texto-muted);
+  font-size: 0.9rem;
+}
+
+.catalogo__vacio {
+  color: var(--color-texto-muted);
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.overlay__panel--ancho {
+  max-width: 640px;
+}
+
+.overlay__acciones {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.campo--switch {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.campo--switch input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  flex-shrink: 0;
+}
+
+.campo--switch label {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
 /* ============================================================
    COMPONENTES — botones, campos, tarjetas, ítems de carrito
    ============================================================ */
