@@ -23,8 +23,9 @@ const inputMontoRecibido = document.getElementById('input-monto-recibido');
 const filaVuelto = document.getElementById('fila-vuelto');
 const vueltoCarrito = document.getElementById('vuelto-carrito');
 const botonCobrar = document.getElementById('boton-cobrar');
-const appRoot = document.getElementById('app');
-const botonHistorial = document.getElementById('boton-historial');
+const navItems = document.querySelectorAll('.nav-lateral__item[data-vista]');
+const navHistorial = document.getElementById('nav-historial');
+const navIndicadores = document.getElementById('nav-indicadores');
 const overlayCaja = document.getElementById('overlay-caja-cerrada');
 const formularioAbrirCaja = document.getElementById('formulario-abrir-caja');
 const inputMontoApertura = document.getElementById('input-monto-apertura');
@@ -293,21 +294,47 @@ iniciarTema(botonTema);
 actualizarVisibilidadMontoRecibido();
 reRenderizarCarrito();
 
-// Fase 4/Bloque 2 (ver ADR 0012/0013): historial es solo-administrador en
-// la UI — la protección real es el 403 ROL_INSUFICIENTE que el backend ya
-// devuelve en PATCH /api/ventas/:id/anular, esto solo evita mostrar una
-// acción que un cajero igual no podría completar.
-botonHistorial.addEventListener('click', () => {
-  appRoot.hidden = true;
-  abrirHistorial();
+// --- Navegación (sidebar persistente, ver ADR 0013) ---
+// Un solo mecanismo para las 4 secciones, no un botón suelto por bloque:
+// mostrarVista() es el único lugar que decide qué <section
+// data-vista-contenido> queda visible. Los ítems deshabilitados (ver
+// index.html: Indicadores/Inventario "Próximamente") ignoran el click.
+function mostrarVista(nombre) {
+  document.querySelectorAll('[data-vista-contenido]').forEach((seccion) => {
+    seccion.hidden = seccion.id !== `vista-${nombre}`;
+  });
+  navItems.forEach((boton) => {
+    if (boton.dataset.vista === nombre) {
+      boton.setAttribute('aria-current', 'page');
+    } else {
+      boton.removeAttribute('aria-current');
+    }
+  });
+}
+
+navItems.forEach((boton) => {
+  boton.addEventListener('click', () => {
+    if (boton.disabled) return;
+    const nombre = boton.dataset.vista;
+    if (nombre === 'historial') abrirHistorial();
+    mostrarVista(nombre);
+  });
 });
 
-iniciarHistorial({
-  obtenerUsuarioActual,
-  alCerrar: () => {
-    appRoot.hidden = false;
-  },
-});
+iniciarHistorial({ obtenerUsuarioActual });
+
+// Historial e Indicadores son solo-administrador en la UI — la protección
+// real de Historial es el 403 ROL_INSUFICIENTE que el backend ya devuelve
+// en PATCH /api/ventas/:id/anular (verificado en Bloque 2); Indicadores
+// (Bloque 3) todavía no existe, así que un cajero ni siquiera ve la opción
+// "Próximamente". Inventario queda visible para ambos roles (ver
+// inventario.routes.js: listar/alertas es de ambos, solo crear un
+// movimiento manual quedó restringido a administrador).
+function actualizarNavegacionPorRol(usuario) {
+  const esAdmin = usuario.rol === 'administrador';
+  navHistorial.hidden = !esAdmin;
+  navIndicadores.hidden = !esAdmin;
+}
 
 async function iniciarMostrador() {
   try {
@@ -322,11 +349,13 @@ async function iniciarMostrador() {
 
 iniciarAuth({
   alListo: (usuario) => {
-    botonHistorial.hidden = usuario.rol !== 'administrador';
+    actualizarNavegacionPorRol(usuario);
     iniciarMostrador();
   },
   alCerrarSesion: () => {
-    botonHistorial.hidden = true;
+    navHistorial.hidden = true;
+    navIndicadores.hidden = true;
+    mostrarVista('mostrador');
     productosActivos = [];
     mapaProductos = new Map();
     cajaSesionActual = null;

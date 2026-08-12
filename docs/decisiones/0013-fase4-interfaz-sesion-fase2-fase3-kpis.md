@@ -2,7 +2,7 @@
 
 ## Estado
 
-En progreso — este ADR se amplía a medida que se cierra cada bloque de la Fase 4. Bloque 1 (sesión) y Bloque 2 (Fase 2/3 en el flujo de venta, más el reemplazo de paleta) cerrados; Bloque 3 pendiente.
+En progreso — este ADR se amplía a medida que se cierra cada bloque de la Fase 4. Bloque 1 (sesión) y Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, y reestructuración a navegación persistente) cerrados; Bloque 3 pendiente.
 
 ## Contexto
 
@@ -80,6 +80,38 @@ La protección real sigue siendo el backend: el botón "Historial" completo qued
 ### Verificación
 
 Suite Puppeteer contra Chrome real (14/14): override de precio reflejado en subtotal y badge; vuelto bloqueando "Cobrar" con monto insuficiente y habilitándolo con monto suficiente, mostrado correctamente antes y después de cobrar; historial listando la venta del día, anulación funcionando y reflejando el badge "Anulada"; botón "Historial" oculto para cajero; y la verificación directa del 403 `ROL_INSUFICIENTE` contra el backend descrita arriba. Datos de prueba (producto, categoría, venta, usuario cajero) eliminados de la base real al terminar.
+
+## Reestructuración a navegación persistente (todavía Bloque 2)
+
+Antes de seguir con recibo/ajuste de color y con el Bloque 3, el cliente pidió dos correcciones de estructura sobre lo ya construido: un bug real de fotos rotas, y reemplazar "un botón por sección metido en el header del mostrador" por una navegación persistente de verdad.
+
+### Bug de fotos: dato de prueba viejo, no un fallo de `onerror`
+
+Dos productos ("Pechuga de pollo", "Salchicha paquete x10") mostraban un bloque rojo sólido en vez del placeholder SVG. Diagnóstico antes de tocar código: las imágenes **cargaban perfectamente** — `foto_nombre_archivo` apuntaba a archivos reales (`demo-pechuga.png`, `demo-salchicha.png`, 70 bytes, un PNG válido de **1×1 píxel rojo**), datos de prueba de una fase anterior que nunca se limpiaron de la base real. El bloque rojo era el render correcto de ese contenido, estirado por `object-fit: cover`. Se limpiaron los dos registros (`foto_nombre_archivo = NULL`) y se borraron los archivos.
+
+Separado de eso, sí había un gap real: el `<img>` nunca tuvo `onerror`, así que un archivo genuinamente faltante (404) habría mostrado el ícono roto del navegador en vez del placeholder. Se agregó (`render.js`: `crearPlaceholderFoto()` reemplaza al `<img>` en el evento `error`) — corrección defensiva, no estaba causando el bug reportado pero es la misma clase de problema.
+
+### Sidebar izquierda, no barra horizontal
+
+Con 4 secciones (Mostrador, Historial, Indicadores, Inventario) más los controles de cuenta (usuario, tema, salir), el header horizontal que ya tenía marca+caja+alertas+tema+usuario+salir no tenía lugar para crecer. La sidebar separa navegación entre secciones (izquierda, persistente) de controles de cuenta (agrupados al final de la misma sidebar, en vez de mezclados con la navegación) y de contexto por sección (`.cabecera-contexto`, la franja superior angosta con estado de caja + alertas, que ahora es parte del marco fijo, no del contenido de cada vista).
+
+Mecanismo único: `main.js:mostrarVista(nombre)` es el único lugar que decide qué `<section data-vista-contenido>` queda visible — reemplaza el patrón anterior (`#app`/`#vista-historial` como hermanos sueltos, cada uno con su propio botón de entrada/salida). `historial.js` dejó de manejar su propio cierre (`alCerrar`, `botonCerrar`) porque ya no tiene sentido — la sidebar es la única forma de navegar entre secciones, siempre.
+
+**Indicadores** e **Inventario** quedan en la sidebar como "Próximamente" (visibles pero `disabled`, con una vista de marcador de posición coherente con el resto del sistema — mismo ícono, misma tipografía, no un placeholder genérico) en vez de aparecer de golpe cuando estén listos. Indicadores queda oculto por completo para cajero (es Bloque 3, admin-only, igual que Historial); Inventario queda visible para ambos roles.
+
+### Inventario: `POST /movimientos` pasa a ser solo-administrador
+
+El cliente señaló, antes de construir nada de UI sobre este endpoint, que `POST /api/inventario/movimientos` no tenía restricción de rol — cualquiera con sesión podía registrar un ajuste manual de stock. Mismo criterio de riesgo que anular una venta (ADR 0012): un ajuste manual sin venta real detrás es una vía para tapar una merma o un faltante. Se agregó `requiereRol('administrador')` en `inventario.routes.js`, mismo patrón que `ventas.routes.js` usa para anular. `GET /movimientos` y `GET /alertas` siguen siendo de ambos roles — un cajero necesita poder consultarlo, la restricción es solo sobre crear.
+
+### Bug real encontrado por el pedido explícito de correr Lighthouse/axe-core de nuevo
+
+axe-core encontró `scrollable-region-focusable` en `#lista-carrito` en las 4 combinaciones que incluían el mostrador (no en historial, porque ahí `#vista-mostrador` queda `hidden` y sus descendientes no se evalúan). Investigado con `getComputedStyle`/`clientHeight`/`scrollHeight` antes de asumir la causa: **no** era el problema de especificidad de `[hidden]` ya conocido — el `<section>` nuevo que envuelve cada vista (`#vista-mostrador`) no participaba del contexto flex que antes hacía que `.contenido`/`.panel-carrito` se acotaran correctamente cuando `.contenido` era hijo directo de `#app`. Se agregó `flex:1; min-height:0; display:flex; flex-direction:column` a `.vista` (y `min-height:0` a `.contenido`) para restaurar esa cadena de altura.
+
+Aun con la cadena de altura corregida (`#lista-carrito` sin overflow real, `clientHeight === scrollHeight`), axe seguía marcando la violación: la regla no depende de si hay overflow en este instante, sino de que cualquier región con `overflow-y: auto` sea alcanzable por teclado — un carrito real se llena de items y sí vuelve a tener scroll. Se agregó `tabindex="0"` a `#lista-carrito` (con `aria-label`) y, proactivamente por el mismo riesgo, a `#grilla-productos` (que ya tenía `role="region"`/`aria-label` pero no `tabindex`). 0 violaciones tras el fix.
+
+### Verificación
+
+Suite Puppeteer contra Chrome real (18/18) cubriendo el flujo completo pedido explícitamente (no solo la sidebar aislada): login → sidebar con las 4 secciones correctas por rol → navegar a Historial y volver a Mostrador vía sidebar → tema/badge/salir funcionando desde su nueva ubicación → logout → login como cajero confirmando Historial/Indicadores ocultos e Inventario visible → verificación directa contra el backend de que `POST /api/inventario/movimientos` rechaza a un cajero con 403 `ROL_INSUFICIENTE` mientras `GET` sí le responde 200. Lighthouse: login 98/100/96/100 (96 = 401 esperado, no un bug), mostrador 98/100/100/100 — sin cambios respecto a antes de la reestructuración. axe-core: 0 violaciones en 5 combinaciones (login × mostrador × historial, ambos temas) tras corregir la regresión real encontrada.
 
 ## Bloque 3
 

@@ -1,7 +1,7 @@
 // Historial de ventas del día, con anulación (Fase 3, ver ADR 0012/0013).
-// Vista separada del mostrador (no mezclada con la pantalla de cobro),
-// mismo criterio de mostrar/ocultar por atributo `hidden` que ya usan los
-// overlays — sin router, consistente con el resto de la interfaz.
+// Vista dentro de la navegación persistente (ver ADR 0013, Bloque 2):
+// mostrar/ocultar la sección en sí es responsabilidad de main.js
+// (mostrarVista) — este módulo solo carga y renderiza sus datos.
 //
 // El botón "Anular" solo se RENDERIZA si el usuario es administrador y la
 // venta sigue activa — es una ayuda de UI, no la protección real: el
@@ -13,12 +13,9 @@ import { formatearMoneda } from './utils.js';
 import { mostrarToast } from './render.js';
 import { iconoAnular } from './icons.js';
 
-const vista = document.getElementById('vista-historial');
-const botonCerrar = document.getElementById('boton-cerrar-historial');
 const listaHistorial = document.getElementById('lista-historial');
 
 let obtenerUsuarioActualFn = null;
-let alCerrarCallback = null;
 
 function mensajeDeError(error) {
   return error instanceof ErrorApi ? error.message : 'No se pudo completar la operación. Intentá de nuevo.';
@@ -173,18 +170,9 @@ function crearAccionAnular(venta) {
 }
 
 export function abrirHistorial() {
-  vista.hidden = false;
   cargarVentas();
 }
 
-function cerrarHistorial() {
-  vista.hidden = true;
-  alCerrarCallback?.();
-}
-
-botonCerrar.addEventListener('click', cerrarHistorial);
-
-export function iniciarHistorial({ obtenerUsuarioActual, alCerrar }) {
+export function iniciarHistorial({ obtenerUsuarioActual }) {
   obtenerUsuarioActualFn = obtenerUsuarioActual;
-  alCerrarCallback = alCerrar;
 }

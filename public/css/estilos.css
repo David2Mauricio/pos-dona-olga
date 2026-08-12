@@ -263,39 +263,135 @@ img {
 }
 
 /* ============================================================
-   LAYOUT — cabecera, grid principal, panel de carrito
+   LAYOUT — sidebar persistente, cabecera de contexto, vistas
    ============================================================ */
-#app {
+/* Fase 4/Bloque 2 (ver ADR 0013): reestructuración de "un botón suelto
+   por sección dentro del header del mostrador" a una navegación
+   persistente real. #shell es el marco fijo (sidebar + contenido); cada
+   sección vive en un <section data-vista-contenido>, y solo una está
+   visible a la vez — mismo mecanismo `hidden` que ya usaban los overlays,
+   ahora centralizado en un solo lugar (main.js:mostrarVista). */
+#shell {
   display: flex;
-  flex-direction: column;
   min-height: 100vh;
 }
 
-/* Mismo bug de especificidad que .overlay__panel form[hidden] (ver ADR
-   0013): una regla de autor con display siempre gana contra el [hidden]
-   del navegador — hay que pedirlo explícito para cada vista que se
-   alterna con #app (historial, KPIs). */
-#app[hidden] {
-  display: none;
+.nav-lateral {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-superficie);
+  border-right: 1px solid var(--color-borde);
+  padding: 1.25rem 1rem;
+  position: sticky;
+  top: 0;
+  height: 100vh;
 }
 
-.cabecera {
+.nav-lateral__marca {
+  font-family: var(--fuente-ui);
+  font-weight: 800;
+  font-size: 1.15rem;
+  padding: 0 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.nav-lateral__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.nav-lateral__item {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radio-chico);
+  border: none;
+  background: transparent;
+  color: var(--color-texto-muted);
+  font-weight: 500;
+  text-align: left;
+}
+
+.nav-lateral__item svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.nav-lateral__item:hover:not(:disabled) {
+  background: var(--color-fondo);
+  color: var(--color-texto);
+}
+
+.nav-lateral__item[aria-current='page'] {
+  background: var(--color-acento-suave);
+  color: var(--color-acento);
+  font-weight: 700;
+}
+
+.nav-lateral__item:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.nav-lateral__etiqueta {
+  margin-left: auto;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-texto-muted);
+}
+
+.nav-lateral__cuenta {
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-borde);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nav-lateral__usuario {
+  padding: 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-texto-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-lateral__cuenta-acciones {
+  display: flex;
+  gap: 0.25rem;
+}
+
+#contenido-principal {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cabecera-contexto {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 0.75rem 1.5rem;
   background: var(--color-superficie);
   border-bottom: 1px solid var(--color-borde);
   position: sticky;
   top: 0;
   z-index: 20;
-}
-
-.cabecera__marca {
-  font-family: var(--fuente-ui);
-  font-weight: 800;
-  font-size: 1.25rem;
-  white-space: nowrap;
 }
 
 .cabecera__caja {
@@ -324,21 +420,47 @@ img {
   flex-shrink: 0;
 }
 
-.cabecera__acciones {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.cabecera__usuario {
-  font-size: 0.85rem;
-  color: var(--color-texto-muted);
-  white-space: nowrap;
-}
-
 .cabecera__alertas-contenedor {
   position: relative;
+}
+
+/* Cada vista es display:flex; flex-direction:column; flex:1 — mismo
+   contexto que .contenido ya esperaba cuando era hijo directo de #app.
+   Sin esto, el <section> intermedio (nuevo con la sidebar, ver ADR 0013)
+   no propaga la altura acotada hacia abajo: .panel-carrito pierde su
+   max-height calculado y #lista-carrito, con overflow-y:auto, termina
+   generando una región con scroll real pero sin ningún elemento
+   enfocable dentro que la habilite por teclado (axe-core:
+   scrollable-region-focusable). min-height:0 es lo que permite que un
+   hijo flex se achique por debajo de su contenido en vez de forzar al
+   padre a crecer. */
+.vista {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.vista[hidden] {
+  display: none;
+}
+
+.vista-proximamente__contenido {
+  max-width: 420px;
+  margin: 3rem auto;
+  text-align: center;
+  color: var(--color-texto-muted);
+}
+
+.vista-proximamente__icono {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 1rem;
+}
+
+.vista-proximamente__contenido h2 {
+  color: var(--color-texto);
+  margin-bottom: 0.5rem;
 }
 
 .overlay__icono {
@@ -372,6 +494,7 @@ img {
 
 .contenido {
   flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 1fr 400px;
   gap: 1.5rem;
@@ -479,18 +602,13 @@ img {
   box-shadow: var(--sombra);
 }
 
-/* --- Vista secundaria (historial, KPIs): pantalla completa alternada con
-   #app por `hidden`, mismo mecanismo que los overlays pero sin backdrop
-   — es una vista propia, no un modal sobre el mostrador. --- */
+/* --- Vista secundaria (historial): una de las secciones dentro de
+   #contenido-principal, alternada por `hidden` vía nav-lateral. --- */
 .vista-secundaria {
-  min-height: 100vh;
   padding: 1.5rem;
   max-width: 1100px;
   margin: 0 auto;
-}
-
-.vista-secundaria[hidden] {
-  display: none;
+  width: 100%;
 }
 
 .vista-secundaria__cabecera {
@@ -1070,13 +1188,13 @@ img {
   }
 }
 
-.cabecera,
+.cabecera-contexto,
 .panel-productos,
 .panel-carrito {
   animation: entrar var(--duracion-media) var(--easing) both;
 }
 
-.cabecera {
+.cabecera-contexto {
   animation-delay: 0ms;
 }
 .panel-productos {

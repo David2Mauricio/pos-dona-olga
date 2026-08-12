@@ -25,6 +25,13 @@ export function renderizarGrillaProductos(productos, contenedor, alAgregar) {
   });
 }
 
+function crearPlaceholderFoto() {
+  const elemento = document.createElement('div');
+  elemento.className = 'tarjeta-producto__foto tarjeta-producto__foto--vacia';
+  elemento.innerHTML = iconoPaqueteVacio;
+  return elemento;
+}
+
 function crearTarjetaProducto(producto, indice, alAgregar) {
   const boton = document.createElement('button');
   boton.type = 'button';
@@ -38,10 +45,13 @@ function crearTarjetaProducto(producto, indice, alAgregar) {
     elementoFoto.alt = '';
     elementoFoto.loading = indice < UMBRAL_FOTOS_EAGER ? 'eager' : 'lazy';
     elementoFoto.className = 'tarjeta-producto__foto';
+    // Si el archivo referenciado no existe (borrado, movido, nunca subido de
+    // verdad) el navegador muestra su ícono de "imagen rota" por defecto —
+    // reemplazamos por el mismo placeholder que ya existe para "sin foto",
+    // en vez de dejar ese ícono genérico.
+    elementoFoto.addEventListener('error', () => elementoFoto.replaceWith(crearPlaceholderFoto()), { once: true });
   } else {
-    elementoFoto = document.createElement('div');
-    elementoFoto.className = 'tarjeta-producto__foto tarjeta-producto__foto--vacia';
-    elementoFoto.innerHTML = iconoPaqueteVacio;
+    elementoFoto = crearPlaceholderFoto();
   }
   boton.appendChild(elementoFoto);
 

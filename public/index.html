@@ -35,13 +35,76 @@
 <link rel="stylesheet" href="/css/estilos.css" />
 </head>
 <body>
-<div id="app">
-  <header class="cabecera">
-    <span class="cabecera__marca">Doña Olga</span>
+<div id="shell">
+  <nav id="nav-lateral" class="nav-lateral" aria-label="Secciones">
+    <span class="nav-lateral__marca">Doña Olga</span>
 
-    <p id="estado-caja" class="cabecera__caja" data-estado="cerrada">Verificando caja…</p>
+    <ul class="nav-lateral__lista">
+      <li>
+        <button id="nav-mostrador" type="button" class="nav-lateral__item" data-vista="mostrador" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M4 8.5l1.2-4h13.6l1.2 4" />
+            <path d="M4 8.5h16v9.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8.5z" />
+            <path d="M9.5 12.5a2.5 2.5 0 0 0 5 0" />
+          </svg>
+          <span>Mostrador</span>
+        </button>
+      </li>
+      <li>
+        <button id="nav-historial" type="button" class="nav-lateral__item" data-vista="historial" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" />
+            <path d="M3.5 5v4h4" />
+            <path d="M12 8v4l3 2" />
+          </svg>
+          <span>Historial</span>
+        </button>
+      </li>
+      <li>
+        <button id="nav-indicadores" type="button" class="nav-lateral__item" data-vista="indicadores" hidden disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M4 20V10M11 20V4M18 20v-7" />
+            <path d="M2.5 20h19" />
+          </svg>
+          <span>Indicadores</span>
+          <span class="nav-lateral__etiqueta">Próximamente</span>
+        </button>
+      </li>
+      <li>
+        <button id="nav-inventario" type="button" class="nav-lateral__item" data-vista="inventario" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M3.5 8L12 3.5 20.5 8 12 12.5 3.5 8z" />
+            <path d="M3.5 8v9L12 21.5 20.5 17V8" />
+            <path d="M12 12.5V21.5" />
+          </svg>
+          <span>Inventario</span>
+          <span class="nav-lateral__etiqueta">Próximamente</span>
+        </button>
+      </li>
+    </ul>
 
-    <nav class="cabecera__acciones" aria-label="Acciones generales">
+    <div class="nav-lateral__cuenta">
+      <span id="badge-usuario" class="nav-lateral__usuario"></span>
+      <div class="nav-lateral__cuenta-acciones">
+        <button id="boton-tema" type="button" class="boton-icono" aria-label="Cambiar tema">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M20 13.2A8.5 8.5 0 1 1 10.8 4a7 7 0 0 0 9.2 9.2z" />
+          </svg>
+        </button>
+        <button id="boton-salir" type="button" class="boton-icono" aria-label="Cerrar sesión" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M15 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8" />
+            <path d="M10 12h11M17 8l4 4-4 4" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div id="contenido-principal">
+    <header class="cabecera-contexto">
+      <p id="estado-caja" class="cabecera__caja" data-estado="cerrada">Verificando caja…</p>
+
       <div class="cabecera__alertas-contenedor">
         <button id="boton-alertas" type="button" class="boton-icono" aria-haspopup="true" aria-expanded="false" aria-label="Alertas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -52,110 +115,109 @@
         </button>
         <div id="panel-alertas" class="panel-alertas" role="region" aria-label="Alertas de inventario" hidden></div>
       </div>
+    </header>
 
-      <button id="boton-tema" type="button" class="boton-icono" aria-label="Cambiar tema">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <path d="M20 13.2A8.5 8.5 0 1 1 10.8 4a7 7 0 0 0 9.2 9.2z" />
-        </svg>
-      </button>
+    <section id="vista-mostrador" class="vista" aria-labelledby="titulo-vista-mostrador" data-vista-contenido>
+      <h2 id="titulo-vista-mostrador" class="visualmente-oculto">Mostrador</h2>
 
-      <button id="boton-historial" type="button" class="boton-icono" aria-label="Historial de ventas de hoy" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" />
-          <path d="M3.5 5v4h4" />
-          <path d="M12 8v4l3 2" />
-        </svg>
-      </button>
+      <main class="contenido">
+        <section class="panel-productos" aria-labelledby="titulo-productos">
+          <h2 id="titulo-productos" class="visualmente-oculto">Buscar y agregar productos</h2>
 
-      <span id="badge-usuario" class="cabecera__usuario"></span>
+          <div class="busqueda">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20.5 20.5l-4.3-4.3" />
+            </svg>
+            <label for="input-busqueda" class="visualmente-oculto">Buscar producto por nombre</label>
+            <input id="input-busqueda" type="search" placeholder="Buscar producto por nombre…" autocomplete="off" />
+          </div>
 
-      <button id="boton-salir" type="button" class="boton-icono" aria-label="Cerrar sesión" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <path d="M15 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8" />
-          <path d="M10 12h11M17 8l4 4-4 4" />
-        </svg>
-      </button>
-    </nav>
-  </header>
+          <!-- El lector de código de barras no tiene campo propio (ver
+               barcode-scanner.js): esta región anuncia el resultado de cada
+               escaneo para quien use lector de pantalla, ya que de otro modo
+               el escaneo es invisible. -->
+          <div id="anuncio-lector" class="visualmente-oculto" role="status" aria-live="polite"></div>
 
-  <main class="contenido">
-    <section class="panel-productos" aria-labelledby="titulo-productos">
-      <h2 id="titulo-productos" class="visualmente-oculto">Buscar y agregar productos</h2>
+          <div id="grilla-productos" class="grilla-productos" role="region" aria-label="Resultados de productos" tabindex="0"></div>
+        </section>
 
-      <div class="busqueda">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20.5 20.5l-4.3-4.3" />
-        </svg>
-        <label for="input-busqueda" class="visualmente-oculto">Buscar producto por nombre</label>
-        <input id="input-busqueda" type="search" placeholder="Buscar producto por nombre…" autocomplete="off" />
-      </div>
+        <aside class="panel-carrito" aria-label="Carrito de venta">
+          <h2 class="visualmente-oculto">Carrito de venta</h2>
 
-      <!-- El lector de código de barras no tiene campo propio (ver
-           barcode-scanner.js): esta región anuncia el resultado de cada
-           escaneo para quien use lector de pantalla, ya que de otro modo
-           el escaneo es invisible. -->
-      <div id="anuncio-lector" class="visualmente-oculto" role="status" aria-live="polite"></div>
+          <ul id="lista-carrito" class="lista-carrito" tabindex="0" aria-label="Ítems en el carrito"></ul>
 
-      <div id="grilla-productos" class="grilla-productos" role="region" aria-label="Resultados de productos"></div>
+          <div class="carrito__resumen">
+            <div class="campo">
+              <label for="select-tipo-precio">Tipo de precio</label>
+              <select id="select-tipo-precio">
+                <option value="publico">Público</option>
+                <option value="mayorista">Mayorista</option>
+              </select>
+            </div>
+
+            <div class="carrito__total">
+              <span>Total</span>
+              <span id="total-carrito" class="total numero">$0</span>
+            </div>
+
+            <div class="campo">
+              <label for="select-medio-pago">Medio de pago</label>
+              <select id="select-medio-pago">
+                <option value="efectivo">Efectivo</option>
+                <option value="tarjeta">Tarjeta</option>
+                <option value="nequi">Nequi</option>
+                <option value="daviplata">Daviplata</option>
+              </select>
+            </div>
+
+            <div class="campo" id="campo-monto-recibido" hidden>
+              <label for="input-monto-recibido">Monto recibido</label>
+              <input id="input-monto-recibido" type="number" inputmode="numeric" min="0" step="1" />
+            </div>
+
+            <div class="carrito__total" id="fila-vuelto" hidden>
+              <span>Vuelto</span>
+              <span id="vuelto-carrito" class="total numero">$0</span>
+            </div>
+
+            <button id="boton-cobrar" type="button" class="boton-primario" disabled>Cobrar</button>
+          </div>
+        </aside>
+      </main>
     </section>
 
-    <aside class="panel-carrito" aria-label="Carrito de venta">
-      <h2 class="visualmente-oculto">Carrito de venta</h2>
+    <section id="vista-historial" class="vista vista-secundaria" aria-labelledby="titulo-vista-historial" data-vista-contenido hidden>
+      <header class="vista-secundaria__cabecera">
+        <h2 id="titulo-vista-historial">Historial de ventas de hoy</h2>
+      </header>
+      <div id="lista-historial" class="lista-historial"></div>
+    </section>
 
-      <ul id="lista-carrito" class="lista-carrito"></ul>
-
-      <div class="carrito__resumen">
-        <div class="campo">
-          <label for="select-tipo-precio">Tipo de precio</label>
-          <select id="select-tipo-precio">
-            <option value="publico">Público</option>
-            <option value="mayorista">Mayorista</option>
-          </select>
-        </div>
-
-        <div class="carrito__total">
-          <span>Total</span>
-          <span id="total-carrito" class="total numero">$0</span>
-        </div>
-
-        <div class="campo">
-          <label for="select-medio-pago">Medio de pago</label>
-          <select id="select-medio-pago">
-            <option value="efectivo">Efectivo</option>
-            <option value="tarjeta">Tarjeta</option>
-            <option value="nequi">Nequi</option>
-            <option value="daviplata">Daviplata</option>
-          </select>
-        </div>
-
-        <div class="campo" id="campo-monto-recibido" hidden>
-          <label for="input-monto-recibido">Monto recibido</label>
-          <input id="input-monto-recibido" type="number" inputmode="numeric" min="0" step="1" />
-        </div>
-
-        <div class="carrito__total" id="fila-vuelto" hidden>
-          <span>Vuelto</span>
-          <span id="vuelto-carrito" class="total numero">$0</span>
-        </div>
-
-        <button id="boton-cobrar" type="button" class="boton-primario" disabled>Cobrar</button>
+    <section id="vista-indicadores" class="vista vista-proximamente" aria-labelledby="titulo-vista-indicadores" data-vista-contenido hidden>
+      <div class="vista-proximamente__contenido">
+        <svg class="vista-proximamente__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M4 20V10M11 20V4M18 20v-7" />
+          <path d="M2.5 20h19" />
+        </svg>
+        <h2 id="titulo-vista-indicadores">Indicadores</h2>
+        <p>Esta sección está en construcción — próximamente vas a poder ver ventas totales, ticket promedio, producto más vendido y comparativa contra el día anterior.</p>
       </div>
-    </aside>
-  </main>
-</div>
+    </section>
 
-<section id="vista-historial" class="vista-secundaria" aria-labelledby="titulo-vista-historial" hidden>
-  <header class="vista-secundaria__cabecera">
-    <h2 id="titulo-vista-historial">Historial de ventas de hoy</h2>
-    <button id="boton-cerrar-historial" type="button" class="boton-icono" aria-label="Volver al mostrador">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-        <path d="M6 6l12 12M18 6L6 18" />
-      </svg>
-    </button>
-  </header>
-  <div id="lista-historial" class="lista-historial"></div>
-</section>
+    <section id="vista-inventario" class="vista vista-proximamente" aria-labelledby="titulo-vista-inventario" data-vista-contenido hidden>
+      <div class="vista-proximamente__contenido">
+        <svg class="vista-proximamente__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M3.5 8L12 3.5 20.5 8 12 12.5 3.5 8z" />
+          <path d="M3.5 8v9L12 21.5 20.5 17V8" />
+          <path d="M12 12.5V21.5" />
+        </svg>
+        <h2 id="titulo-vista-inventario">Inventario</h2>
+        <p>Esta sección está en construcción — próximamente vas a poder ver el historial de movimientos de stock.</p>
+      </div>
+    </section>
+  </div>
+</div>
 
 <div id="overlay-login" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-overlay-login" hidden>
   <div class="overlay__panel">

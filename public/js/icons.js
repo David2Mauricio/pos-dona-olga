@@ -77,6 +77,26 @@ export const iconoHistorial = `
   <path d="M12 8v4l3 2" />
 </svg>`;
 
+export const iconoMostrador = `
+<svg ${ATRIBUTOS_BASE}>
+  <path d="M4 8.5l1.2-4h13.6l1.2 4" />
+  <path d="M4 8.5h16v9.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8.5z" />
+  <path d="M9.5 12.5a2.5 2.5 0 0 0 5 0" />
+</svg>`;
+
+export const iconoIndicadores = `
+<svg ${ATRIBUTOS_BASE}>
+  <path d="M4 20V10M11 20V4M18 20v-7" />
+  <path d="M2.5 20h19" />
+</svg>`;
+
+export const iconoInventario = `
+<svg ${ATRIBUTOS_BASE}>
+  <path d="M3.5 8L12 3.5 20.5 8 12 12.5 3.5 8z" />
+  <path d="M3.5 8v9L12 21.5 20.5 17V8" />
+  <path d="M12 12.5V21.5" />
+</svg>`;
+
 // Placeholder para producto sin foto: un paquete envuelto en papel de
 // carnicería, no un ícono de "imagen rota" ni un cuadro gris genérico.
 export const iconoPaqueteVacio = `

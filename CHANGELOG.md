@@ -4,6 +4,33 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Cambiado (Fase 4 / Bloque 2: navegación persistente y fixes)
+
+- Interfaz reestructurada de "un botón suelto por sección en el header"
+  a una sidebar izquierda persistente con 4 secciones (Mostrador,
+  Historial, Indicadores, Inventario), controles de cuenta (usuario,
+  tema, salir) agrupados al final de la misma sidebar. Indicadores e
+  Inventario quedan visibles como "Próximamente" (deshabilitados,
+  visualmente coherentes) hasta que se construyan. `main.js` gana un
+  único mecanismo (`mostrarVista`) para alternar secciones.
+- Fix: dos productos mostraban un bloque rojo sólido en vez del
+  placeholder — no era un fallo de `onerror`, eran fotos de prueba viejas
+  (PNG de 1×1 píxel) nunca limpiadas de la base real. Se limpió el dato y,
+  aparte, se agregó el `onerror` que nunca existió (fallback real a SVG si
+  un archivo referenciado no existe de verdad).
+- `POST /api/inventario/movimientos` pasa a ser solo-administrador (mismo
+  criterio de riesgo que anular una venta, ADR 0012): un ajuste manual de
+  stock sin venta real detrás es una vía para tapar una merma. `GET` sigue
+  siendo de ambos roles.
+- Bug real de accesibilidad encontrado al correr Lighthouse/axe-core de
+  nuevo sobre la superficie con sidebar: `#lista-carrito` (con
+  `overflow-y: auto`) no era alcanzable por teclado
+  (`scrollable-region-focusable`) — corregido con `tabindex="0"` ahí y,
+  proactivamente, en `#grilla-productos`. axe-core: 0 violaciones en 5
+  combinaciones tras el fix; Lighthouse sin cambios respecto a antes de la
+  reestructuración.
+- ADR 0013 ampliado.
+
 ### Cambiado (Fase 4 / Bloque 2: paleta navy/blanco/gris)
 
 - Paleta cálida del ADR 0009 (crema/vino, Fraunces + Public Sans)
