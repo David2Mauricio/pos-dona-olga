@@ -44,6 +44,7 @@ function exponer(usuario) {
     usuario: usuario.usuario,
     rol: usuario.rol,
     debeCambiarPassword: usuario.debeCambiarPassword,
+    activo: usuario.activo,
   };
 }
 

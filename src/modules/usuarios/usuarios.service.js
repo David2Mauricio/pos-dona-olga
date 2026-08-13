@@ -64,4 +64,16 @@ function actualizar(id, cambios) {
   return authService.exponer(actualizado);
 }
 
-module.exports = { crear, listar, obtenerPorId, actualizar };
+// Fase 4 (ver ADR 0013): mismo criterio que crear() — la contraseña
+// temporal siempre la genera el sistema al azar, nunca se recibe del
+// administrador que resetea. Fuerza debeCambiarPassword:true (a
+// diferencia del cambio de contraseña por autoservicio, que lo apaga).
+function resetearPassword(id) {
+  obtenerPorId(id); // 404 si no existe
+
+  const passwordTemporal = generarPasswordTemporal();
+  const actualizado = repository.resetearPassword(id, authService.crearHash(passwordTemporal));
+  return { ...authService.exponer(actualizado), passwordTemporal };
+}
+
+module.exports = { crear, listar, obtenerPorId, actualizar, resetearPassword };

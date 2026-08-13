@@ -4,6 +4,30 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Agregado (Fase 4: Usuarios)
+
+- Nueva sección "Usuarios" en la sidebar (solo administrador): listado,
+  alta de cajero/administrador con contraseña temporal mostrada una vez
+  (overlay dedicado, no el toast), reseteo de contraseña de cualquier
+  usuario, cambio de rol y activar/desactivar en línea.
+- Backend nuevo: `PATCH /api/usuarios/:id/resetear-password` — genera una
+  contraseña temporal y fuerza `debeCambiarPassword:true`, separado del
+  autoservicio (`POST /api/auth/cambiar-password`), que nunca fuerza esa
+  bandera.
+- Ícono de ojo para mostrar/ocultar contraseña en los tres campos de
+  contraseña de la aplicación (login, cambio obligatorio actual y nuevo).
+- Fix: `authService.exponer()` no incluía `activo`, así que el listado de
+  usuarios mostraba a todos como inactivos (incluido el propio admin) sin
+  importar su estado real.
+- Fix de accesibilidad: el `<select>` de rol no tenía una etiqueta
+  asociada en el DOM (crítico, axe `select-name`) ni fondo/color propios
+  — heredaba el widget nativo del navegador, que podía quedar con texto
+  oscuro sobre fondo oscuro en tema claro (axe `color-contrast`).
+- `public/js/usuarios.js` (nuevo), métodos nuevos en `api.js`.
+- ADR 0013 ampliado, incluyendo un hallazgo de accesibilidad preexistente
+  (falta de `<main>`/`<h1>` únicos fuera de la vista Mostrador) señalado
+  como fuera de alcance de esta sección, no resuelto acá.
+
 ### Agregado (Fase 4: Cierre de Caja)
 
 - El indicador "Caja abierta · $X" en la barra de contexto pasa a ser un

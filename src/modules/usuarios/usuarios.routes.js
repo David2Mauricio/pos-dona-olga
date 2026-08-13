@@ -14,5 +14,6 @@ const router = Router();
 router.post('/', validar(crearUsuarioSchema, 'body'), controller.crear);
 router.get('/', controller.listar);
 router.patch('/:id', validar(idParamsSchema, 'params'), validar(actualizarUsuarioSchema, 'body'), controller.actualizar);
+router.patch('/:id/resetear-password', validar(idParamsSchema, 'params'), controller.resetearPassword);
 
 module.exports = router;

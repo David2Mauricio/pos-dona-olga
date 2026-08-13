@@ -97,6 +97,18 @@ function actualizarPassword(id, passwordHash) {
   return obtenerPorId(id);
 }
 
+// Fase 4 (ver ADR 0013): distinta de actualizarPassword a propósito, no un
+// parámetro extra en esa — son dos flujos con reglas opuestas sobre
+// debe_cambiar_password (autoservicio la apaga porque la persona ya la
+// escribió ella misma; un reseteo por administrador la prende porque la
+// contraseña nueva es temporal y ajena, igual que en el alta).
+function resetearPassword(id, passwordHash) {
+  db.prepare(
+    `UPDATE usuarios SET password_hash = @passwordHash, debe_cambiar_password = 1 WHERE id = @id`
+  ).run({ id, passwordHash });
+  return obtenerPorId(id);
+}
+
 module.exports = {
   crear,
   obtenerPorId,
@@ -105,4 +117,5 @@ module.exports = {
   contarAdministradoresActivos,
   actualizar,
   actualizarPassword,
+  resetearPassword,
 };

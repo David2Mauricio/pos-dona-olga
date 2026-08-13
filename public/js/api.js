@@ -83,6 +83,12 @@ export const api = {
   crearCategoria: (nombre) => peticion('/categorias', { method: 'POST', body: JSON.stringify({ nombre }) }),
   actualizarCategoria: (id, nombre) => peticion(`/categorias/${id}`, { method: 'PATCH', body: JSON.stringify({ nombre }) }),
 
+  // Gestión de usuarios (Fase 4, ver ADR 0013) — módulo entero solo-administrador.
+  listarUsuarios: () => peticion('/usuarios'),
+  crearUsuario: (datos) => peticion('/usuarios', { method: 'POST', body: JSON.stringify(datos) }),
+  actualizarUsuario: (id, cambios) => peticion(`/usuarios/${id}`, { method: 'PATCH', body: JSON.stringify(cambios) }),
+  resetearPasswordUsuario: (id) => peticion(`/usuarios/${id}/resetear-password`, { method: 'PATCH' }),
+
   crearVenta: (datos) => peticion('/ventas', { method: 'POST', body: JSON.stringify(datos) }),
   listarVentas: ({ desde, hasta }) => peticion(`/ventas?desde=${desde}&hasta=${hasta}`),
   anularVenta: (id, motivoAnulacion) =>

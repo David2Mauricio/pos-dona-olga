@@ -70,6 +70,17 @@
         </button>
       </li>
       <li>
+        <button id="nav-usuarios" type="button" class="nav-lateral__item" data-vista="usuarios" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <circle cx="9" cy="8" r="3.25" />
+            <path d="M2.75 19c0-3.45 2.8-6 6.25-6s6.25 2.55 6.25 6" />
+            <path d="M16 6.5a3 3 0 0 1 0 5.9" />
+            <path d="M18.5 13.3c2.35.55 4 2.65 4 5.2" />
+          </svg>
+          <span>Usuarios</span>
+        </button>
+      </li>
+      <li>
         <button id="nav-indicadores" type="button" class="nav-lateral__item" data-vista="indicadores" hidden disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <path d="M4 20V10M11 20V4M18 20v-7" />
@@ -240,6 +251,14 @@
       </div>
     </section>
 
+    <section id="vista-usuarios" class="vista vista-secundaria" aria-labelledby="titulo-vista-usuarios" data-vista-contenido hidden>
+      <header class="vista-secundaria__cabecera">
+        <h2 id="titulo-vista-usuarios">Usuarios</h2>
+        <button id="boton-nuevo-usuario" type="button" class="boton-primario">+ Nuevo usuario</button>
+      </header>
+      <div id="tabla-usuarios" class="catalogo__tabla" role="region" aria-label="Listado de usuarios" tabindex="0"></div>
+    </section>
+
     <section id="vista-indicadores" class="vista vista-proximamente" aria-labelledby="titulo-vista-indicadores" data-vista-contenido hidden>
       <div class="vista-proximamente__contenido">
         <svg class="vista-proximamente__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -281,7 +300,10 @@
       </div>
       <div class="campo">
         <label for="input-password">Contraseña</label>
-        <input id="input-password" type="password" autocomplete="current-password" required />
+        <div class="campo__password-envoltorio">
+          <input id="input-password" type="password" autocomplete="current-password" required />
+          <button type="button" class="campo__boton-ojo" data-target="input-password" aria-label="Mostrar contraseña" aria-pressed="false"></button>
+        </div>
       </div>
       <button type="submit" class="boton-primario">Ingresar</button>
     </form>
@@ -289,11 +311,17 @@
     <form id="formulario-cambiar-password" hidden>
       <div class="campo">
         <label for="input-password-actual">Contraseña actual</label>
-        <input id="input-password-actual" type="password" autocomplete="current-password" required />
+        <div class="campo__password-envoltorio">
+          <input id="input-password-actual" type="password" autocomplete="current-password" required />
+          <button type="button" class="campo__boton-ojo" data-target="input-password-actual" aria-label="Mostrar contraseña" aria-pressed="false"></button>
+        </div>
       </div>
       <div class="campo">
         <label for="input-password-nueva">Contraseña nueva</label>
-        <input id="input-password-nueva" type="password" autocomplete="new-password" minlength="8" required />
+        <div class="campo__password-envoltorio">
+          <input id="input-password-nueva" type="password" autocomplete="new-password" minlength="8" required />
+          <button type="button" class="campo__boton-ojo" data-target="input-password-nueva" aria-label="Mostrar contraseña" aria-pressed="false"></button>
+        </div>
       </div>
       <button type="submit" class="boton-primario">Guardar y continuar</button>
     </form>
@@ -364,6 +392,48 @@
         <button type="button" id="boton-cancelar-categoria" class="boton-secundario">Cancelar</button>
       </div>
     </form>
+  </div>
+</div>
+
+<div id="overlay-form-usuario" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-form-usuario" hidden>
+  <div class="overlay__panel">
+    <h2 id="titulo-form-usuario">Nuevo usuario</h2>
+    <form id="formulario-usuario">
+      <div class="campo">
+        <label for="input-usuario-nombre">Nombre</label>
+        <input id="input-usuario-nombre" type="text" required />
+      </div>
+      <div class="campo">
+        <label for="input-usuario-usuario">Usuario</label>
+        <input id="input-usuario-usuario" type="text" autocomplete="off" required minlength="3" />
+      </div>
+      <div class="campo">
+        <label for="input-usuario-rol">Rol</label>
+        <select id="input-usuario-rol">
+          <option value="cajero">Cajero</option>
+          <option value="administrador">Administrador</option>
+        </select>
+      </div>
+      <div class="overlay__acciones">
+        <button type="submit" class="boton-primario">Crear</button>
+        <button type="button" id="boton-cancelar-usuario" class="boton-secundario">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="overlay-password-temporal" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-password-temporal" hidden>
+  <div class="overlay__panel">
+    <svg class="overlay__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <rect x="5" y="11" width="14" height="9" rx="1.8" />
+      <path d="M8 11V7.5a4 4 0 0 1 8 0V11" />
+    </svg>
+    <h2 id="titulo-password-temporal">Contraseña temporal generada</h2>
+    <p id="texto-password-temporal">Guardala ahora — no se vuelve a mostrar. El sistema le va a pedir cambiarla en el próximo ingreso.</p>
+    <p id="valor-password-temporal" class="password-temporal__valor numero"></p>
+    <div class="overlay__acciones">
+      <button type="button" id="boton-cerrar-password-temporal" class="boton-primario">Entendido, cerrar</button>
+    </div>
   </div>
 </div>
 

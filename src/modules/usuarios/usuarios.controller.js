@@ -14,4 +14,9 @@ function actualizar(req, res) {
   res.json(usuario);
 }
 
-module.exports = { crear, listar, actualizar };
+function resetearPassword(req, res) {
+  const usuario = usuariosService.resetearPassword(req.params.id);
+  res.json(usuario);
+}
+
+module.exports = { crear, listar, actualizar, resetearPassword };

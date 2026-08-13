@@ -8,6 +8,7 @@ import { iniciarAuth, obtenerUsuarioActual } from './auth.js';
 import { iniciarHistorial, abrirHistorial } from './historial.js';
 import { abrirCatalogo } from './catalogo.js';
 import { iniciarCierreCaja, establecerCajaSesionId } from './cierre-caja.js';
+import { abrirUsuarios } from './usuarios.js';
 
 const elementoEstadoCaja = document.getElementById('estado-caja');
 const botonTema = document.getElementById('boton-tema');
@@ -28,6 +29,7 @@ const botonCobrar = document.getElementById('boton-cobrar');
 const navItems = document.querySelectorAll('.nav-lateral__item[data-vista]');
 const navHistorial = document.getElementById('nav-historial');
 const navProductos = document.getElementById('nav-productos');
+const navUsuarios = document.getElementById('nav-usuarios');
 const navIndicadores = document.getElementById('nav-indicadores');
 const overlayCaja = document.getElementById('overlay-caja-cerrada');
 const formularioAbrirCaja = document.getElementById('formulario-abrir-caja');
@@ -323,6 +325,7 @@ navItems.forEach((boton) => {
     const nombre = boton.dataset.vista;
     if (nombre === 'historial') abrirHistorial();
     if (nombre === 'productos') abrirCatalogo();
+    if (nombre === 'usuarios') abrirUsuarios();
     mostrarVista(nombre);
   });
 });
@@ -347,18 +350,21 @@ iniciarCierreCaja({
   },
 });
 
-// Historial, Productos e Indicadores son solo-administrador en la UI — la
-// protección real de Historial es el 403 ROL_INSUFICIENTE que el backend
-// ya devuelve en PATCH /api/ventas/:id/anular (verificado en Bloque 2);
-// Productos la misma en POST/PATCH /api/productos y /api/categorias;
-// Indicadores (Bloque 3) todavía no existe, así que un cajero ni siquiera
-// ve la opción "Próximamente". Inventario queda visible para ambos roles
-// (ver inventario.routes.js: listar/alertas es de ambos, solo crear un
-// movimiento manual quedó restringido a administrador).
+// Historial, Productos, Usuarios e Indicadores son solo-administrador en
+// la UI — la protección real de Historial es el 403 ROL_INSUFICIENTE que
+// el backend ya devuelve en PATCH /api/ventas/:id/anular (verificado en
+// Bloque 2); Productos la misma en POST/PATCH /api/productos y
+// /api/categorias; Usuarios el módulo entero (app.js monta /api/usuarios
+// con requiereRol('administrador')); Indicadores (Bloque 3) todavía no
+// existe, así que un cajero ni siquiera ve la opción "Próximamente".
+// Inventario queda visible para ambos roles (ver inventario.routes.js:
+// listar/alertas es de ambos, solo crear un movimiento manual quedó
+// restringido a administrador).
 function actualizarNavegacionPorRol(usuario) {
   const esAdmin = usuario.rol === 'administrador';
   navHistorial.hidden = !esAdmin;
   navProductos.hidden = !esAdmin;
+  navUsuarios.hidden = !esAdmin;
   navIndicadores.hidden = !esAdmin;
 }
 
@@ -381,6 +387,7 @@ iniciarAuth({
   alCerrarSesion: () => {
     navHistorial.hidden = true;
     navProductos.hidden = true;
+    navUsuarios.hidden = true;
     navIndicadores.hidden = true;
     mostrarVista('mostrador');
     productosActivos = [];

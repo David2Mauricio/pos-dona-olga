@@ -787,6 +787,49 @@ img {
   grid-template-columns: 1fr auto;
 }
 
+.catalogo__fila--usuario {
+  grid-template-columns: 1.3fr 1fr 9rem 6rem auto;
+}
+
+/* Sin esto, el <select> de rol solo hereda color: inherit (regla base) y
+   deja el fondo a cargo del widget nativo del navegador/SO — que no seguía
+   nuestro data-tema y podía quedar oscuro incluso en tema claro, texto
+   oscuro sobre fondo oscuro (axe: color-contrast). Mismo patrón que
+   .catalogo__filtros select. */
+.catalogo__fila--usuario select {
+  min-height: 44px;
+  padding: 0 0.5rem;
+  border-radius: var(--radio-chico);
+  border: 1px solid var(--color-borde-fuerte);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+}
+
+.catalogo__fila-acciones {
+  display: flex;
+  gap: 0.4rem;
+  justify-self: end;
+}
+
+.catalogo__fila-acciones .boton-secundario {
+  min-height: 36px;
+  padding: 0 0.65rem;
+  font-size: 0.8rem;
+}
+
+.password-temporal__valor {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  background: var(--color-fondo);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.03em;
+  user-select: all;
+}
+
 .catalogo__fila-nombre {
   font-weight: 500;
 }
@@ -999,6 +1042,40 @@ img {
 .campo input:focus-visible,
 .campo select:focus-visible {
   border-color: var(--color-acento);
+}
+
+/* --- Ojo de contraseña (Fase 4, ver ADR 0013) --- */
+
+.campo__password-envoltorio {
+  position: relative;
+}
+
+.campo__password-envoltorio input {
+  width: 100%;
+  padding-right: 2.75rem;
+}
+
+.campo__boton-ojo {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-texto-muted);
+}
+
+.campo__boton-ojo:hover {
+  color: var(--color-texto);
+}
+
+.campo__boton-ojo svg {
+  width: 20px;
+  height: 20px;
 }
 
 .busqueda {

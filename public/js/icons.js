@@ -90,6 +90,27 @@ export const iconoIndicadores = `
   <path d="M2.5 20h19" />
 </svg>`;
 
+export const iconoOjo = `
+<svg ${ATRIBUTOS_BASE}>
+  <path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z" />
+  <circle cx="12" cy="12" r="2.75" />
+</svg>`;
+
+export const iconoOjoTachado = `
+<svg ${ATRIBUTOS_BASE}>
+  <path d="M2.5 12s3.5-6.5 9.5-6.5c1.7 0 3.15.4 4.37 1M21.5 12s-1.15 2.15-3.32 3.98M9.9 9.9a2.75 2.75 0 0 0 3.9 3.9" />
+  <path d="M6.6 6.6C4.2 8.1 2.5 12 2.5 12s3.5 6.5 9.5 6.5c1.55 0 2.9-.34 4.05-.85" />
+  <path d="M3.5 3.5l17 17" />
+</svg>`;
+
+export const iconoUsuarios = `
+<svg ${ATRIBUTOS_BASE}>
+  <circle cx="9" cy="8" r="3.25" />
+  <path d="M2.75 19c0-3.45 2.8-6 6.25-6s6.25 2.55 6.25 6" />
+  <path d="M16 6.5a3 3 0 0 1 0 5.9" />
+  <path d="M18.5 13.3c2.35.55 4 2.65 4 5.2" />
+</svg>`;
+
 export const iconoProductos = `
 <svg ${ATRIBUTOS_BASE}>
   <path d="M20.5 12.5L12 21 3.5 12.5V6a2 2 0 0 1 2-2H12l8.5 8.5z" />

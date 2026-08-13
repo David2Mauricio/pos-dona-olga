@@ -2,7 +2,7 @@
 
 ## Estado
 
-En progreso — este ADR se amplía a medida que se cierra cada pieza de la Fase 4. Bloque 1 (sesión), Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, navegación persistente), Gestión de Productos y Categorías, y Cierre de Caja cerrados; Bloque 3 (KPIs) pendiente — con esto el sistema cubre el 100% de los módulos de backend construidos.
+En progreso — este ADR se amplía a medida que se cierra cada pieza de la Fase 4. Bloque 1 (sesión), Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, navegación persistente), Gestión de Productos y Categorías, Cierre de Caja, y Usuarios cerrados; Bloque 3 (KPIs), Vencimientos y Proveedores pendientes, en ese orden (confirmado con el cliente) — con esto el sistema cubre el 100% de los módulos de backend construidos.
 
 ## Contexto
 
@@ -162,6 +162,38 @@ Pedido explícito del cliente: la diferencia se etiqueta como "Sobra $X" o "Falt
 ### Verificación
 
 Suite Puppeteer contra Chrome real (15/15) cubriendo los tres escenarios pedidos explícitamente: diferencia en 0 ("Cuadra", badge de éxito), sobrante ("Sobra $5.000", badge de peligro), y faltante ("Falta $3.000"). Además: "Cobrar" bloqueado mientras el overlay está abierto (con un producto real en el carrito, no solo verificado en abstracto) y bloqueado también después de confirmar (por falta de caja, ya no por el cierre); tras confirmar, el overlay de "caja cerrada" aparece solo, sin código nuevo; cancelar el cierre deja la sesión abierta; y verificación directa contra el backend de que un cajero puede cerrar su propia caja (200, no 403). axe-core: 0 violaciones en 4 combinaciones (mostrador con caja abierta, overlay de cierre con y sin diferencia visible, ambos temas). Lighthouse sin cambios (login 98/100/96/100, mostrador 98/100/100/100). Datos de prueba (producto, categoría, sesiones de caja, usuario cajero) eliminados de la base real al terminar.
+
+## Sección: Usuarios
+
+Tercera pieza del orden confirmado (Usuarios → Bloque 3 → Vencimientos → Proveedores). Auditoría de `usuarios.routes.js`, `usuarios.schema.js`, `usuarios.controller.js`, `usuarios.service.js`, `auth/usuarios.repository.js` y `auth/auth.service.js` antes de escribir código, con tres preguntas explícitas del cliente a responder primero.
+
+### Hallazgos de la auditoría
+
+- Contrato real: `POST /api/usuarios` `{nombre, usuario (min 3, se guarda en minúsculas), rol}` → responde el usuario expuesto + `passwordTemporal` (generada con `generarPasswordTemporal()`, la misma función que usa `seed-admin.js`). `GET /api/usuarios` lista todos (activos e inactivos). `PATCH /api/usuarios/:id` acepta `{rol?, activo?}` — nunca contraseña, el schema es `.strict()`. Todo el módulo montado en `app.js` con `requiereRol('administrador')` a nivel de router, no endpoint por endpoint.
+- **No existía un reseteo de contraseña por administrador.** Existía `actualizarPassword` en el repositorio, pero hardcodeada a `debe_cambiar_password = 0` — es el flujo de autoservicio (`POST /api/auth/cambiar-password`), donde la persona ya escribió su propia contraseña nueva y no hace falta forzar un cambio otra vez. Usar esa misma función para un reseteo por admin habría dejado a la persona con una contraseña temporal ajena pero sin la bandera que la obliga a cambiarla — un hueco de seguridad. Se agregó `PATCH /api/usuarios/:id/resetear-password` (sin body) con una función nueva y separada (`resetearPassword`, capas repositorio→servicio→controlador→ruta) en vez de un parámetro extra en `actualizarPassword`, para no arriesgar el comportamiento ya validado del autoservicio. Responde el usuario expuesto + `passwordTemporal` nueva, mismo shape que el alta.
+- **Sí existe** un mecanismo de desactivar-no-borrar (`PATCH {activo:false}`, igual que productos) y **ya existe** la protección de "único administrador activo": `usuarios.service.js` rechaza con `400` cualquier intento de desactivar o cambiar de rol al último administrador activo. No había que construir nada de esto, solo verificarlo y ejercitarlo desde la UI.
+
+### Bug real encontrado durante las pruebas: `activo` faltaba en la respuesta
+
+`authService.exponer()` — la única función que decide qué campos del usuario salen hacia HTTP/sesión — nunca incluía `activo`. Pasó inadvertido en login/sesión (un usuario inactivo ya no puede loguearse, `auth.service.js` lo valida antes) pero rompía el listado de Usuarios: cada fila, incluido el admin real, se renderizaba como "Inactivo" y el botón ofrecía "Activar" en vez de "Desactivar". Encontrado por la propia suite Puppeteer (aserción sobre el estado real del admin tras los intentos de único-administrador) y confirmado leyendo el repositorio (`fila.activo === 1` sí llega desde SQLite, se perdía en `exponer()`). Fix de una línea: se agregó `activo: usuario.activo` a `exponer()`.
+
+### Dos bugs de accesibilidad reales encontrados con axe-core (no artefactos de timing)
+
+- **`select-name` (crítico)**: el `<select>` de rol en cada fila tenía un `<label for="rol-usuario-N">` construido en JS pero nunca insertado en el DOM — quedaba huérfano en memoria, sin asociación real. Fix: se agrega como hijo de la fila (es `position:absolute` vía `.visualmente-oculto`, así que no participa del auto-placement de la grilla y no corre las columnas).
+- **`color-contrast` (serio), solo en tema claro**: el `<select>` de rol no tenía `background`/`color` propios — solo heredaba la regla base `select { color: inherit }`, sin fondo. El widget nativo del navegador podía quedar con un fondo oscuro (ligado al tema del SO/navegador, no al `data-tema` de la página) mientras el texto heredaba el color oscuro del tema claro: texto oscuro sobre fondo oscuro. Mismo patrón que ya usa `.catalogo__filtros select` (fondo/color explícitos con los tokens `--color-superficie`/`--color-texto`) se aplicó acá.
+- Nota aparte, **no bug**: varias violaciones de `color-contrast` que aparecían solo justo después de alternar `data-tema` (`.nav-lateral__marca`, `#boton-nuevo-usuario`, `.catalogo__fila-nombre`) eran un artefacto del script de prueba, no del producto — hay una transición CSS de 260ms (`--duracion-tema`) en `background-color`/`color`, y axe medía el color a mitad de la transición. Se corrigió el script (espera de 350ms tras cada cambio de tema) y desaparecieron.
+
+### Hallazgo fuera de alcance, documentado y no resuelto acá
+
+`landmark-main-is-top-level`, `landmark-one-main` y `page-has-heading-one` (moderado, axe-core): `<main class="contenido">` solo envuelve el contenido de la vista Mostrador (anidado dentro de `<section id="vista-mostrador">`, que ya es un landmark `region` por tener `aria-labelledby`) y no existe ningún `<h1>` visible en la página. Al navegar a cualquier otra vista (Usuarios, Productos, Historial, Cierre de Caja — todas, no solo esta), `vista-mostrador` queda `hidden` y con él su único `<main>`, dejando la página sin landmark principal y sin encabezado de nivel 1. Preexistente desde el Bloque 1 (la estructura de `<main>` es de esa sesión), no introducido acá, y no específico de Usuarios — afecta a toda sección ya cerrada. No se corrige en esta pasada porque el fix correcto (mover `<main>` a envolver `#contenido-principal` a nivel de shell, agregar un `<h1>` visualmente oculto) toca el shell compartido por todas las vistas, no solo Usuarios — se señala para decidir aparte, no se asume que corresponde resolverlo dentro de esta sección.
+
+### Ícono de ojo en contraseña (login + cambio obligatorio)
+
+Pedido explícito del cliente, empaquetado dentro de esta sección por ser trivial. Un solo patrón reutilizado en los tres campos de contraseña (`#input-password` en login, `#input-password-actual`/`#input-password-nueva` en cambio obligatorio): cada input queda envuelto en `.campo__password-envoltorio`, con un `<button type="button" class="campo__boton-ojo">` hermano que alterna `input.type` entre `password`/`text` e intercambia el ícono (`iconoOjo`/`iconoOjoTachado`), actualizando `aria-label`/`aria-pressed`. Nada de esto pasa por el backend — es puramente visual.
+
+### Verificación
+
+Suite Puppeteer contra Chrome real (19/19) cubriendo los cinco escenarios pedidos explícitamente: alta de usuario con contraseña temporal mostrada una vez (overlay dedicado, no el toast de 3.5s — no da tiempo real a copiarla); reseteo de contraseña de un cajero existente, verificado contra el backend que la contraseña anterior ya no sirve (401) y que la nueva sí funciona forzando `debeCambiarPassword:true`; intento de desactivar y de degradar de rol al único administrador activo, ambos rechazados con el 400 ya existente, con verificación posterior de que el admin real quedó intacto; ojo de contraseña funcionando en los tres campos (login y ambos campos del cambio obligatorio); y sección oculta para cajero en la sidebar con el 403 `ROL_INSUFICIENTE` real verificado contra el backend (no solo la UI). axe-core: 0 violaciones en las superficies de Usuarios tras los fixes (listado en ambos temas, overlay de alta, overlay de contraseña temporal) — quedan sin resolver, a propósito, los tres hallazgos de landmark/heading documentados arriba por ser preexistentes y fuera de alcance. Lighthouse: login 83/100/96/100, mostrador autenticado 83/100/100/100 (sin cambios respecto a la sección anterior). Datos de prueba (2 usuarios cajero de prueba, sesiones de caja abiertas/cerradas por el propio test) eliminados de la base real al terminar.
 
 ## Bloque 3
 

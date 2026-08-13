@@ -6,6 +6,7 @@
 
 import { api, ErrorApi, registrarOnSesionExpirada } from './api.js';
 import { mostrarToast } from './render.js';
+import { iconoOjo, iconoOjoTachado } from './icons.js';
 
 const overlayLogin = document.getElementById('overlay-login');
 const tituloOverlayLogin = document.getElementById('titulo-overlay-login');
@@ -18,6 +19,22 @@ const inputPasswordActual = document.getElementById('input-password-actual');
 const inputPasswordNueva = document.getElementById('input-password-nueva');
 const badgeUsuario = document.getElementById('badge-usuario');
 const botonSalir = document.getElementById('boton-salir');
+
+// Ojo de contraseña: un botón por campo (data-target apunta al id del
+// input), genérico para los tres campos de contraseña que existen hoy —
+// alterna type="password"/"text" del input al que apunta, nada de
+// backend involucrado.
+document.querySelectorAll('.campo__boton-ojo').forEach((boton) => {
+  const input = document.getElementById(boton.dataset.target);
+  boton.innerHTML = iconoOjo;
+  boton.addEventListener('click', () => {
+    const mostrando = input.type === 'text';
+    input.type = mostrando ? 'password' : 'text';
+    boton.innerHTML = mostrando ? iconoOjo : iconoOjoTachado;
+    boton.setAttribute('aria-label', mostrando ? 'Mostrar contraseña' : 'Ocultar contraseña');
+    boton.setAttribute('aria-pressed', String(!mostrando));
+  });
+});
 
 let usuarioActual = null;
 let usuarioPendienteDeCambioPassword = null; // guarda el usuario/id entre el login y el cambio obligatorio
