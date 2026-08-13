@@ -239,6 +239,15 @@ img {
   border-radius: var(--radio-chico);
 }
 
+/* Dentro de la sidebar navy, el outline de --color-acento de arriba
+   coincide con el fondo (mismo color) y desaparece — encontrado al
+   revisar el cambio de fondo navy, antes de que llegara a producción, no
+   con axe (axe no chequea foco de teclado). Mismo criterio que el resto
+   de la sidebar: texto-sobre-acento en vez del token normal. */
+.nav-lateral :focus-visible {
+  outline-color: var(--color-texto-sobre-acento);
+}
+
 .visualmente-oculto {
   position: absolute;
   width: 1px;
@@ -276,13 +285,19 @@ img {
   min-height: 100vh;
 }
 
+/* Fondo navy sólido (--color-acento) en vez de --color-superficie: más
+   presencia de marca en la barra lateral, contraste alto contra el resto
+   blanco/gris de la interfaz (pedido explícito). Todo el texto/íconos de
+   acá adentro usa --color-texto-sobre-acento en vez de los tokens
+   normales (--color-texto/--color-texto-muted), que están calibrados para
+   fondos claros — verificado con la fórmula de contraste WCAG real, no a
+   ojo: 12.91:1 en tema claro, 5.83:1 en tema oscuro (ambos ≥4.5:1). */
 .nav-lateral {
   width: 220px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: var(--color-superficie);
-  border-right: 1px solid var(--color-borde);
+  background: var(--color-acento);
   padding: 1.25rem 1rem;
   position: sticky;
   top: 0;
@@ -295,6 +310,7 @@ img {
   font-size: 1.15rem;
   padding: 0 0.5rem;
   margin-bottom: 1.5rem;
+  color: var(--color-texto-sobre-acento);
 }
 
 .nav-lateral__lista {
@@ -307,6 +323,14 @@ img {
   flex: 1;
 }
 
+/* Sin estado "muted" separado a propósito: --color-texto-muted está
+   calibrado para fondos claros (--color-superficie/--color-fondo), no
+   para navy — reducirlo con opacity acá reproduciría el mismo bug de
+   contraste ya encontrado y corregido en Vencimientos (opacity sobre un
+   fondo sólido puede caer por debajo de 4.5:1, ver ADR 0013). Todos los
+   ítems usan el mismo texto-sobre-acento a plena fuerza; la jerarquía
+   entre "página actual" y el resto la sigue dando el chip de
+   aria-current de abajo, no un texto apagado. */
 .nav-lateral__item {
   width: 100%;
   display: flex;
@@ -316,7 +340,7 @@ img {
   border-radius: var(--radio-chico);
   border: none;
   background: transparent;
-  color: var(--color-texto-muted);
+  color: var(--color-texto-sobre-acento);
   font-weight: 500;
   text-align: left;
 }
@@ -327,9 +351,12 @@ img {
   flex-shrink: 0;
 }
 
+/* rgba blanco fijo (no un token de tema) porque el hover necesita
+   aclarar el navy sin importar qué tema esté activo — verificado: 9.53:1
+   en claro, 6.67:1 en oscuro, ambos con margen sobre el mínimo de 4.5:1. */
 .nav-lateral__item:hover:not(:disabled) {
-  background: var(--color-fondo);
-  color: var(--color-texto);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-texto-sobre-acento);
 }
 
 .nav-lateral__item[aria-current='page'] {
@@ -338,9 +365,11 @@ img {
   font-weight: 700;
 }
 
+/* Sin opacity (ver comentario de arriba): el cursor y la etiqueta
+   "Próximamente" ya comunican el estado deshabilitado sin arriesgar el
+   contraste del texto. */
 .nav-lateral__item:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
 }
 
 .nav-lateral__etiqueta {
@@ -349,12 +378,12 @@ img {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--color-texto-muted);
+  color: var(--color-texto-sobre-acento);
 }
 
 .nav-lateral__cuenta {
   padding-top: 1rem;
-  border-top: 1px solid var(--color-borde);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -363,10 +392,24 @@ img {
 .nav-lateral__usuario {
   padding: 0 0.5rem;
   font-size: 0.8rem;
-  color: var(--color-texto-muted);
+  color: var(--color-texto-sobre-acento);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* .boton-icono (tema/salir) hereda color: var(--color-texto) por defecto,
+   calibrado para fondos claros — sobre el navy nuevo de la sidebar medía
+   1.42:1 en claro y 3.05:1 en oscuro, muy por debajo de 4.5:1. Override
+   acotado a estos dos botones específicos, sin tocar el resto de usos de
+   .boton-icono (cabecera, sobre fondo claro, donde el original sigue
+   siendo correcto). */
+.nav-lateral__cuenta-acciones .boton-icono {
+  color: var(--color-texto-sobre-acento);
+}
+
+.nav-lateral__cuenta-acciones .boton-icono:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .nav-lateral__cuenta-acciones {

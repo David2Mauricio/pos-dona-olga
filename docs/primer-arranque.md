@@ -3,6 +3,27 @@
 Para quien instale el sistema en la máquina del mostrador. No requiere saber
 programar, pero sí tener acceso a una terminal en esa máquina.
 
+## 0. Antes de abrir por primera vez
+
+La base de datos se entrega **sin catálogo** — el que se usó para construir
+y probar el sistema (productos y categorías de ejemplo) se vació a
+propósito antes de la instalación real. Dos cosas para hacer antes de dejar
+que el negocio empiece a vender:
+
+1. **Cargar el catálogo real.** Iniciar sesión como administrador, entrar a
+   **Productos** en la barra lateral, y dar de alta ahí las categorías y
+   productos reales de Doña Olga (nombre, tipo de venta, precios, stock
+   inicial). No hay una forma de importar en lote todavía — se carga
+   producto por producto desde esa sección. Es la única vía pensada para
+   esto: no se carga por script ni por Postman.
+2. **Confirmar el usuario administrador.** El sistema ya trae un
+   administrador (`admin`) creado durante el desarrollo. Antes de dejarlo
+   en producción, decidir si esa es la cuenta real que va a usar el
+   negocio (y en ese caso, resetearle la contraseña — ver el paso 4 más
+   abajo, la cuenta actual tiene una contraseña de desarrollo que no debe
+   quedar en uso) o si conviene crear una cuenta nueva con el nombre real
+   de quien administra el sistema y desactivar la de desarrollo.
+
 ## 1. Iniciar el servidor
 
 Desde la carpeta del proyecto:

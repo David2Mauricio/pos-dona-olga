@@ -27,6 +27,13 @@ const ANCHO_TICKET = 32;
 const NOMBRE_NEGOCIO_LINEA_1 = 'Avícola y Salsamentaria';
 const NOMBRE_NEGOCIO_LINEA_2 = 'Doña Olga';
 
+// Mismos datos fijos que el nombre — no varían por instalación, así que
+// tampoco van a variable de entorno. Ambas líneas miden bien menos que
+// ANCHO_TICKET (21 y 17 caracteres respectivamente), no hace falta
+// partirlas como el nombre.
+const DIRECCION_NEGOCIO = 'Calle 33A Sur # 78-23';
+const TELEFONO_NEGOCIO = 'Tel: 312 501 2879';
+
 function inicializar() {
   // Solo ESC @ (reset). Se probó ESC t con varios valores (0-5, 16-19)
   // contra la impresora física y no cambia nada: este modelo ignora el
@@ -107,10 +114,10 @@ function construirRecibo(venta) {
     texto(centrar(NOMBRE_NEGOCIO_LINEA_1)),
     texto(centrar(NOMBRE_NEGOCIO_LINEA_2)),
     negrita(false),
+    texto(centrar(DIRECCION_NEGOCIO)),
+    texto(centrar(TELEFONO_NEGOCIO)),
     texto('-'.repeat(ANCHO_TICKET)),
-    texto(`Venta #${venta.id}`),
     texto(`Fecha: ${venta.creadaEn}`),
-    texto(`Precio: ${venta.tipoPrecio === 'mayorista' ? 'Mayorista' : 'Público'}`),
     texto(`Pago: ${venta.medioPago}`),
     texto('-'.repeat(ANCHO_TICKET)),
   ];
