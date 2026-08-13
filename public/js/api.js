@@ -99,4 +99,12 @@ export const api = {
   // que es lo que necesita el indicador de alertas del mostrador.
   obtenerAlertasInventario: () => peticion('/inventario/alertas'),
   obtenerAlertasVencimientos: () => peticion('/vencimientos/alertas'),
+
+  // Panel de Indicadores (Fase 4/Bloque 3, ver ADR 0013) — admin-only en
+  // el backend (app.js monta /api/reportes con requiereRol('administrador')).
+  obtenerReporteVentas: ({ desde, hasta, cajaSesionId } = {}) => {
+    const parametros = new URLSearchParams({ desde, hasta });
+    if (cajaSesionId) parametros.set('cajaSesionId', cajaSesionId);
+    return peticion(`/reportes/ventas?${parametros.toString()}`);
+  },
 };

@@ -4,6 +4,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Agregado (Fase 4: Bloque 3 — panel de Indicadores)
+
+- Nueva sección "Indicadores" en la sidebar (solo administrador): ventas
+  totales de hoy, ticket promedio, producto más vendido (por ingresos) y
+  comparativa contra el día anterior — cuatro tarjetas, sin librería de
+  gráficos.
+- Backend: `reportes.service.js` agrega `ticketPromedio` a
+  `GET /api/reportes/ventas` (`null` si no hubo ventas, no `0`).
+- Comparativa contra ayer resuelta en el cliente (dos llamadas en paralelo
+  al mismo endpoint, sin endpoint nuevo) con manejo explícito de "ayer sin
+  ventas": muestra un mensaje claro en vez de `Infinity`/`NaN`/"0%"
+  engañoso.
+- `public/js/kpis.js` (nuevo), cargado con `import()` dinámico al abrir la
+  sección — mismo patrón que Historial/Productos/Usuarios.
+- Con esto, la interfaz cubre todas las secciones del backend salvo
+  Vencimientos y Proveedores.
+
 ### Corregido (Fase 4: performance y estructura del shell, tras Usuarios)
 
 - JS de vista bajo demanda: `historial.js`, `catalogo.js` y `usuarios.js`

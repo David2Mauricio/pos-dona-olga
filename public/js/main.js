@@ -344,6 +344,9 @@ navItems.forEach((boton) => {
     if (nombre === 'usuarios') {
       import('./usuarios.js').then(({ abrirUsuarios }) => abrirUsuarios());
     }
+    if (nombre === 'indicadores') {
+      import('./kpis.js').then(({ abrirIndicadores }) => abrirIndicadores());
+    }
     mostrarVista(nombre);
   });
 });
@@ -384,8 +387,8 @@ async function cargarModuloCierreCaja() {
 // el backend ya devuelve en PATCH /api/ventas/:id/anular (verificado en
 // Bloque 2); Productos la misma en POST/PATCH /api/productos y
 // /api/categorias; Usuarios el módulo entero (app.js monta /api/usuarios
-// con requiereRol('administrador')); Indicadores (Bloque 3) todavía no
-// existe, así que un cajero ni siquiera ve la opción "Próximamente".
+// con requiereRol('administrador')); Indicadores (Bloque 3) el módulo
+// entero también (app.js monta /api/reportes con requiereRol('administrador')).
 // Inventario queda visible para ambos roles (ver inventario.routes.js:
 // listar/alertas es de ambos, solo crear un movimiento manual quedó
 // restringido a administrador).

@@ -6,9 +6,14 @@ const LIMITE_TOP_PRODUCTOS = 10;
 
 function reporteVentas({ desde, hasta, cajaSesionId }) {
   const filtros = { desde, hasta, cajaSesionId };
+  const totales = repository.obtenerTotalesVentas(filtros);
 
   return {
-    ...repository.obtenerTotalesVentas(filtros),
+    ...totales,
+    // Redondeado como las demás cifras de dinero (entero COP, ADR 0002) —
+    // null si no hubo ventas, no 0, para que el frontend pueda distinguir
+    // "ticket promedio de $0" (imposible) de "todavía no hay ventas".
+    ticketPromedio: totales.cantidadVentas > 0 ? Math.round(totales.totalVentas / totales.cantidadVentas) : null,
     desglosePorMedioPago: repository.obtenerDesglosePorMedioPago(filtros),
     topProductos: repository.obtenerTopProductos(filtros, LIMITE_TOP_PRODUCTOS),
   };

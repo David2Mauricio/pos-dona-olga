@@ -93,13 +93,12 @@
         </button>
       </li>
       <li>
-        <button id="nav-indicadores" type="button" class="nav-lateral__item" data-vista="indicadores" hidden disabled>
+        <button id="nav-indicadores" type="button" class="nav-lateral__item" data-vista="indicadores" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <path d="M4 20V10M11 20V4M18 20v-7" />
             <path d="M2.5 20h19" />
           </svg>
           <span>Indicadores</span>
-          <span class="nav-lateral__etiqueta">Próximamente</span>
         </button>
       </li>
       <li>
@@ -273,14 +272,35 @@
       <div id="tabla-usuarios" class="catalogo__tabla" role="region" aria-label="Listado de usuarios" tabindex="0"></div>
     </section>
 
-    <section id="vista-indicadores" class="vista vista-proximamente" aria-labelledby="titulo-vista-indicadores" data-vista-contenido hidden>
-      <div class="vista-proximamente__contenido">
-        <svg class="vista-proximamente__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <path d="M4 20V10M11 20V4M18 20v-7" />
-          <path d="M2.5 20h19" />
-        </svg>
+    <section id="vista-indicadores" class="vista vista-secundaria" aria-labelledby="titulo-vista-indicadores" data-vista-contenido hidden>
+      <header class="vista-secundaria__cabecera">
         <h2 id="titulo-vista-indicadores">Indicadores</h2>
-        <p>Esta sección está en construcción — próximamente vas a poder ver ventas totales, ticket promedio, producto más vendido y comparativa contra el día anterior.</p>
+      </header>
+
+      <p id="indicadores-cargando" class="catalogo__vacio">Cargando…</p>
+
+      <div id="indicadores-grilla" class="indicadores__grilla" hidden>
+        <article class="indicadores__tarjeta">
+          <h3 class="indicadores__etiqueta">Ventas totales (hoy)</h3>
+          <p id="indicadores-total-ventas" class="indicadores__valor total numero">$0</p>
+          <p id="indicadores-cantidad-ventas" class="indicadores__detalle"></p>
+        </article>
+
+        <article class="indicadores__tarjeta">
+          <h3 class="indicadores__etiqueta">Ticket promedio</h3>
+          <p id="indicadores-ticket-promedio" class="indicadores__valor total numero">$0</p>
+        </article>
+
+        <article class="indicadores__tarjeta">
+          <h3 class="indicadores__etiqueta">Producto más vendido</h3>
+          <p id="indicadores-producto-top" class="indicadores__valor"></p>
+          <p id="indicadores-producto-top-monto" class="indicadores__detalle"></p>
+        </article>
+
+        <article class="indicadores__tarjeta">
+          <h3 class="indicadores__etiqueta">Comparativa contra ayer</h3>
+          <p id="indicadores-comparativa" class="indicadores__valor"></p>
+        </article>
       </div>
     </section>
 

@@ -2,7 +2,7 @@
 
 ## Estado
 
-En progreso — este ADR se amplía a medida que se cierra cada pieza de la Fase 4. Bloque 1 (sesión), Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, navegación persistente), Gestión de Productos y Categorías, Cierre de Caja, y Usuarios cerrados; Bloque 3 (KPIs), Vencimientos y Proveedores pendientes, en ese orden (confirmado con el cliente) — con esto el sistema cubre el 100% de los módulos de backend construidos.
+En progreso — este ADR se amplía a medida que se cierra cada pieza de la Fase 4. Bloque 1 (sesión), Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, navegación persistente), Gestión de Productos y Categorías, Cierre de Caja, Usuarios y Bloque 3 (KPIs) cerrados; Vencimientos y Proveedores pendientes, en ese orden (confirmado con el cliente) — con Bloque 3 cerrado, la interfaz cubre todas las secciones del backend salvo esas dos.
 
 ## Contexto
 
@@ -215,6 +215,20 @@ En vez de dejarlo como hallazgo documentado-pero-no-resuelto, el cliente pidió 
 
 Suite Puppeteer + axe-core dedicada (9/9): estructura (`<main>` único, `<h1>` único, hijo directo de `#shell`, 0 violaciones de axe); estado de caja reflejado en la cabecera sin depender de ningún click de nav (cierre-caja.js cargado en `alListo`, no perdió su timing al pasar a import dinámico); Productos, Historial y Usuarios abriendo correctamente por primera vez vía `import()` dinámico, con Productos y Usuarios verificados también con axe-core (0 violaciones); overlay de cierre de caja abriendo con normalidad; sin excepciones de JS sin capturar en todo el flujo. Nada de esto formaba parte del plan original de Bloque 3 — se cierra acá, aparte, antes de arrancarlo, tal como se pidió.
 
-## Bloque 3
+## Bloque 3 — Panel de Indicadores
 
-Pendiente — se documenta acá al cerrarse.
+Plan aprobado varios turnos antes de implementarse (ver auditoría original de `reportes.service.js` en este mismo ADR); el cliente pidió, en vez de repetir la auditoría completa, solo verificar que el contrato no hubiera cambiado desde entonces. Se releyó `reportes.service.js`/`reportes.repository.js`/`reportes.routes.js` justo antes de tocar código: sin cambios — `reporteVentas()` seguía devolviendo exactamente `{totalVentas, cantidadVentas, desglosePorMedioPago, topProductos}`, ya con `estado='activa'` excluyendo anuladas (ADR 0012) y `topProductos` ordenado por `totalVendido` DESC (ingresos, no unidades), sin `ticketPromedio` todavía. Confirmado antes de implementar, tal como se pidió.
+
+### Diseño
+
+- `reportes.service.js`: único cambio de backend de este bloque — agrega `ticketPromedio` (`Math.round(totalVentas / cantidadVentas)`, redondeado como toda cifra de dinero, `null` si `cantidadVentas === 0` en vez de `0`, para que el frontend distingue "ticket promedio de $0" de "todavía no hay ventas").
+- `public/js/kpis.js` (nuevo, mismo patrón autocontenido que `usuarios.js`/`catalogo.js`): pide el reporte de hoy y de ayer en paralelo (`Promise.all`, un solo endpoint existente llamado dos veces — no hay ni hace falta un endpoint de comparación). "Producto más vendido" usa `topProductos[0]` tal cual (por ingresos, confirmado hace varios turnos). Comparativa: `calcularVariacionPorcentual(totalHoy, totalAyer)` devuelve `null` si `totalAyer === 0` — nunca `Infinity`/`NaN` — y el panel muestra "Sin ventas registradas ayer" en ese caso (cubre también "ambos días en $0": el guardia de `ayer === 0` se evalúa primero, así que nunca llega a calcular "0% de variación", que hubiera sido engañoso). Con variación real, un badge reutiliza las clases `badge-alerta--exito`/`--peligro` ya existentes (positiva=éxito, negativa=peligro, plana=neutra) — mismo criterio de "no es el navy de marca" que ya se usó en Cierre de Caja para las desviaciones.
+- `import()` dinámico, no import estático (pedido explícito, mismo patrón fijado en el fix de performance de la sección anterior): `kpis.js` se carga la primera vez que se hace click en "Indicadores", no en toda carga de página.
+- `index.html`: `#vista-indicadores` deja de ser un placeholder "Próximamente" (`vista-proximamente`) y pasa a `vista-secundaria` real con cuatro tarjetas (`.indicadores__grilla`/`.indicadores__tarjeta`) reusando tokens existentes — sin librería de gráficos, tal como se decidió en la auditoría original. `#nav-indicadores` deja de tener `disabled`.
+- `api.js`: + `obtenerReporteVentas({desde, hasta, cajaSesionId})`.
+
+### Verificación
+
+Suite Puppeteer + axe-core dedicada (17/17): estado vacío real de la base (sin ventas hoy ni ayer en este momento) mostrando los tres mensajes explícitos correctos — "—" en ticket promedio (no $0), "Sin ventas registradas hoy" en producto más vendido, "Sin ventas registradas ayer" en la comparativa (exactamente el caso "ayer=0" que se pidió cubrir, verificado contra el estado real de la base, no simulado); una venta real de hoy y una venta real "de ayer" (creada vía la API real de ventas y backdateada solo en `creada_en` para simular el día, sin tocar ninguna otra columna) reflejadas correctamente en totales/ticket promedio/producto top, con la comparativa calculando el porcentaje real (+33%, verificado numéricamente, no asumido); venta de hoy anulada vía `PATCH /api/ventas/:id/anular` y el panel reflejando la exclusión (vuelve a "Sin ventas registradas hoy"); nav oculto para un cajero real (creado y eliminado por el propio test) con el 403 `ROL_INSUFICIENTE` verificado contra el backend, no solo la UI. axe-core: 0 violaciones en ambos temas. Lighthouse: login 82/100/96/100, mostrador autenticado 86/100/100/100 — en línea con el baseline establecido en el fix de performance anterior, sin regresión. Datos de prueba (2 ventas con sus movimientos de inventario asociados, stock restaurado a mano donde la venta no pasó por anulación real, 1 cajero temporal, 1 sesión de caja) eliminados/revertidos de la base real al terminar.
+
+Con esto, según lo acordado, quedan cubiertas todas las secciones del backend salvo **Vencimientos** y **Proveedores**, que siguen en cola en ese orden.

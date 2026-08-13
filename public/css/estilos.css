@@ -637,6 +637,40 @@ img {
   margin-bottom: 1.5rem;
 }
 
+/* --- Indicadores (Bloque 3, ver ADR 0013): tarjetas de KPI, sin
+   librería de gráficos — reusa los mismos tokens de color/tipografía que
+   el resto de la interfaz. --- */
+.indicadores__grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.indicadores__tarjeta {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+  padding: 1.25rem;
+}
+
+.indicadores__etiqueta {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-texto-muted);
+  margin-bottom: 0.5rem;
+}
+
+.indicadores__valor {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.indicadores__detalle {
+  margin-top: 0.35rem;
+  color: var(--color-texto-muted);
+  font-size: 0.9rem;
+}
+
 .lista-historial {
   display: flex;
   flex-direction: column;
