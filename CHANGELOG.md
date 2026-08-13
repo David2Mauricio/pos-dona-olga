@@ -4,6 +4,22 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Verificado (Fase 4: auditoría final de las 8 secciones completas)
+
+- Primera pasada de Lighthouse + axe-core sobre el conjunto completo de la
+  interfaz (Login, cambio de contraseña obligatorio, Mostrador, Historial,
+  Productos, Usuarios, Vencimientos, Indicadores, Proveedores, cierre de
+  caja — 21 combinaciones de estado×tema), no sección por sección.
+- axe-core: 0 violaciones en las 21 combinaciones. Lighthouse (4 pasadas ×
+  3 corridas): Accessibility 100, Best Practices 96–100, SEO 100 estables
+  en las 12 mediciones; Performance con la variancia de máquina ya
+  documentada (66–86), sin tendencia a la baja entre pasadas.
+- Un hallazgo de contraste resultó ser un artefacto de timing del propio
+  script de auditoría (medía a mitad de un repintado de la grilla de
+  productos), no un bug de la aplicación — sin cambios de código como
+  resultado de esta pasada.
+- Con esto, la Fase 4 queda cerrada.
+
 ### Agregado (Fase 4: Proveedores)
 
 - Nueva sección "Proveedores" en la sidebar (solo administrador, ya

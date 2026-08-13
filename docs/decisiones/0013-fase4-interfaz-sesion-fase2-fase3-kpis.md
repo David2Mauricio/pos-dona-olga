@@ -2,7 +2,7 @@
 
 ## Estado
 
-En progreso — este ADR se amplía a medida que se cierra cada pieza de la Fase 4. Bloque 1 (sesión), Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, navegación persistente), Gestión de Productos y Categorías, Cierre de Caja, Usuarios, Bloque 3 (KPIs), Vencimientos y Proveedores cerrados — la interfaz cubre el 100% de las secciones del backend. Pendiente: la pasada final de Lighthouse + axe-core sobre las 8 secciones completas.
+**Cerrado.** Bloque 1 (sesión), Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, navegación persistente), Gestión de Productos y Categorías, Cierre de Caja, Usuarios, Bloque 3 (KPIs), Vencimientos, Proveedores, y la auditoría final de las 8 secciones completas — todos cerrados. La interfaz cubre el 100% de los módulos de backend construidos.
 
 ## Contexto
 
@@ -280,4 +280,20 @@ Auditoría de `proveedores.routes.js`/`.schema.js`/`.service.js`/`.repository.js
 
 Suite Puppeteer + axe-core dedicada (13/13): alta con NIT verificada contra el backend, campo opcional vacío guardado como `null` (no `''`); NIT duplicado rechazado con `409` real y el formulario permaneciendo abierto; edición actualizando un campo opcional y confirmada contra el backend; desactivar sin borrar; badge explícito `Activo`/`Inactivo` correcto en el listado; nav oculto para cajero con `403 ROL_INSUFICIENTE` real verificado contra el backend. axe-core: 0 violaciones en ambos temas, incluida la fila desactivada (beneficiándose del fix de contraste `opacity: 0.85` ya aplicado en Vencimientos). Datos de prueba (1 proveedor, 1 cajero temporal, 1 sesión de caja) eliminados de la base real al terminar.
 
-Con esto se cierra la cola completa (Usuarios → Bloque 3 → Vencimientos → Proveedores). Queda pendiente la pasada final de Lighthouse + axe-core sobre las 8 secciones completas de la interfaz (no solo la última agregada), documentada en su propia entrada más abajo al completarse.
+Con esto se cierra la cola completa (Usuarios → Bloque 3 → Vencimientos → Proveedores).
+
+## Auditoría final: las 8 secciones completas, no solo la última agregada
+
+Primera vez que se audita el conjunto completo de la interfaz en una sola pasada, en vez de sección por sección — pedido explícito del cliente al cerrarse Proveedores. Cubre: Login, overlay de cambio de contraseña obligatorio, Mostrador, Historial, Productos (ambas pestañas), Usuarios, Vencimientos, Indicadores, Proveedores, y overlay de cierre de caja — 21 combinaciones de estado×tema en total.
+
+**Alcance de "2-3 corridas por vista"**: el pedido se cortó a mitad de frase. Interpretación aplicada: axe-core es determinístico (una violación real no desaparece por correrlo de nuevo), así que corre una vez por estado y tema. Lighthouse sí tiene variancia real medida en esta máquina (ver Bloque 3 y Vencimientos más arriba) y además solo tiene sentido en los dos estados de **carga de página** reales que existen en esta SPA (login sin sesión, autenticado en mostrador) — el resto son estados de un mismo documento alternados por JS, sin una URL ni una carga de página distinta que Lighthouse pueda medir por separado. Se corrió 3 veces en cada uno de esos dos estados, en 4 pasadas completas distintas de la suite (12 mediciones por estado en total).
+
+### Un bug real encontrado y corregido — en el script de auditoría, no en la aplicación
+
+La primera pasada completa encontró `color-contrast` en el overlay de cierre de caja (tema claro), con **elementos distintos marcados en cada corrida** (a veces los `<select>` y el texto del carrito, otra vez las tarjetas de producto de la grilla) — la firma característica de una medición a mitad de un repintado, no un problema de estilos estático (un bug real de CSS marca siempre los mismos elementos con los mismos colores). Se confirmó con evidencia antes de tocar nada: (1) reproducir el mismo estado navegando directo desde el login dio 0 violaciones; (2) reproducir la secuencia completa de navegación por las 6 secciones intermedias, con los mismos toggles de tema, también dio 0 violaciones al medir manualmente los estilos computados antes/después de abrir el overlay — sin ninguna pausa. La causa: el paso 10 del script volvía a Mostrador (repintando toda la grilla de tarjetas de producto, docenas de nodos pasando de `hidden` a visible) y abría el overlay de cierre inmediatamente después, sin ninguna espera — axe corría a mitad de ese repintado. Fix: dos pausas de 400ms en el script (tras volver a Mostrador, tras abrir el overlay) — dos corridas limpias consecutivas después del fix, cero violaciones. **No se tocó ningún archivo de la aplicación para esto** — el hallazgo era del arnés de prueba, no del producto (mismo patrón ya documentado dos veces antes: la transición de tema en Usuarios, la animación de toast en Vencimientos).
+
+### Resultado
+
+axe-core: 0 violaciones en las 21 combinaciones, en las 2 pasadas completas corridas tras el fix del script. Lighthouse (4 pasadas × 3 corridas cada una): Accessibility 100, Best Practices 96 (login) / 100 (autenticado), SEO 100 — estables sin ninguna variación en las 12 mediciones de cada estado. Performance osciló entre 66 y 86 según la carga de la máquina en el momento exacto de cada corrida (consistente con la variancia ya documentada y verificada contra el baseline en Bloque 3/Vencimientos) — sin ninguna tendencia a la baja entre pasadas sucesivas, así que no hay indicio de una regresión acumulada por sumar las 4 secciones nuevas de esta fase. Sin cambios de código de aplicación como resultado de esta auditoría — el único hallazgo fue del script de prueba.
+
+Con esto, la Fase 4 queda cerrada: las 8 secciones de la interfaz (Mostrador, Historial, Productos, Usuarios, Vencimientos, Indicadores, Proveedores, y el gate de sesión) cubren el 100% de los módulos de backend construidos, auditadas individualmente al cerrarse cada una y en conjunto en esta pasada final.
