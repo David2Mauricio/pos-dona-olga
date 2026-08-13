@@ -100,6 +100,15 @@ export const api = {
   obtenerAlertasInventario: () => peticion('/inventario/alertas'),
   obtenerAlertasVencimientos: () => peticion('/vencimientos/alertas'),
 
+  // Lotes de vencimiento (Fase 4, ver ADR 0013) — de ambos roles en el
+  // backend (app.js monta /api/vencimientos sin requiereRol, confirmado
+  // con el cliente: registrar un lote es documentación aditiva, no un
+  // caso con riesgo de ocultar una merma).
+  listarLotesVencimiento: () => peticion('/vencimientos/lotes'),
+  crearLoteVencimiento: (datos) => peticion('/vencimientos/lotes', { method: 'POST', body: JSON.stringify(datos) }),
+  actualizarLoteVencimiento: (id, cambios) =>
+    peticion(`/vencimientos/lotes/${id}`, { method: 'PATCH', body: JSON.stringify(cambios) }),
+
   // Panel de Indicadores (Fase 4/Bloque 3, ver ADR 0013) — admin-only en
   // el backend (app.js monta /api/reportes con requiereRol('administrador')).
   obtenerReporteVentas: ({ desde, hasta, cajaSesionId } = {}) => {

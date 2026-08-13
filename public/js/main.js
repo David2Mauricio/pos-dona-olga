@@ -347,6 +347,9 @@ navItems.forEach((boton) => {
     if (nombre === 'indicadores') {
       import('./kpis.js').then(({ abrirIndicadores }) => abrirIndicadores());
     }
+    if (nombre === 'vencimientos') {
+      import('./vencimientos.js').then(({ abrirVencimientos }) => abrirVencimientos());
+    }
     mostrarVista(nombre);
   });
 });
@@ -391,7 +394,12 @@ async function cargarModuloCierreCaja() {
 // entero también (app.js monta /api/reportes con requiereRol('administrador')).
 // Inventario queda visible para ambos roles (ver inventario.routes.js:
 // listar/alertas es de ambos, solo crear un movimiento manual quedó
-// restringido a administrador).
+// restringido a administrador). Vencimientos (nav-vencimientos, sin
+// `hidden` en el markup) tampoco pasa por esta función a propósito: es de
+// ambos roles en el backend (app.js monta /api/vencimientos sin
+// requiereRol) — confirmado con el cliente, registrar un lote es
+// documentación aditiva, sin el riesgo de ocultar una merma o un error que
+// sí tienen los casos restringidos arriba.
 function actualizarNavegacionPorRol(usuario) {
   const esAdmin = usuario.rol === 'administrador';
   navHistorial.hidden = !esAdmin;

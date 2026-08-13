@@ -93,6 +93,16 @@
         </button>
       </li>
       <li>
+        <button id="nav-vencimientos" type="button" class="nav-lateral__item" data-vista="vencimientos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="13" r="8" />
+            <path d="M12 9v4l2.5 2" />
+            <path d="M9 2.5h6" />
+          </svg>
+          <span>Vencimientos</span>
+        </button>
+      </li>
+      <li>
         <button id="nav-indicadores" type="button" class="nav-lateral__item" data-vista="indicadores" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <path d="M4 20V10M11 20V4M18 20v-7" />
@@ -270,6 +280,14 @@
         <button id="boton-nuevo-usuario" type="button" class="boton-primario">+ Nuevo usuario</button>
       </header>
       <div id="tabla-usuarios" class="catalogo__tabla" role="region" aria-label="Listado de usuarios" tabindex="0"></div>
+    </section>
+
+    <section id="vista-vencimientos" class="vista vista-secundaria" aria-labelledby="titulo-vista-vencimientos" data-vista-contenido hidden>
+      <header class="vista-secundaria__cabecera">
+        <h2 id="titulo-vista-vencimientos">Vencimientos</h2>
+        <button id="boton-nuevo-lote" type="button" class="boton-primario">+ Nuevo lote</button>
+      </header>
+      <div id="tabla-vencimientos" class="catalogo__tabla" role="region" aria-label="Listado de lotes de vencimiento" tabindex="0"></div>
     </section>
 
     <section id="vista-indicadores" class="vista vista-secundaria" aria-labelledby="titulo-vista-indicadores" data-vista-contenido hidden>
@@ -451,6 +469,30 @@
       <div class="overlay__acciones">
         <button type="submit" class="boton-primario">Crear</button>
         <button type="button" id="boton-cancelar-usuario" class="boton-secundario">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="overlay-form-lote" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-form-lote" hidden>
+  <div class="overlay__panel">
+    <h2 id="titulo-form-lote">Nuevo lote</h2>
+    <form id="formulario-lote">
+      <div class="campo">
+        <label for="input-lote-producto">Producto</label>
+        <select id="input-lote-producto" required></select>
+      </div>
+      <div class="campo">
+        <label for="input-lote-cantidad" id="label-lote-cantidad">Cantidad (unidades)</label>
+        <input id="input-lote-cantidad" type="number" inputmode="numeric" min="1" step="1" required />
+      </div>
+      <div class="campo">
+        <label for="input-lote-fecha">Fecha de vencimiento</label>
+        <input id="input-lote-fecha" type="date" required />
+      </div>
+      <div class="overlay__acciones">
+        <button type="submit" class="boton-primario">Guardar</button>
+        <button type="button" id="boton-cancelar-lote" class="boton-secundario">Cancelar</button>
       </div>
     </form>
   </div>

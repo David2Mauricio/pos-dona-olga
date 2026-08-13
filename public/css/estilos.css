@@ -813,8 +813,12 @@ img {
   border-radius: var(--radio-chico);
 }
 
+/* 0.6 (valor original) empujaba el texto muted y los badges por debajo
+   del mínimo WCAG (4.5:1) al mezclarse con el fondo — encontrado con
+   axe-core en Vencimientos (ver ADR 0013), pero es una regla compartida
+   con Productos/Usuarios: el fix mejora las tres, nunca las empeora. */
 .catalogo__fila--inactivo {
-  opacity: 0.6;
+  opacity: 0.85;
 }
 
 .catalogo__fila--categoria {
@@ -823,6 +827,10 @@ img {
 
 .catalogo__fila--usuario {
   grid-template-columns: 1.3fr 1fr 9rem 6rem auto;
+}
+
+.catalogo__fila--lote {
+  grid-template-columns: 1.3fr 7rem 7rem 7rem auto;
 }
 
 /* Sin esto, el <select> de rol solo hereda color: inherit (regla base) y

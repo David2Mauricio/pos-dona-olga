@@ -4,6 +4,24 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Agregado (Fase 4: Vencimientos)
+
+- Nueva sección "Vencimientos" en la sidebar — primera sección de gestión
+  visible para **ambos roles** (confirmado: registrar un lote es
+  documentación aditiva, sin el riesgo de ocultar una merma o un error que
+  sí tienen las secciones restringidas a administrador). Listado con
+  cantidad, fecha, estado (Vencido/Por vencer/Vigente); alta y edición de
+  lotes; desactivar sin borrar.
+- Cantidad en kg para productos de tipo peso, convertida a gramos antes de
+  enviar al backend (mismo criterio que el alta de Productos).
+- `public/js/vencimientos.js` (nuevo), cargado con `import()` dinámico al
+  abrir la sección.
+- Fix de accesibilidad: `.catalogo__fila--inactivo` (compartida con
+  Productos y Usuarios) bajaba el contraste de texto/badges por debajo del
+  mínimo WCAG al aplicar `opacity: 0.6`; ajustado a `0.85`.
+- Sin cambios de backend en esta sección.
+- Con esto, según lo acordado, queda solo Proveedores en cola.
+
 ### Agregado (Fase 4: Bloque 3 — panel de Indicadores)
 
 - Nueva sección "Indicadores" en la sidebar (solo administrador): ventas

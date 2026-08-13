@@ -2,7 +2,7 @@
 
 ## Estado
 
-En progreso — este ADR se amplía a medida que se cierra cada pieza de la Fase 4. Bloque 1 (sesión), Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, navegación persistente), Gestión de Productos y Categorías, Cierre de Caja, Usuarios y Bloque 3 (KPIs) cerrados; Vencimientos y Proveedores pendientes, en ese orden (confirmado con el cliente) — con Bloque 3 cerrado, la interfaz cubre todas las secciones del backend salvo esas dos.
+En progreso — este ADR se amplía a medida que se cierra cada pieza de la Fase 4. Bloque 1 (sesión), Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, navegación persistente), Gestión de Productos y Categorías, Cierre de Caja, Usuarios, Bloque 3 (KPIs) y Vencimientos cerrados; **Proveedores** pendiente — la última sección del backend sin construir en la interfaz.
 
 ## Contexto
 
@@ -232,3 +232,33 @@ Plan aprobado varios turnos antes de implementarse (ver auditoría original de `
 Suite Puppeteer + axe-core dedicada (17/17): estado vacío real de la base (sin ventas hoy ni ayer en este momento) mostrando los tres mensajes explícitos correctos — "—" en ticket promedio (no $0), "Sin ventas registradas hoy" en producto más vendido, "Sin ventas registradas ayer" en la comparativa (exactamente el caso "ayer=0" que se pidió cubrir, verificado contra el estado real de la base, no simulado); una venta real de hoy y una venta real "de ayer" (creada vía la API real de ventas y backdateada solo en `creada_en` para simular el día, sin tocar ninguna otra columna) reflejadas correctamente en totales/ticket promedio/producto top, con la comparativa calculando el porcentaje real (+33%, verificado numéricamente, no asumido); venta de hoy anulada vía `PATCH /api/ventas/:id/anular` y el panel reflejando la exclusión (vuelve a "Sin ventas registradas hoy"); nav oculto para un cajero real (creado y eliminado por el propio test) con el 403 `ROL_INSUFICIENTE` verificado contra el backend, no solo la UI. axe-core: 0 violaciones en ambos temas. Lighthouse: login 82/100/96/100, mostrador autenticado 86/100/100/100 — en línea con el baseline establecido en el fix de performance anterior, sin regresión. Datos de prueba (2 ventas con sus movimientos de inventario asociados, stock restaurado a mano donde la venta no pasó por anulación real, 1 cajero temporal, 1 sesión de caja) eliminados/revertidos de la base real al terminar.
 
 Con esto, según lo acordado, quedan cubiertas todas las secciones del backend salvo **Vencimientos** y **Proveedores**, que siguen en cola en ese orden.
+
+## Sección: Vencimientos
+
+Auditoría de `vencimientos.routes.js`/`.schema.js`/`.service.js`/`.repository.js` y la tabla `lotes_vencimiento` antes de escribir código, con dos hallazgos que se llevaron al cliente para confirmar en vez de asumir.
+
+### Hallazgo 1 — permisos: de ambos roles, a diferencia de todo lo construido hasta ahora
+
+`/api/vencimientos` está montado en `app.js` **sin** `requiereRol('administrador')`, ni a nivel de módulo ni por ruta individual — a diferencia de Productos (crear/editar admin-only), Usuarios e Indicadores (módulo entero admin-only). Confirmado con el cliente: **es intencional, no se toca el backend**. Razón dada: registrar un lote es documentación aditiva, sin el riesgo de ocultar un error o una merma que sí tienen los casos ya restringidos (anular una venta, editar stock de un producto, resetear una contraseña, un ajuste manual de inventario) — y operativamente, cualquiera que reciba mercadería debe poder cargarlo. Consecuencia de diseño: `#nav-vencimientos` es el primer ítem de nav que **no** pasa por `actualizarNavegacionPorRol()` — visible para ambos roles desde que hay sesión, sin `hidden` en el markup, mismo patrón que ya tenía el placeholder de `nav-inventario`.
+
+### Hallazgo 2 — unidad de `cantidad`: sin definir en el schema, resuelto por analogía con Productos
+
+La columna es un entero genérico ("snapshot de cuánto llegó", ADR 0006) sin distinguir gramos de unidades para un producto `tipo_venta='peso'`, y no había ningún código existente que la usara para desambiguar (el panel de alertas nunca mostró `cantidad`). Confirmado con el cliente: mismo criterio que el alta de Productos — el formulario captura en kg para productos tipo peso y convierte a gramos antes de mandar al backend (`kilosTextoAGramos`/`gramosAKilosTexto`, ya existentes en `utils.js`).
+
+### Diseño
+
+- `public/js/vencimientos.js` (nuevo, mismo patrón autocontenido que `usuarios.js`), cargado con `import()` dinámico al hacer click en el nav. El campo cantidad cambia de tipo/etiqueta según el `tipoVenta` del producto elegido, igual que el alta de Productos; en edición, el `<select>` de producto queda `disabled` (visible pero inmutable, coherente con que el backend rechaza cambiarlo) en vez de ocultarse, para no perder el contexto de a qué producto pertenece el lote mientras se edita.
+- El estado del badge (Vencido/Por vencer/Vigente) se calcula en el cliente sobre la fecha de cada lote ya traída por `GET /lotes` — mismo cálculo que `vencimientos.service.js:obtenerAlertas()`, sin pedir `/alertas` aparte solo para pintar el listado.
+- Sin borrado — solo `activo` (mismo patrón que Productos/Usuarios).
+- `api.js`: `listarLotesVencimiento`, `crearLoteVencimiento`, `actualizarLoteVencimiento`.
+
+### Dos bugs reales de accesibilidad encontrados con axe-core (no artefactos de test)
+
+- **`color-contrast` en filas desactivadas**: `.catalogo__fila--inactivo { opacity: 0.6 }` — regla compartida con Productos y Usuarios — empujaba el texto muted (3.25:1) y el badge (3.15:1) por debajo del mínimo WCAG de 4.5:1 al mezclarse con el fondo. Nunca se había ejercitado con axe-core sobre una fila realmente desactivada en las secciones anteriores. Fix: `opacity: 0.85` — mejora las tres secciones que comparten la regla, no solo esta.
+- Un tercer hallazgo (`.toast > span`, contraste 2.15:1) resultó ser un **artefacto de timing del script de prueba**, no un bug real: axe corrió a mitad de la animación de entrada del toast (`--duracion-media`, 220ms) y midió un color mezclado — mismo patrón ya documentado en la sección Usuarios para el tema. Se corrigió el script (espera de 400ms tras la última mutación) y desapareció; verificado además con Lighthouse+axe corridos varias veces sin que reaparezca.
+
+### Verificación
+
+Suite Puppeteer + axe-core dedicada (18/18): conversión kg→gramos verificada contra el valor real guardado en la base ("2,5" → 2500, no 2 ni "2,5"), formato de cantidad correcto en el listado para ambos `tipoVenta` (kg con coma decimal para peso, unidades para unidad — mismo formato que ya usa el resto de la app, `gramosAKilosTexto`), badges Vencido/Por vencer contra fechas reales; edición con producto deshabilitado e inmutable confirmado contra el backend; desactivar sin borrar; el panel de alertas del mostrador (mismo backend desde Bloque 1) reflejando el lote vencido real tras recargar; y, en vez de un 403, la prueba positiva pedida por el hallazgo de permisos — un cajero real (creado y eliminado por el propio test) creando un lote con éxito. axe-core: 0 violaciones en ambos temas tras los dos fixes. Lighthouse corrido tres veces (variancia real de la máquina: 67/83, 82/65, 82/82 entre login/mostrador) convergiendo al baseline ya establecido de ~82 — sin regresión atribuible a esta sección, accessibility/best-practices/SEO estables en 100 en las tres corridas. Datos de prueba (3 lotes, 1 cajero temporal, 1 sesión de caja) eliminados de la base real al terminar.
+
+Con esto, según lo acordado, queda solo **Proveedores** en cola.
