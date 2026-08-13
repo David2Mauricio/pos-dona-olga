@@ -40,6 +40,7 @@ const navHistorial = document.getElementById('nav-historial');
 const navProductos = document.getElementById('nav-productos');
 const navUsuarios = document.getElementById('nav-usuarios');
 const navIndicadores = document.getElementById('nav-indicadores');
+const navProveedores = document.getElementById('nav-proveedores');
 const overlayCaja = document.getElementById('overlay-caja-cerrada');
 const formularioAbrirCaja = document.getElementById('formulario-abrir-caja');
 const inputMontoApertura = document.getElementById('input-monto-apertura');
@@ -350,6 +351,9 @@ navItems.forEach((boton) => {
     if (nombre === 'vencimientos') {
       import('./vencimientos.js').then(({ abrirVencimientos }) => abrirVencimientos());
     }
+    if (nombre === 'proveedores') {
+      import('./proveedores.js').then(({ abrirProveedores }) => abrirProveedores());
+    }
     mostrarVista(nombre);
   });
 });
@@ -385,13 +389,15 @@ async function cargarModuloCierreCaja() {
   });
 }
 
-// Historial, Productos, Usuarios e Indicadores son solo-administrador en
-// la UI — la protección real de Historial es el 403 ROL_INSUFICIENTE que
-// el backend ya devuelve en PATCH /api/ventas/:id/anular (verificado en
-// Bloque 2); Productos la misma en POST/PATCH /api/productos y
-// /api/categorias; Usuarios el módulo entero (app.js monta /api/usuarios
+// Historial, Productos, Usuarios, Indicadores y Proveedores son
+// solo-administrador en la UI — la protección real de Historial es el 403
+// ROL_INSUFICIENTE que el backend ya devuelve en PATCH /api/ventas/:id/anular
+// (verificado en Bloque 2); Productos la misma en POST/PATCH /api/productos
+// y /api/categorias; Usuarios el módulo entero (app.js monta /api/usuarios
 // con requiereRol('administrador')); Indicadores (Bloque 3) el módulo
-// entero también (app.js monta /api/reportes con requiereRol('administrador')).
+// entero también (app.js monta /api/reportes con requiereRol('administrador'));
+// Proveedores el módulo entero también (app.js monta /api/proveedores con
+// requiereRol('administrador'), documentado desde ADR 0010).
 // Inventario queda visible para ambos roles (ver inventario.routes.js:
 // listar/alertas es de ambos, solo crear un movimiento manual quedó
 // restringido a administrador). Vencimientos (nav-vencimientos, sin
@@ -406,6 +412,7 @@ function actualizarNavegacionPorRol(usuario) {
   navProductos.hidden = !esAdmin;
   navUsuarios.hidden = !esAdmin;
   navIndicadores.hidden = !esAdmin;
+  navProveedores.hidden = !esAdmin;
 }
 
 async function iniciarMostrador() {
@@ -430,6 +437,7 @@ iniciarAuth({
     navProductos.hidden = true;
     navUsuarios.hidden = true;
     navIndicadores.hidden = true;
+    navProveedores.hidden = true;
     mostrarVista('mostrador');
     productosActivos = [];
     mapaProductos = new Map();

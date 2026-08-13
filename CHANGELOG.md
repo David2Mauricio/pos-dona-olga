@@ -4,6 +4,21 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Agregado (Fase 4: Proveedores)
+
+- Nueva sección "Proveedores" en la sidebar (solo administrador, ya
+  documentado desde ADR 0010): listado con nombre, NIT, teléfono,
+  dirección y badge explícito Activo/Inactivo; alta y edición; desactivar
+  sin borrar.
+- Conflicto de NIT duplicado (`UNIQUE` en la base) mostrado como error real
+  del backend (`409`), sin cerrar el formulario.
+- `public/js/proveedores.js` (nuevo), cargado con `import()` dinámico al
+  abrir la sección.
+- Sin cambios de backend.
+- Con esto se cierra la cola completa de secciones (Usuarios, Bloque 3,
+  Vencimientos, Proveedores) — la interfaz cubre el 100% de los módulos de
+  backend construidos.
+
 ### Agregado (Fase 4: Vencimientos)
 
 - Nueva sección "Vencimientos" en la sidebar — primera sección de gestión

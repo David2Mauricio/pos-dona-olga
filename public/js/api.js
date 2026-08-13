@@ -116,4 +116,11 @@ export const api = {
     if (cajaSesionId) parametros.set('cajaSesionId', cajaSesionId);
     return peticion(`/reportes/ventas?${parametros.toString()}`);
   },
+
+  // Proveedores (Fase 4, ver ADR 0013) — módulo entero solo-administrador
+  // (app.js monta /api/proveedores con requiereRol('administrador'), ya
+  // documentado desde ADR 0010).
+  listarProveedores: () => peticion('/proveedores'),
+  crearProveedor: (datos) => peticion('/proveedores', { method: 'POST', body: JSON.stringify(datos) }),
+  actualizarProveedor: (id, cambios) => peticion(`/proveedores/${id}`, { method: 'PATCH', body: JSON.stringify(cambios) }),
 };

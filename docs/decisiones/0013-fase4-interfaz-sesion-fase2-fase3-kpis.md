@@ -2,7 +2,7 @@
 
 ## Estado
 
-En progreso — este ADR se amplía a medida que se cierra cada pieza de la Fase 4. Bloque 1 (sesión), Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, navegación persistente), Gestión de Productos y Categorías, Cierre de Caja, Usuarios, Bloque 3 (KPIs) y Vencimientos cerrados; **Proveedores** pendiente — la última sección del backend sin construir en la interfaz.
+En progreso — este ADR se amplía a medida que se cierra cada pieza de la Fase 4. Bloque 1 (sesión), Bloque 2 (Fase 2/3 en el flujo de venta, reemplazo de paleta, navegación persistente), Gestión de Productos y Categorías, Cierre de Caja, Usuarios, Bloque 3 (KPIs), Vencimientos y Proveedores cerrados — la interfaz cubre el 100% de las secciones del backend. Pendiente: la pasada final de Lighthouse + axe-core sobre las 8 secciones completas.
 
 ## Contexto
 
@@ -262,3 +262,22 @@ La columna es un entero genérico ("snapshot de cuánto llegó", ADR 0006) sin d
 Suite Puppeteer + axe-core dedicada (18/18): conversión kg→gramos verificada contra el valor real guardado en la base ("2,5" → 2500, no 2 ni "2,5"), formato de cantidad correcto en el listado para ambos `tipoVenta` (kg con coma decimal para peso, unidades para unidad — mismo formato que ya usa el resto de la app, `gramosAKilosTexto`), badges Vencido/Por vencer contra fechas reales; edición con producto deshabilitado e inmutable confirmado contra el backend; desactivar sin borrar; el panel de alertas del mostrador (mismo backend desde Bloque 1) reflejando el lote vencido real tras recargar; y, en vez de un 403, la prueba positiva pedida por el hallazgo de permisos — un cajero real (creado y eliminado por el propio test) creando un lote con éxito. axe-core: 0 violaciones en ambos temas tras los dos fixes. Lighthouse corrido tres veces (variancia real de la máquina: 67/83, 82/65, 82/82 entre login/mostrador) convergiendo al baseline ya establecido de ~82 — sin regresión atribuible a esta sección, accessibility/best-practices/SEO estables en 100 en las tres corridas. Datos de prueba (3 lotes, 1 cajero temporal, 1 sesión de caja) eliminados de la base real al terminar.
 
 Con esto, según lo acordado, queda solo **Proveedores** en cola.
+
+## Sección: Proveedores
+
+Auditoría de `proveedores.routes.js`/`.schema.js`/`.service.js`/`.repository.js` y la tabla `proveedores` antes de escribir código. A diferencia de Usuarios y Vencimientos, no surgió ningún hallazgo que requiriera confirmación del cliente: el módulo entero es solo-administrador (`app.js`, `requiereRol('administrador')` a nivel de mount), y esto **ya estaba documentado** desde ADR 0010 ("Solo administrador: ... proveedores (módulo completo)") — no un gap descubierto ahora, como sí lo fue el de Vencimientos. Verificado además que ni `productos` ni `lotes_vencimiento` tienen FK a `proveedores`: es un directorio de contactos independiente, desacoplado de compras/inventario (ADR 0003 ya lo anticipaba).
+
+### Diseño
+
+- `public/js/proveedores.js` (nuevo, mismo patrón autocontenido que `usuarios.js`), cargado con `import()` dinámico al hacer click en el nav.
+- Listado con badge explícito de `Activo`/`Inactivo` (`badge-alerta--exito`/`--peligro`, mismo patrón que Usuarios) — a diferencia de Vencimientos, que solo señalizaba inactivo con `.catalogo__fila--inactivo` (opacity). Nombre, NIT, teléfono y dirección faltantes se muestran como "—" en vez de una celda vacía.
+- Formulario alta/edición: nombre obligatorio, NIT/teléfono/dirección opcionales (string vacío se manda como `null`, no como `''`, mismo criterio que el schema del backend que los acepta `nullish`); el toggle de activo queda oculto en alta (`campo-proveedor-activo[hidden]`) y visible en edición, mismo patrón que el toggle de activo de Productos.
+- `nit` UNIQUE en la base: un conflicto se traduce a `409` en el backend (ya existente) — el formulario simplemente no se cierra si la petición falla, mostrando el mensaje real del backend vía el toast de error ya establecido.
+- `api.js`: `listarProveedores`, `crearProveedor`, `actualizarProveedor`.
+- Sin cambios de backend.
+
+### Verificación
+
+Suite Puppeteer + axe-core dedicada (13/13): alta con NIT verificada contra el backend, campo opcional vacío guardado como `null` (no `''`); NIT duplicado rechazado con `409` real y el formulario permaneciendo abierto; edición actualizando un campo opcional y confirmada contra el backend; desactivar sin borrar; badge explícito `Activo`/`Inactivo` correcto en el listado; nav oculto para cajero con `403 ROL_INSUFICIENTE` real verificado contra el backend. axe-core: 0 violaciones en ambos temas, incluida la fila desactivada (beneficiándose del fix de contraste `opacity: 0.85` ya aplicado en Vencimientos). Datos de prueba (1 proveedor, 1 cajero temporal, 1 sesión de caja) eliminados de la base real al terminar.
+
+Con esto se cierra la cola completa (Usuarios → Bloque 3 → Vencimientos → Proveedores). Queda pendiente la pasada final de Lighthouse + axe-core sobre las 8 secciones completas de la interfaz (no solo la última agregada), documentada en su propia entrada más abajo al completarse.

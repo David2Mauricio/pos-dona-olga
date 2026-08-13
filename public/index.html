@@ -112,6 +112,16 @@
         </button>
       </li>
       <li>
+        <button id="nav-proveedores" type="button" class="nav-lateral__item" data-vista="proveedores" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M3.5 20V9.5L12 4l8.5 5.5V20" />
+            <path d="M8 20v-6h8v6" />
+            <path d="M3.5 9.5h17" />
+          </svg>
+          <span>Proveedores</span>
+        </button>
+      </li>
+      <li>
         <button id="nav-inventario" type="button" class="nav-lateral__item" data-vista="inventario" disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <path d="M3.5 8L12 3.5 20.5 8 12 12.5 3.5 8z" />
@@ -322,6 +332,14 @@
       </div>
     </section>
 
+    <section id="vista-proveedores" class="vista vista-secundaria" aria-labelledby="titulo-vista-proveedores" data-vista-contenido hidden>
+      <header class="vista-secundaria__cabecera">
+        <h2 id="titulo-vista-proveedores">Proveedores</h2>
+        <button id="boton-nuevo-proveedor" type="button" class="boton-primario">+ Nuevo proveedor</button>
+      </header>
+      <div id="tabla-proveedores" class="catalogo__tabla" role="region" aria-label="Listado de proveedores" tabindex="0"></div>
+    </section>
+
     <section id="vista-inventario" class="vista vista-proximamente" aria-labelledby="titulo-vista-inventario" data-vista-contenido hidden>
       <div class="vista-proximamente__contenido">
         <svg class="vista-proximamente__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -493,6 +511,38 @@
       <div class="overlay__acciones">
         <button type="submit" class="boton-primario">Guardar</button>
         <button type="button" id="boton-cancelar-lote" class="boton-secundario">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="overlay-form-proveedor" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-form-proveedor" hidden>
+  <div class="overlay__panel">
+    <h2 id="titulo-form-proveedor">Nuevo proveedor</h2>
+    <form id="formulario-proveedor">
+      <div class="campo">
+        <label for="input-proveedor-nombre">Nombre</label>
+        <input id="input-proveedor-nombre" type="text" required />
+      </div>
+      <div class="campo">
+        <label for="input-proveedor-nit">NIT (opcional)</label>
+        <input id="input-proveedor-nit" type="text" />
+      </div>
+      <div class="campo">
+        <label for="input-proveedor-telefono">Teléfono (opcional)</label>
+        <input id="input-proveedor-telefono" type="text" />
+      </div>
+      <div class="campo">
+        <label for="input-proveedor-direccion">Dirección (opcional)</label>
+        <input id="input-proveedor-direccion" type="text" />
+      </div>
+      <div class="campo campo--switch" id="campo-proveedor-activo" hidden>
+        <label for="input-proveedor-activo">Proveedor activo</label>
+        <input id="input-proveedor-activo" type="checkbox" />
+      </div>
+      <div class="overlay__acciones">
+        <button type="submit" class="boton-primario">Guardar</button>
+        <button type="button" id="boton-cancelar-proveedor" class="boton-secundario">Cancelar</button>
       </div>
     </form>
   </div>

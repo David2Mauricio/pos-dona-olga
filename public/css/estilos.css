@@ -833,6 +833,10 @@ img {
   grid-template-columns: 1.3fr 7rem 7rem 7rem auto;
 }
 
+.catalogo__fila--proveedor {
+  grid-template-columns: 1.2fr 8rem 8rem 1.3fr 6rem auto;
+}
+
 /* Sin esto, el <select> de rol solo hereda color: inherit (regla base) y
    deja el fondo a cargo del widget nativo del navegador/SO — que no seguía
    nuestro data-tema y podía quedar oscuro incluso en tema claro, texto
