@@ -4,6 +4,33 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Corregido (Fase 4: performance y estructura del shell, tras Usuarios)
+
+- JS de vista bajo demanda: `historial.js`, `catalogo.js` y `usuarios.js`
+  pasan de `import` estático a `import()` dinámico disparado por el click
+  del ítem de nav correspondiente — antes se descargaban en toda carga de
+  página, incluida la pantalla de login sin sesión, aunque son
+  solo-administrador. `cierre-caja.js` pasa a cargarse una sola vez apenas
+  hay sesión confirmada, no en la carga inicial de la página (su disparador
+  vive en la cabecera persistente, no en una vista de nav, así que no se
+  puede diferir a un click). 23 → 19 solicitudes, 153KB → 142KB en login.
+- `estilos.css` deja de ser render-blocking: pasa al patrón
+  preload+swap (`rel="preload" as="style"` con swap a `stylesheet` en
+  `onload`, más `<noscript>` de respaldo) — el archivo venía creciendo con
+  cada sección y Lighthouse ya lo señalaba como la causa directa
+  (`render-blocking-resources`).
+- `<main>`/`<h1>` únicos para toda la aplicación: `#contenido-principal`
+  pasa de `<div>` a `<main>`, hijo directo del shell (antes vivía anidado
+  dentro de la vista Mostrador y desaparecía en cualquier otra vista); se
+  agrega un `<h1>` visualmente oculto a nivel de shell. Corrige el hallazgo
+  de accesibilidad señalado (no resuelto) al cerrar Usuarios.
+- Diagnosticado con evidencia (pedido explícito del cliente antes de
+  Bloque 3): la caída de Performance de Lighthouse (98→82-83) no la causó
+  código de Usuarios — medida de nuevo la versión de Cierre de Caja en la
+  misma máquina, mismo momento, dio el mismo 82-83. Ver ADR 0013 para el
+  detalle completo (candidatos descartados uno por uno, comparación
+  directa contra el commit anterior).
+
 ### Agregado (Fase 4: Usuarios)
 
 - Nueva sección "Usuarios" en la sidebar (solo administrador): listado,

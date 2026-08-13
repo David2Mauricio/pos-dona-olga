@@ -31,8 +31,20 @@
 
 <!-- Un solo archivo (tokens+base+layout+componentes+animaciones, con
      comentarios de sección) en vez de 5 <link> separados — menos
-     peticiones que bloquean el render (ver auditoría Lighthouse). -->
-<link rel="stylesheet" href="/css/estilos.css" />
+     peticiones que bloquean el render (ver auditoría Lighthouse).
+     El archivo fue creciendo con cada sección nueva (Productos, Cierre de
+     Caja, Usuarios) hasta que un <link rel="stylesheet"> normal (que SÍ
+     bloquea el render por definición) empezó a costar ~400-600ms de
+     FCP/LCP medidos — ver ADR 0013, hallazgo de performance en Usuarios.
+     Patrón preload+swap: se descarga en paralelo sin bloquear el primer
+     pintado, y se activa como stylesheet real apenas termina. El <noscript>
+     cubre el caso (no aplica acá, pero es gratis) de JS deshabilitado. Un
+     posible parpadeo de contenido sin estilo es aceptable acá porque los
+     overlays de gate (login, caja cerrada) ya usan el atributo `hidden`
+     nativo del navegador — se ocultan solos aunque el CSS todavía no haya
+     cargado, sin depender de estilos.css para eso. -->
+<link rel="preload" href="/css/estilos.css" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+<noscript><link rel="stylesheet" href="/css/estilos.css" /></noscript>
 </head>
 <body>
 <div id="shell">
@@ -121,7 +133,9 @@
     </div>
   </nav>
 
-  <div id="contenido-principal">
+  <main id="contenido-principal">
+    <h1 class="visualmente-oculto">Doña Olga — Punto de venta</h1>
+
     <header class="cabecera-contexto">
       <button id="estado-caja" type="button" class="cabecera__caja" data-estado="cerrada" disabled>Verificando caja…</button>
 
@@ -140,7 +154,7 @@
     <section id="vista-mostrador" class="vista" aria-labelledby="titulo-vista-mostrador" data-vista-contenido>
       <h2 id="titulo-vista-mostrador" class="visualmente-oculto">Mostrador</h2>
 
-      <main class="contenido">
+      <div class="contenido">
         <section class="panel-productos" aria-labelledby="titulo-productos">
           <h2 id="titulo-productos" class="visualmente-oculto">Buscar y agregar productos</h2>
 
@@ -204,7 +218,7 @@
             <button id="boton-cobrar" type="button" class="boton-primario" disabled>Cobrar</button>
           </div>
         </aside>
-      </main>
+      </div>
     </section>
 
     <section id="vista-historial" class="vista vista-secundaria" aria-labelledby="titulo-vista-historial" data-vista-contenido hidden>
@@ -281,7 +295,7 @@
         <p>Esta sección está en construcción — próximamente vas a poder ver el historial de movimientos de stock.</p>
       </div>
     </section>
-  </div>
+  </main>
 </div>
 
 <div id="overlay-login" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-overlay-login" hidden>

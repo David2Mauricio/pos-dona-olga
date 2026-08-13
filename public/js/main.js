@@ -5,10 +5,19 @@ import { iniciarLectorCodigoBarras } from './barcode-scanner.js';
 import { renderizarGrillaProductos, renderizarCarrito, actualizarEstadoCaja, renderizarAlertas, mostrarToast } from './render.js';
 import { debounce, formatearMoneda } from './utils.js';
 import { iniciarAuth, obtenerUsuarioActual } from './auth.js';
-import { iniciarHistorial, abrirHistorial } from './historial.js';
-import { abrirCatalogo } from './catalogo.js';
-import { iniciarCierreCaja, establecerCajaSesionId } from './cierre-caja.js';
-import { abrirUsuarios } from './usuarios.js';
+
+// Historial, Productos, Usuarios y Cierre de Caja se cargan bajo demanda
+// (import() dinámico), no con import estático arriba: cada sección nueva
+// sumaba su JS al camino crítico de TODA carga inicial, incluida la
+// pantalla de login sin sesión — Lighthouse lo empezó a reflejar (ver ADR
+// 0013, hallazgo de performance surgido en la sección Usuarios).
+// establecerCajaSesionId empieza como no-op porque verificarCaja() podría
+// llamarla antes de que el import dinámico de cierre-caja.js resuelva si
+// algún día se reordena el arranque — no pasa hoy (se espera el import
+// antes de iniciarMostrador()), pero el no-op evita un TypeError si eso
+// cambiara.
+let establecerCajaSesionId = () => {};
+let cierreCajaCargado = false;
 
 const elementoEstadoCaja = document.getElementById('estado-caja');
 const botonTema = document.getElementById('boton-tema');
@@ -323,14 +332,21 @@ navItems.forEach((boton) => {
   boton.addEventListener('click', () => {
     if (boton.disabled) return;
     const nombre = boton.dataset.vista;
-    if (nombre === 'historial') abrirHistorial();
-    if (nombre === 'productos') abrirCatalogo();
-    if (nombre === 'usuarios') abrirUsuarios();
+    if (nombre === 'historial') {
+      import('./historial.js').then(({ iniciarHistorial, abrirHistorial }) => {
+        iniciarHistorial({ obtenerUsuarioActual });
+        abrirHistorial();
+      });
+    }
+    if (nombre === 'productos') {
+      import('./catalogo.js').then(({ abrirCatalogo }) => abrirCatalogo());
+    }
+    if (nombre === 'usuarios') {
+      import('./usuarios.js').then(({ abrirUsuarios }) => abrirUsuarios());
+    }
     mostrarVista(nombre);
   });
 });
-
-iniciarHistorial({ obtenerUsuarioActual });
 
 // Cierre de caja (ver ADR 0013): mientras el overlay de cierre está
 // abierto, "Cobrar" queda bloqueado (mismo criterio que sin caja abierta)
@@ -339,16 +355,29 @@ iniciarHistorial({ obtenerUsuarioActual });
 // éxito) se vuelve a chequear el estado real de la caja — si el cierre
 // se confirmó, verificarCaja() ya no encuentra sesión abierta y el
 // overlay de "caja cerrada" existente se muestra solo.
-iniciarCierreCaja({
-  alAbrir: () => {
-    cierreCajaEnProceso = true;
-    actualizarEstadoBotonCobrar();
-  },
-  alCerrar: () => {
-    cierreCajaEnProceso = false;
-    verificarCaja();
-  },
-});
+//
+// A diferencia de Historial/Productos/Usuarios, este módulo no se puede
+// diferir a un click de nav: su disparador (#estado-caja) vive en la
+// cabecera persistente, siempre clickeable apenas hay sesión — así que se
+// carga una sola vez, apenas iniciarAuth confirma sesión (alListo), en vez
+// de en la carga inicial de la página (que incluye la pantalla de login
+// sin sesión, donde no hace falta todavía).
+async function cargarModuloCierreCaja() {
+  if (cierreCajaCargado) return;
+  cierreCajaCargado = true;
+  const { iniciarCierreCaja, establecerCajaSesionId: establecer } = await import('./cierre-caja.js');
+  establecerCajaSesionId = establecer;
+  iniciarCierreCaja({
+    alAbrir: () => {
+      cierreCajaEnProceso = true;
+      actualizarEstadoBotonCobrar();
+    },
+    alCerrar: () => {
+      cierreCajaEnProceso = false;
+      verificarCaja();
+    },
+  });
+}
 
 // Historial, Productos, Usuarios e Indicadores son solo-administrador en
 // la UI — la protección real de Historial es el 403 ROL_INSUFICIENTE que
@@ -380,8 +409,9 @@ async function iniciarMostrador() {
 }
 
 iniciarAuth({
-  alListo: (usuario) => {
+  alListo: async (usuario) => {
     actualizarNavegacionPorRol(usuario);
+    await cargarModuloCierreCaja();
     iniciarMostrador();
   },
   alCerrarSesion: () => {
