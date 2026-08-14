@@ -305,12 +305,25 @@ img {
 }
 
 .nav-lateral__marca {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   font-family: var(--fuente-ui);
   font-weight: 800;
   font-size: 1.15rem;
   padding: 0 0.5rem;
   margin-bottom: 1.5rem;
   color: var(--color-texto-sobre-acento);
+}
+
+/* Altura fija, ancho libre (object-fit) — funciona igual con un isotipo
+   cuadrado o un logo horizontal, sin importar la relación de aspecto
+   real que tenga el archivo que se suba. */
+.nav-lateral__logo {
+  height: 32px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
 }
 
 .nav-lateral__lista {

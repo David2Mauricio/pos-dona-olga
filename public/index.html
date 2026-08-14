@@ -49,7 +49,14 @@
 <body>
 <div id="shell">
   <nav id="nav-lateral" class="nav-lateral" aria-label="Secciones">
-    <span class="nav-lateral__marca">Doña Olga</span>
+    <div class="nav-lateral__marca">
+      <!-- Ruta predecible para cuando exista el logo real (ver ADR de
+           cierre): con el archivo puesto ahí, aparece solo, sin tocar
+           código. Si no existe (hoy), onerror lo saca del documento y
+           queda el nombre en texto como ya estaba. -->
+      <img src="/img/logo.png" alt="" class="nav-lateral__logo" onerror="this.remove()" />
+      <span>Doña Olga</span>
+    </div>
 
     <ul class="nav-lateral__lista">
       <li>
