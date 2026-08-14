@@ -22,6 +22,10 @@ function mapearFila(fila) {
     debeCambiarPassword: fila.debe_cambiar_password === 1,
     activo: fila.activo === 1,
     creadoEn: fila.creado_en,
+    // Igual que passwordHash: uso interno del módulo auth para comparar
+    // con bcryptjs, nunca sale de la capa de service hacia HTTP.
+    preguntaSeguridad: fila.pregunta_seguridad,
+    respuestaSeguridadHash: fila.respuesta_seguridad_hash,
   };
 }
 
@@ -109,6 +113,15 @@ function resetearPassword(id, passwordHash) {
   return obtenerPorId(id);
 }
 
+// Pregunta de seguridad (ver ADR de cierre del proyecto): siempre se
+// guarda junto con el hash de la respuesta, nunca una sin la otra.
+function establecerPreguntaSeguridad(id, pregunta, respuestaHash) {
+  db.prepare(
+    `UPDATE usuarios SET pregunta_seguridad = @pregunta, respuesta_seguridad_hash = @respuestaHash WHERE id = @id`
+  ).run({ id, pregunta, respuestaHash });
+  return obtenerPorId(id);
+}
+
 module.exports = {
   crear,
   obtenerPorId,
@@ -118,4 +131,5 @@ module.exports = {
   actualizar,
   actualizarPassword,
   resetearPassword,
+  establecerPreguntaSeguridad,
 };

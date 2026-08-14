@@ -1065,6 +1065,37 @@ img {
   background: var(--color-fondo);
 }
 
+/* Botón con apariencia de enlace de texto — "olvidé mi contraseña",
+   "volver a iniciar sesión". Sin fondo ni borde propio, min-height 44px
+   igual que el resto de los controles (objetivo táctil), centrado dentro
+   del <form> porque siempre acompaña a un botón primario de ancho
+   completo arriba. */
+.boton-enlace {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--color-acento);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: underline;
+  text-align: center;
+}
+
+.boton-enlace:hover {
+  color: var(--color-acento-hover);
+}
+
+.recuperar-password__pregunta {
+  font-weight: 700;
+  padding: 0.85rem 1rem;
+  background: var(--color-fondo);
+  border-radius: var(--radio-chico);
+  margin: 0.5rem 0 1rem;
+}
+
 .boton-icono {
   width: 44px;
   height: 44px;

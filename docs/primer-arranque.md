@@ -22,7 +22,10 @@ que el negocio empiece a vender:
    negocio (y en ese caso, resetearle la contraseña — ver el paso 4 más
    abajo, la cuenta actual tiene una contraseña de desarrollo que no debe
    quedar en uso) o si conviene crear una cuenta nueva con el nombre real
-   de quien administra el sistema y desactivar la de desarrollo.
+   de quien administra el sistema y desactivar la de desarrollo. Al
+   cambiar esa contraseña, el sistema va a pedir definir también una
+   pregunta de seguridad — completarla ahí mismo (ver 4.2): es lo que
+   permite recuperar el acceso más adelante sin depender de nadie más.
 
 ## 1. Iniciar el servidor
 
@@ -79,9 +82,13 @@ Para restaurar uno (situación de emergencia, con el servidor **detenido**):
 copiá el archivo de backup elegido a `data/pos.sqlite`, reemplazando el que
 esté ahí, y volvé a iniciar el servidor.
 
-## 4. Resetear la contraseña de un administrador
+## 4. Recuperar el acceso si se olvida una contraseña
 
-**Caso normal — hay al menos un administrador que puede iniciar sesión:**
+Hay tres caminos, de más a menos preferible. Los dos primeros son
+autoservicio, sin depender de nadie más; el tercero es la salida de
+emergencia si los otros dos no alcanzan.
+
+### 4.1. Caso normal — otro administrador puede resetearte la contraseña
 
 Cualquier administrador logueado puede resetear la contraseña de cualquier
 otro usuario (cajero o administrador) desde la interfaz, sin tocar la base
@@ -97,20 +104,65 @@ de datos ni usar Postman:
    el sistema le va a pedir que la cambie por una propia antes de dejarla
    usar el resto del sistema.
 
-**Caso de emergencia — el único administrador olvidó su contraseña y no
-puede iniciar sesión:**
+### 4.2. Pregunta de seguridad — un administrador se recupera solo, sin nadie más
 
-Esto **no** está cubierto por el paso anterior (hace falta estar logueado
-como administrador para resetear la contraseña de alguien más — incluida
-la de otro administrador). Si solo existe un administrador y pierde el
-acceso, hoy no hay ninguna vía desde la interfaz para recuperarlo; haría
-falta una intervención directa sobre la base de datos, algo que **no está
-documentado ni construido todavía** como procedimiento seguro.
+**Solo para administradores.** La primera vez que un administrador cambia
+su contraseña temporal (al crearse la cuenta, o después de un reseteo),
+el sistema le pide definir una pregunta de seguridad propia y su
+respuesta — algo que ella elija, nunca una lista de preguntas genéricas.
+Ni quien la creó ni ningún otro administrador ve esa respuesta: queda
+guardada igual que una contraseña (hasheada, no en texto plano).
 
-Dos formas de evitar quedar en esa situación:
-- Mantener **más de un administrador activo** en todo momento (recomendado,
-  bajo costo, y ya funciona con lo construido).
-- Pedir que se construya un mecanismo de recuperación de emergencia
-  aparte (por ejemplo, un script de un solo uso que solo se pueda correr
-  con acceso directo a la máquina) — no se armó todavía porque no fue
-  pedido; avisar si se quiere agregar.
+Para recuperar el acceso más adelante, sin depender de otro administrador:
+
+1. En la pantalla de inicio de sesión, escribir el usuario y hacer clic
+   fuera del campo (o presionar Tab). Si esa cuenta tiene una pregunta
+   configurada, aparece el enlace **"¿Olvidaste tu contraseña?"** debajo
+   del botón de ingresar.
+2. Hacer clic en el enlace. Aparece la pregunta guardada.
+3. Responderla y definir una contraseña nueva ahí mismo.
+4. Si la respuesta es correcta, vuelve a la pantalla de login — ya se
+   puede entrar con la contraseña nueva. Si no coincide, el sistema no
+   dice cuál de los dos datos falló (usuario o respuesta), mismo criterio
+   que el login normal.
+
+Los intentos fallidos (de contraseña *o* de respuesta, cuentan juntos
+contra la misma cuenta) están limitados: después de 5 intentos fallidos
+en 15 minutos, el sistema bloquea nuevos intentos por ese rato — no se
+puede probar contraseñas o respuestas sin límite.
+
+**Un administrador que todavía no configuró su pregunta** (por ejemplo,
+si nunca completó ese primer cambio de contraseña) no tiene este camino
+disponible — el enlace simplemente no aparece para esa cuenta. Cajeros
+nunca ven este enlace: la pregunta de seguridad es solo para
+administradores.
+
+### 4.3. Script de emergencia — cuando ni 4.1 ni 4.2 alcanzan
+
+Para cuando el único administrador está bloqueado, no configuró todavía
+una pregunta de seguridad, y no hay nadie más con acceso. Requiere acceso
+directo a la máquina donde corre el servidor (terminal, no un navegador,
+nunca Postman) — el gate de seguridad acá es "quién puede ejecutar código
+en este servidor", no una contraseña más.
+
+```bash
+node src/auth/emergencia-resetear-password.js <usuario>
+```
+
+Resetea la contraseña de ese usuario (cualquiera, no solo administradores)
+y muestra una contraseña temporal **una sola vez** — no se vuelve a
+mostrar. No borra ni recrea al usuario: mismo criterio que el reseteo
+desde Usuarios (4.1), solo que sin necesitar una sesión ya iniciada. En
+el próximo ingreso, el sistema va a pedir que la cambie por una propia
+(y, si es administrador y todavía no tiene una, que defina su pregunta de
+seguridad ahí mismo — ver 4.2).
+
+> `npm run seed:admin` **no sirve para esto** — se niega a correr si ya
+> existe un administrador activo, y no toca contraseñas de cuentas
+> existentes. Solo crea el administrador inicial la primera vez que se
+> instala el sistema, cuando todavía no hay ninguno.
+
+Para no depender de este camino: mantené **más de un administrador
+activo** (así siempre hay alguien para el camino 4.1), y asegurate de que
+cada administrador complete su pregunta de seguridad (4.2) apenas entra
+por primera vez.

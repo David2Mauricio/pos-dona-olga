@@ -22,7 +22,9 @@ function cambiarPassword(req, res) {
   const actualizado = authService.cambiarPassword(
     req.session.usuario.id,
     req.body.passwordActual,
-    req.body.passwordNueva
+    req.body.passwordNueva,
+    req.body.pregunta,
+    req.body.respuesta
   );
   // La sesión activa ya tenía debeCambiarPassword=true cargado desde el
   // login; hay que refrescarla o quedaría bloqueada hasta el próximo login.
@@ -30,4 +32,13 @@ function cambiarPassword(req, res) {
   res.json(actualizado);
 }
 
-module.exports = { login, logout, sesion, cambiarPassword };
+function preguntaSeguridad(req, res) {
+  res.json(authService.obtenerPreguntaSeguridad(req.params.usuario));
+}
+
+function recuperarPassword(req, res) {
+  authService.recuperarPassword(req.body.usuario, req.body.respuesta, req.body.passwordNueva);
+  res.json({ mensaje: 'Contraseña actualizada. Ya podés iniciar sesión con tu nueva contraseña.' });
+}
+
+module.exports = { login, logout, sesion, cambiarPassword, preguntaSeguridad, recuperarPassword };

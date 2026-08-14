@@ -56,8 +56,18 @@ export const api = {
   login: (usuario, password) => peticion('/auth/login', { method: 'POST', body: JSON.stringify({ usuario, password }) }),
   logout: () => peticion('/auth/logout', { method: 'POST' }),
   obtenerSesion: () => peticion('/auth/sesion'),
-  cambiarPassword: (passwordActual, passwordNueva) =>
-    peticion('/auth/cambiar-password', { method: 'POST', body: JSON.stringify({ passwordActual, passwordNueva }) }),
+  cambiarPassword: (passwordActual, passwordNueva, pregunta, respuesta) =>
+    peticion('/auth/cambiar-password', {
+      method: 'POST',
+      body: JSON.stringify({ passwordActual, passwordNueva, ...(pregunta && respuesta ? { pregunta, respuesta } : {}) }),
+    }),
+  // peticionOpcional: 404 (usuario sin pregunta configurada, o
+  // inexistente) se resuelve como null, no como error — así el llamador
+  // solo decide mostrar u ocultar el enlace. Un 429 por rate-limit sigue
+  // lanzando normalmente, eso sí hay que mostrarlo.
+  obtenerPreguntaSeguridad: (usuario) => peticionOpcional(`/auth/pregunta-seguridad/${encodeURIComponent(usuario)}`),
+  recuperarPassword: (usuario, respuesta, passwordNueva) =>
+    peticion('/auth/recuperar-password', { method: 'POST', body: JSON.stringify({ usuario, respuesta, passwordNueva }) }),
 
   obtenerCajaActual: () => peticionOpcional('/caja/actual'),
   abrirCaja: (montoApertura) => peticion('/caja/apertura', { method: 'POST', body: JSON.stringify({ montoApertura }) }),

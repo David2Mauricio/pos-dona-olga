@@ -45,6 +45,12 @@ function exponer(usuario) {
     rol: usuario.rol,
     debeCambiarPassword: usuario.debeCambiarPassword,
     activo: usuario.activo,
+    // Nunca la pregunta ni el hash de la respuesta acá — solo si existe,
+    // para que el frontend sepa si tiene que pedirla (ver
+    // cambiarPassword). La pregunta en sí se expone aparte, en
+    // obtenerPreguntaSeguridad, que es pública mientras que esto viaja
+    // en la sesión de un usuario ya logueado.
+    tienePreguntaSeguridad: Boolean(usuario.preguntaSeguridad),
   };
 }
 
@@ -71,7 +77,12 @@ function login(usuarioTexto, password) {
   return exponer(usuario);
 }
 
-function cambiarPassword(usuarioId, passwordActual, passwordNueva) {
+// pregunta/respuesta son opcionales EXCEPTO para un administrador que
+// todavía no tiene una configurada (ver ADR de cierre del proyecto): se
+// pide en el primer cambio de contraseña obligatorio, autoservicio, para
+// que nadie más que la propia persona la vea. Si ya la tiene, mandarlas
+// de nuevo la redefine — no hace falta una pantalla de edición aparte.
+function cambiarPassword(usuarioId, passwordActual, passwordNueva, pregunta, respuesta) {
   const usuario = repository.obtenerPorId(usuarioId);
   if (!usuario) {
     throw new AppError('Usuario no encontrado', 404);
@@ -81,8 +92,21 @@ function cambiarPassword(usuarioId, passwordActual, passwordNueva) {
     throw new AppError('La contraseña actual no es correcta', 400);
   }
 
+  if (usuario.rol === 'administrador' && !usuario.preguntaSeguridad && !(pregunta && respuesta)) {
+    throw new AppError(
+      'Como administrador, definí una pregunta de seguridad y su respuesta al cambiar la contraseña.',
+      400
+    );
+  }
+
   const nuevoHash = bcrypt.hashSync(passwordNueva, RONDAS_SAL);
-  const actualizado = repository.actualizarPassword(usuarioId, nuevoHash);
+  repository.actualizarPassword(usuarioId, nuevoHash);
+
+  const actualizado =
+    pregunta && respuesta
+      ? repository.establecerPreguntaSeguridad(usuarioId, pregunta, bcrypt.hashSync(respuesta, RONDAS_SAL))
+      : repository.obtenerPorId(usuarioId);
+
   return exponer(actualizado);
 }
 
@@ -90,4 +114,68 @@ function crearHash(password) {
   return bcrypt.hashSync(password, RONDAS_SAL);
 }
 
-module.exports = { login, cambiarPassword, exponer, crearHash };
+// Pública a propósito (sin sesión, ver auth.routes.js): es el primer paso
+// de "olvidé mi contraseña". Un solo mensaje/404 para las cuatro causas
+// posibles (no existe, inactivo, no es administrador, no tiene pregunta
+// configurada) — no darle a quien pregunta pistas de cuál fue. Consulta
+// el mismo contador de rate-limit que login/recuperarPassword pero sin
+// incrementarlo: preguntar si existe una pregunta no es un intento de
+// adivinar nada.
+function obtenerPreguntaSeguridad(usuarioTexto) {
+  if (estaBloqueado(usuarioTexto)) {
+    throw new AppError(
+      'Demasiados intentos fallidos. Esperá 15 minutos antes de volver a intentar.',
+      429,
+      'RATE_LIMITED'
+    );
+  }
+
+  const usuario = repository.obtenerPorUsuario(usuarioTexto);
+  if (!usuario || !usuario.activo || usuario.rol !== 'administrador' || !usuario.preguntaSeguridad) {
+    throw new AppError('No hay recuperación por pregunta de seguridad disponible para este usuario.', 404);
+  }
+
+  return { pregunta: usuario.preguntaSeguridad };
+}
+
+// Segundo paso de "olvidé mi contraseña": compara la respuesta contra el
+// hash guardado y, si coincide, define la contraseña nueva ahí mismo. Sin
+// auto-login a propósito (ver ADR de cierre) — confirma y la persona
+// entra de nuevo por el login normal, ya con su contraseña nueva.
+function recuperarPassword(usuarioTexto, respuesta, passwordNueva) {
+  if (estaBloqueado(usuarioTexto)) {
+    throw new AppError(
+      'Demasiados intentos fallidos. Esperá 15 minutos antes de volver a intentar.',
+      429,
+      'RATE_LIMITED'
+    );
+  }
+
+  const usuario = repository.obtenerPorUsuario(usuarioTexto);
+
+  // Mismo criterio que login: un solo mensaje genérico sin importar cuál
+  // de las condiciones falló, para no revelar de más.
+  if (
+    !usuario ||
+    !usuario.activo ||
+    usuario.rol !== 'administrador' ||
+    !usuario.respuestaSeguridadHash ||
+    !bcrypt.compareSync(respuesta, usuario.respuestaSeguridadHash)
+  ) {
+    registrarIntentoFallido(usuarioTexto);
+    throw new AppError('Usuario o respuesta incorrectos', 401, 'RESPUESTA_INVALIDA');
+  }
+
+  limpiarIntentos(usuarioTexto);
+  const nuevoHash = bcrypt.hashSync(passwordNueva, RONDAS_SAL);
+  repository.actualizarPassword(usuario.id, nuevoHash);
+}
+
+module.exports = {
+  login,
+  cambiarPassword,
+  exponer,
+  crearHash,
+  obtenerPreguntaSeguridad,
+  recuperarPassword,
+};

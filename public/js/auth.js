@@ -17,8 +17,19 @@ const inputPassword = document.getElementById('input-password');
 const formularioCambiarPassword = document.getElementById('formulario-cambiar-password');
 const inputPasswordActual = document.getElementById('input-password-actual');
 const inputPasswordNueva = document.getElementById('input-password-nueva');
+const campoPreguntaSeguridad = document.getElementById('campo-pregunta-seguridad');
+const inputPreguntaSeguridad = document.getElementById('input-pregunta-seguridad');
+const campoRespuestaSeguridad = document.getElementById('campo-respuesta-seguridad');
+const inputRespuestaSeguridad = document.getElementById('input-respuesta-seguridad');
 const badgeUsuario = document.getElementById('badge-usuario');
 const botonSalir = document.getElementById('boton-salir');
+
+const enlaceOlvidePassword = document.getElementById('enlace-olvide-password');
+const formularioRecuperarPassword = document.getElementById('formulario-recuperar-password');
+const preguntaRecuperarPassword = document.getElementById('pregunta-recuperar-password');
+const inputRecuperarRespuesta = document.getElementById('input-recuperar-respuesta');
+const inputRecuperarPasswordNueva = document.getElementById('input-recuperar-password-nueva');
+const botonVolverALogin = document.getElementById('boton-volver-a-login');
 
 // Ojo de contraseña: un botón por campo (data-target apunta al id del
 // input), genérico para los tres campos de contraseña que existen hoy —
@@ -49,25 +60,56 @@ function mensajeDeError(error) {
   return error instanceof ErrorApi ? error.message : 'No se pudo conectar con el servidor. Verificá que esté corriendo.';
 }
 
-function mostrarPantallaLogin() {
+function mostrarPantallaLogin(usuarioPrellenado) {
   tituloOverlayLogin.textContent = 'Iniciá sesión';
   textoOverlayLogin.textContent = 'Ingresá tu usuario y contraseña para entrar al mostrador.';
   formularioCambiarPassword.hidden = true;
+  formularioRecuperarPassword.hidden = true;
   formularioLogin.hidden = false;
   overlayLogin.hidden = false;
+  if (usuarioPrellenado) inputUsuario.value = usuarioPrellenado;
   inputPassword.value = '';
   inputUsuario.focus();
+}
+
+// El admin sin pregunta configurada todavía tiene que definirla acá
+// mismo, autoservicio (ver ADR de cierre del proyecto) — nadie más que
+// ella la ve. Un cajero, o un admin que ya la tiene, no ve estos campos.
+function actualizarCamposPreguntaSeguridad() {
+  const usuario = usuarioPendienteDeCambioPassword;
+  const debeConfigurarla = usuario?.rol === 'administrador' && !usuario?.tienePreguntaSeguridad;
+  campoPreguntaSeguridad.hidden = !debeConfigurarla;
+  campoRespuestaSeguridad.hidden = !debeConfigurarla;
+  inputPreguntaSeguridad.required = debeConfigurarla;
+  inputRespuestaSeguridad.required = debeConfigurarla;
+  inputPreguntaSeguridad.value = '';
+  inputRespuestaSeguridad.value = '';
 }
 
 function mostrarPantallaCambiarPassword() {
   tituloOverlayLogin.textContent = 'Definí una contraseña nueva';
   textoOverlayLogin.textContent = 'Por seguridad, tenés que cambiar la contraseña temporal antes de continuar.';
   formularioLogin.hidden = true;
+  formularioRecuperarPassword.hidden = true;
   formularioCambiarPassword.hidden = false;
   overlayLogin.hidden = false;
   inputPasswordActual.value = '';
   inputPasswordNueva.value = '';
+  actualizarCamposPreguntaSeguridad();
   inputPasswordActual.focus();
+}
+
+function mostrarPantallaRecuperarPassword(pregunta) {
+  tituloOverlayLogin.textContent = 'Recuperar acceso';
+  textoOverlayLogin.textContent = '';
+  formularioLogin.hidden = true;
+  formularioCambiarPassword.hidden = true;
+  formularioRecuperarPassword.hidden = false;
+  overlayLogin.hidden = false;
+  preguntaRecuperarPassword.textContent = pregunta;
+  inputRecuperarRespuesta.value = '';
+  inputRecuperarPasswordNueva.value = '';
+  inputRecuperarRespuesta.focus();
 }
 
 function aplicarSesionLista(usuario) {
@@ -114,9 +156,77 @@ formularioCambiarPassword.addEventListener('submit', async (evento) => {
   boton.disabled = true;
 
   try {
-    const usuario = await api.cambiarPassword(inputPasswordActual.value, inputPasswordNueva.value);
+    const usuario = await api.cambiarPassword(
+      inputPasswordActual.value,
+      inputPasswordNueva.value,
+      campoPreguntaSeguridad.hidden ? null : inputPreguntaSeguridad.value.trim(),
+      campoRespuestaSeguridad.hidden ? null : inputRespuestaSeguridad.value.trim()
+    );
     aplicarSesionLista(usuario);
     mostrarToast('Contraseña actualizada');
+  } catch (error) {
+    mostrarToast(mensajeDeError(error), 'error');
+  } finally {
+    boton.disabled = false;
+  }
+});
+
+// "Olvidé mi contraseña" aparece/desaparece al perder el foco del campo
+// usuario, no en cada tecla — solo si ESE usuario tiene una pregunta
+// configurada (ver ADR de cierre: es autoservicio, solo para
+// administradores). peticionOpcional en api.js ya resuelve "no tiene
+// pregunta" como null, no como error.
+inputUsuario.addEventListener('blur', async () => {
+  const nombreUsuario = inputUsuario.value.trim();
+  if (!nombreUsuario) {
+    enlaceOlvidePassword.hidden = true;
+    return;
+  }
+  try {
+    const resultado = await api.obtenerPreguntaSeguridad(nombreUsuario);
+    enlaceOlvidePassword.hidden = !resultado;
+  } catch (error) {
+    // Rate-limited u otro error real: no mostrar el enlace, pero tampoco
+    // interrumpir al usuario con un toast por algo que todavía no pidió.
+    enlaceOlvidePassword.hidden = true;
+  }
+});
+
+enlaceOlvidePassword.addEventListener('click', async () => {
+  const nombreUsuario = inputUsuario.value.trim();
+  enlaceOlvidePassword.disabled = true;
+  try {
+    const resultado = await api.obtenerPreguntaSeguridad(nombreUsuario);
+    if (!resultado) {
+      mostrarToast('No hay recuperación por pregunta de seguridad disponible para este usuario.', 'error');
+      return;
+    }
+    formularioRecuperarPassword.dataset.usuario = nombreUsuario;
+    mostrarPantallaRecuperarPassword(resultado.pregunta);
+  } catch (error) {
+    mostrarToast(mensajeDeError(error), 'error');
+  } finally {
+    enlaceOlvidePassword.disabled = false;
+  }
+});
+
+botonVolverALogin.addEventListener('click', () => {
+  mostrarPantallaLogin(formularioRecuperarPassword.dataset.usuario);
+});
+
+formularioRecuperarPassword.addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const boton = formularioRecuperarPassword.querySelector('button[type="submit"]');
+  boton.disabled = true;
+
+  try {
+    await api.recuperarPassword(
+      formularioRecuperarPassword.dataset.usuario,
+      inputRecuperarRespuesta.value,
+      inputRecuperarPasswordNueva.value
+    );
+    mostrarToast('Contraseña actualizada. Iniciá sesión con tu contraseña nueva.');
+    mostrarPantallaLogin(formularioRecuperarPassword.dataset.usuario);
   } catch (error) {
     mostrarToast(mensajeDeError(error), 'error');
   } finally {
