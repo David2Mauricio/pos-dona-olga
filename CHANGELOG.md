@@ -4,6 +4,27 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Agregado (cierre previo a instalación real — ver ADR 0014)
+
+- Recibo: dirección y teléfono del negocio, quita número de venta y tipo
+  de precio.
+- Sidebar con fondo navy sólido, contraste verificado con WCAG real.
+- Ruta lista para el logo (`public/img/logo.png`), sin bloquear en el
+  archivo.
+- Recuperación de contraseña sin Postman: pregunta de seguridad
+  (autoservicio, administradores) y script de emergencia
+  (`emergencia-resetear-password.js`) como respaldo.
+- Persistencia del proceso: Tarea Programada de Windows, arranque sin
+  sesión gráfica y reinicio automático ante un crash — verificados en vivo
+  en la máquina real, no en teoría. Bug real encontrado y corregido en el
+  camino: el reintento de Task Scheduler no detecta crashes de la
+  aplicación (ver ADR 0014); el reintento real vive en un loop dentro de
+  `iniciar-servidor.bat`.
+- `docs/primer-arranque.md` completo: arranque, verificación, backups,
+  checklist de primer uso, los tres caminos de recuperación de contraseña.
+- Limpieza de datos de prueba de la base real (29 sesiones de caja y 1
+  lote huérfano) y catálogo de ejemplo vaciado antes de instalar.
+
 ### Verificado (Fase 4: auditoría final de las 8 secciones completas)
 
 - Primera pasada de Lighthouse + axe-core sobre el conjunto completo de la
