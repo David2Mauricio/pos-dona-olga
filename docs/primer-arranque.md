@@ -27,7 +27,63 @@ que el negocio empiece a vender:
    pregunta de seguridad — completarla ahí mismo (ver 4.2): es lo que
    permite recuperar el acceso más adelante sin depender de nadie más.
 
-## 1. Iniciar el servidor
+## 1. Cómo arranca el servidor
+
+**El sistema arranca solo — no hace falta abrir una terminal cada mañana.**
+Una Tarea Programada de Windows ("POS Doña Olga - Servidor") lo levanta
+automáticamente al iniciar la máquina, corriendo como `SYSTEM`, sin
+necesitar que nadie inicie sesión gráfica. Si el proceso se cae por
+cualquier motivo, se reinicia solo en unos segundos — probado en vivo
+matando el proceso a mano y confirmando el reinicio por log y por reloj,
+no asumido.
+
+Al arrancar (a mano o por la tarea), automáticamente:
+
+- Aplica cualquier migración de base de datos pendiente.
+- Hace un backup de la base de datos.
+- Empieza a hacer un backup nuevo cada 6 horas mientras el proceso siga corriendo.
+
+### Verificar que la tarea está instalada y activa
+
+```powershell
+Get-ScheduledTask -TaskName "POS Dona Olga - Servidor" | Select-Object TaskName, State
+```
+
+`State` debería decir `Ready` (esperando el próximo inicio de Windows) o
+`Running` (el servidor está corriendo ahora). Si el comando no encuentra
+la tarea, hay que instalarla — ver "Instalar la tarea" más abajo.
+
+### Reinstalar la tarea (máquina nueva, o si se borró por error)
+
+Desde una PowerShell abierta **como Administrador** (clic derecho →
+"Ejecutar como administrador" — sin esto falla con "Acceso denegado"):
+
+```powershell
+& "C:\ruta\al\proyecto\crear-tarea-programada.ps1"
+```
+
+Es seguro correrlo de nuevo aunque la tarea ya exista: la reemplaza sin
+duplicarla. Registra la tarea para arrancar al iniciar Windows, sin login
+gráfico. **El reintento ante una caída no lo configura esta tarea** — vive
+adentro de `iniciar-servidor.bat` (ver más abajo, "Si el servidor se cae
+solo"), porque Windows Task Scheduler no reconoce un crash de la
+aplicación como una falla de la tarea (probado con evidencia real: un
+proceso muerto con código de salida `-1` quedó registrado por Task
+Scheduler como "completó correctamente" — su propio reintento configurable
+nunca se dispara para esto).
+
+### Si el servidor se cae solo (crash, corte de luz, reinicio de Windows)
+
+No hace falta hacer nada. `iniciar-servidor.bat` (lo que ejecuta la tarea)
+tiene su propio ciclo: si `node` termina por el motivo que sea, lo vuelve a
+lanzar a los 5 segundos, indefinidamente. Y si la máquina se reinicia
+entera, la tarea vuelve a arrancar sola al iniciar Windows — sin login.
+
+Para confirmar que un reinicio reciente fue detectado y manejado, revisar
+el log del día (ver más abajo): cada arranque y cada caída queda anotado
+con hora exacta.
+
+### Arranque manual (para desarrollo, o para probar algo puntual)
 
 Desde la carpeta del proyecto:
 
@@ -35,21 +91,11 @@ Desde la carpeta del proyecto:
 npm start
 ```
 
-Esto levanta el servidor en el puerto configurado en `.env` (por defecto
-`3000`). Al arrancar, automáticamente:
-
-- Aplica cualquier migración de base de datos pendiente.
-- Hace un backup de la base de datos.
-- Empieza a hacer un backup nuevo cada 6 horas mientras el proceso siga corriendo.
-
-> Si ya se configuró un mecanismo de arranque automático (pm2, Tarea
-> Programada de Windows, systemd — ver el punto pendiente de persistencia
-> del proceso), seguí las instrucciones propias de ese mecanismo en vez de
-> `npm start` a mano. Esta sección asume arranque manual.
-
-**No cerrés la ventana de la terminal** mientras el sistema esté en uso — si
-se cierra, el servidor se detiene y el mostrador deja de funcionar hasta que
-se vuelva a levantar.
+**No cerrés la ventana de la terminal** mientras uses esta vía — a
+diferencia de la tarea programada, acá si se cierra la terminal el
+servidor se detiene, sin nada que lo vuelva a levantar solo. Para uso
+real del negocio, dejar que la tarea programada se encargue (punto
+anterior), no levantarlo a mano.
 
 ## 2. Verificar que está corriendo
 
@@ -64,6 +110,20 @@ servidor no está corriendo — repetí el paso 1.
 
 También podés simplemente abrir `http://localhost:3000` en el navegador:
 si aparece la pantalla de inicio de sesión, el servidor está funcionando.
+
+### El log de arranque de la tarea programada
+
+Distinto del log propio de la aplicación (`logs/app.log`): este es el
+registro de cada vez que la tarea programada arrancó o reinició el
+servidor, con hora exacta y el código de salida si terminó por una
+caída. Un archivo por día:
+
+```
+logs/tarea-programada-2026-08-14.log
+```
+
+Útil para responder "¿el sistema estuvo caído anoche?" sin adivinar —
+cada arranque queda anotado ahí, se haya notado o no en el momento.
 
 ## 3. Dónde están los backups
 
