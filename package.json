@@ -8,7 +8,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "migrate": "node src/db/migrate.js",
-    "seed:admin": "node src/auth/seed-admin.js"
+    "seed:admin": "node src/auth/seed-admin.js",
+    "limpiar-datos-prueba": "node limpiar-datos-prueba.js"
   },
   "license": "UNLICENSED",
   "dependencies": {
@@ -22,6 +23,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "axe-core": "^4.13.0",
+    "lighthouse": "^12.8.2",
+    "nodemon": "^3.1.14",
+    "puppeteer": "^25.8.0"
   }
 }
