@@ -36,11 +36,29 @@ curl http://localhost:3000/api/health
 
 ## Scripts disponibles
 
-| Script           | Qué hace                                                        |
-|------------------|-------------------------------------------------------------------|
-| `npm start`      | Levanta el servidor en modo normal                               |
-| `npm run dev`    | Levanta el servidor con `nodemon` (recarga automática)            |
-| `npm run migrate`| Aplica las migraciones SQL pendientes en `/migrations`            |
+| Script                          | Qué hace                                                        |
+|---------------------------------|-------------------------------------------------------------------|
+| `npm start`                     | Levanta el servidor en modo normal                               |
+| `npm run dev`                   | Levanta el servidor con `nodemon` (recarga automática)            |
+| `npm run migrate`                | Aplica las migraciones SQL pendientes en `/migrations`            |
+| `npm run seed:admin`             | Crea el primer usuario administrador (solo si no existe ninguno) |
+| `npm run limpiar-datos-prueba`   | **Uso único, día de instalación.** Ver aviso abajo. |
+
+### `limpiar-datos-prueba` — un solo uso, día de instalación
+
+Vacía **todas** las tablas de negocio (`productos`, `categorias`, `ventas`,
+`ventas_items`, `movimientos_inventario`, `caja_sesiones`,
+`lotes_vencimiento`, `proveedores`) — nunca la estructura. Preserva
+`usuarios` intacto (el/los administrador/es siguen pudiendo loguearse
+después) y no toca `gastos` ni `auditoria` (registro inmutable, ver
+[ADR 0018](./docs/decisiones/0018-registro-de-auditoria-inmutable.md)).
+Crea un backup de seguridad antes de borrar nada, y pide escribir
+`CONFIRMAR` por teclado antes de tocar cualquier dato.
+
+**Es para el día de instalación real, para vaciar los datos de desarrollo
+y pruebas antes de cargar el catálogo real del negocio. Nunca lo corras
+después de que el negocio ya tenga ventas o catálogo reales cargados** —
+no hay forma de deshacerlo más allá del backup que el propio script crea.
 
 ## Estructura del proyecto
 
@@ -53,8 +71,7 @@ src/
   utils/        # logger, AppError, helpers compartidos
   app.js        # configuración de Express (middlewares, rutas)
   server.js     # punto de entrada del proceso
-migrations/     # archivos .sql numerados (001_..., 002_...)
-uploads/        # fotos de producto (solo el nombre de archivo va a la BD)
+migrations/     # archivos .sql numerados (002_..., 003_...)
 logs/           # logs de la aplicación (no se versionan)
 data/           # archivo pos.sqlite (no se versiona)
 docs/decisiones/# ADRs: decisiones de arquitectura y su porqué
