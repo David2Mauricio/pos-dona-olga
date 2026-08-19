@@ -10,4 +10,12 @@ function reporteInventario(req, res) {
   res.json(reporte);
 }
 
-module.exports = { reporteVentas, reporteInventario };
+function exportarVentasCsv(req, res) {
+  const { desde, hasta } = req.query;
+  const csv = reportesService.exportarVentasCsv(req.query);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="ventas-${desde}-a-${hasta}.csv"`);
+  res.send(csv);
+}
+
+module.exports = { reporteVentas, reporteInventario, exportarVentasCsv };

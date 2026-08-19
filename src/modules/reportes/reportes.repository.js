@@ -49,6 +49,25 @@ function obtenerDesglosePorMedioPago(filtros) {
     .all(parametros);
 }
 
+// Totales agrupados por día dentro del rango, para el gráfico de tendencia
+// (ver ADR de exportación CSV/gastos/redondeo/gráficos): a diferencia de
+// obtenerTotalesVentas(), que agrega el rango completo en una sola fila,
+// esto arma un punto por día. substr(creada_en, 1, 10), no strftime: mismo
+// estilo de texto que ya usa el resto de este archivo (creada_en es
+// 'YYYY-MM-DD HH:MM:SS', los primeros 10 caracteres ya son la fecha).
+function obtenerVentasPorDia(filtros) {
+  const { clausulaWhere, parametros } = construirFiltro(filtros);
+  return db
+    .prepare(
+      `SELECT substr(creada_en, 1, 10) AS fecha, COALESCE(SUM(total), 0) AS total, COUNT(*) AS cantidadVentas
+       FROM ventas
+       WHERE ${clausulaWhere}
+       GROUP BY substr(creada_en, 1, 10)
+       ORDER BY fecha`
+    )
+    .all(parametros);
+}
+
 function obtenerTopProductos(filtros, limite) {
   const { clausulaWhere, parametros } = construirFiltro(filtros, 'v');
   return db
@@ -91,6 +110,7 @@ function obtenerValorEstimadoInventario() {
 module.exports = {
   obtenerTotalesVentas,
   obtenerDesglosePorMedioPago,
+  obtenerVentasPorDia,
   obtenerTopProductos,
   obtenerValorEstimadoInventario,
 };
