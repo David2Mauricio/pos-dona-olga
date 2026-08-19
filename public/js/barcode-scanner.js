@@ -43,6 +43,21 @@ export function iniciarLectorCodigoBarras(alDetectarCodigo) {
   }
 
   document.addEventListener('keydown', (evento) => {
+    // El listener es global (ver comentario de arriba) y arranca en la
+    // carga de la página, antes de que exista sesión — sin este freno,
+    // tipear rápido usuario/contraseña en #overlay-login (login, cambio de
+    // contraseña obligatorio, o recuperación) se leía como una ráfaga de
+    // lector y disparaba una búsqueda de código de barras sin sesión
+    // todavía. Esa búsqueda, al fallar con 401 SIN_SESION después de que
+    // el login ya había resuelto bien, disparaba el hook global de sesión
+    // expirada (ver api.js) y devolvía a la pantalla de login a alguien
+    // que sí acababa de entrar. No hay ningún caso de uso real para
+    // escanear un código mientras esa pantalla está abierta.
+    if (document.getElementById('overlay-login')?.hidden === false) {
+      reiniciar();
+      return;
+    }
+
     if (evento.ctrlKey || evento.altKey || evento.metaKey) {
       reiniciar();
       return;
