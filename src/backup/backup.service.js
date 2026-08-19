@@ -6,9 +6,17 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const db = require('../config/database');
+const env = require('../config/env');
 const logger = require('../utils/logger');
 
-const DIRECTORIO_BACKUPS = path.resolve(process.cwd(), 'backups');
+// Anclado a la ubicación real de la base de datos (env.dbPath), no a
+// process.cwd(): un backup es tan crítico como el dato que respalda, y no
+// puede depender de desde qué carpeta se haya lanzado el proceso. Lanzar
+// el servidor mal ubicado alguna vez escribió (y podó por retención) un
+// backup real en una carpeta "backups" accidental creada donde fuera que
+// corriera el comando -- ver ADR 0008, sección "Corrección: ruta anclada
+// a DB_PATH", y la auditoría final 2026-08-19 que lo encontró en vivo.
+const DIRECTORIO_BACKUPS = path.resolve(path.dirname(env.dbPath), '..', 'backups');
 const PREFIJO_ARCHIVO = 'pos-backup-';
 const RETENCION_MAXIMA = 14;
 const INTERVALO_POR_DEFECTO_MS = 6 * 60 * 60 * 1000; // 6 horas

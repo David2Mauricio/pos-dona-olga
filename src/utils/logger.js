@@ -2,7 +2,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const env = require('../config/env');
 
-const DIRECTORIO_LOGS = path.resolve(process.cwd(), 'logs');
+// Anclado a env.raizProyecto, no a process.cwd() (ver ADR 0008, sección
+// "Corrección: ruta anclada a DB_PATH" -- mismo defecto, mismo fix).
+const DIRECTORIO_LOGS = path.resolve(env.raizProyecto, 'logs');
 fs.mkdirSync(DIRECTORIO_LOGS, { recursive: true });
 
 const ARCHIVO_LOG = path.join(DIRECTORIO_LOGS, 'app.log');
