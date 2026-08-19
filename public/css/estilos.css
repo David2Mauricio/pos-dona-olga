@@ -586,6 +586,58 @@ img {
   }
 }
 
+/* Sidebar responsive (ver ADR 0017, Bloque C): a los 220px fijos de
+   .nav-lateral, un viewport de 375px le dejaba 155px al contenido (59%
+   ocupado por la sidebar, confirmado con Puppeteer real, no a ojo). Por
+   debajo de 768px pasa de barra fija a cajón (drawer) que se abre con el
+   botón de hamburguesa de la cabecera, sobre un fondo que la cierra al
+   tocarlo afuera -- mismo criterio de overlay ya usado en el resto de la
+   interfaz, sin agregar un mecanismo nuevo. */
+.boton-menu {
+  display: none;
+}
+
+.fondo-menu {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .boton-menu {
+    display: inline-flex;
+  }
+
+  .nav-lateral {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 45;
+    width: 260px;
+    max-width: 85vw;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--sombra);
+  }
+
+  .nav-lateral--abierta {
+    transform: translateX(0);
+  }
+
+  .fondo-menu {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 12, 16, 0.5);
+    z-index: 40;
+  }
+
+  .fondo-menu[hidden] {
+    display: none;
+  }
+}
+/* prefers-reduced-motion ya cubierto por la regla global de arriba
+   (selector *, !important sobre transition-duration) -- no hace falta
+   repetirla acá para .nav-lateral. */
+
 .panel-productos {
   display: flex;
   flex-direction: column;
@@ -668,12 +720,33 @@ img {
   display: none;
 }
 
+/* #overlay-login es el único contenedor de las 3 pantallas de sesión
+   (login, cambio de contraseña obligatorio, recuperación por pregunta de
+   seguridad — ver public/index.html) — un solo selector cubre las tres.
+   Blur (no solo oscurecer) para que datos del mostrador que quedaron en
+   pantalla (carrito, totales) no se alcancen a leer detrás cuando la
+   sesión expira o alguien se desloguea con la pantalla a la vista. */
+#overlay-login {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Sin esto, un panel más alto que el viewport (ej. el formulario de alta
+   de Productos, con 8 campos) se centraba verticalmente sin ningún límite
+   de altura -- la mitad de arriba quedaba literalmente por encima de
+   y=0, inalcanzable, y el fondo de la página se veía en esa franja porque
+   ahí no había caja del panel cubriéndola. Confirmado con captura real
+   (panel de 944px en un viewport de 800px, top: -72px) antes de asumir la
+   causa. max-height + overflow-y hace que el panel se achique y scrollee
+   internamente en vez de desbordar el viewport. */
 .overlay__panel {
   background: var(--color-superficie);
   border-radius: var(--radio);
   padding: 2rem;
   max-width: 420px;
   width: 100%;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
   box-shadow: var(--sombra);
 }
 
@@ -691,6 +764,13 @@ img {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1.5rem;
+}
+
+.indicadores__cabecera-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 /* --- Indicadores (Bloque 3, ver ADR 0013): tarjetas de KPI, sin
@@ -716,6 +796,12 @@ img {
   margin-bottom: 0.5rem;
 }
 
+.indicadores__descripcion {
+  font-size: 0.8rem;
+  color: var(--color-texto-muted);
+  margin: -0.3rem 0 0.6rem;
+}
+
 .indicadores__valor {
   font-size: 1.75rem;
   font-weight: 700;
@@ -725,6 +811,128 @@ img {
   margin-top: 0.35rem;
   color: var(--color-texto-muted);
   font-size: 0.9rem;
+}
+
+.indicadores__tarjeta--ancha {
+  margin-top: 1rem;
+}
+
+.indicadores__desglose {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-borde);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.indicadores__desglose-fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-texto-muted);
+}
+
+.indicadores__desglose-fila .numero {
+  color: var(--color-texto);
+}
+
+.indicadores__desglose-vacio {
+  font-size: 0.85rem;
+  color: var(--color-texto-muted);
+}
+
+.indicadores__grafico {
+  margin-top: 0.75rem;
+}
+
+.indicadores__svg {
+  width: 100%;
+  height: auto;
+  max-width: 260px;
+}
+
+.indicadores__svg--productos,
+.indicadores__svg--tendencia {
+  max-width: 100%;
+}
+
+.indicadores__grafico--donut {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.indicadores__svg--donut {
+  width: 160px;
+  max-width: 160px;
+  flex-shrink: 0;
+}
+
+.indicadores__leyenda-donut {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.indicadores__leyenda-donut li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.indicadores__leyenda-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.indicadores__svg-valor {
+  font-family: var(--fuente-ui);
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--color-texto);
+}
+
+.indicadores__svg-etiqueta {
+  font-family: var(--fuente-ui);
+  font-size: 11px;
+  fill: var(--color-texto-muted);
+}
+
+.indicadores__svg-etiqueta--nombre {
+  dominant-baseline: middle;
+}
+
+.selector-periodo {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.selector-periodo__boton {
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border-radius: var(--radio-chico);
+  border: 1px solid var(--color-borde-fuerte);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  font-family: var(--fuente-ui);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.selector-periodo__boton--activo {
+  background: var(--color-acento);
+  border-color: var(--color-acento);
+  color: var(--color-texto-sobre-acento);
 }
 
 .lista-historial {
@@ -750,8 +958,14 @@ img {
   border-radius: var(--radio-chico);
 }
 
+/* Sin opacity (mismo bug de contraste ya encontrado y corregido dos veces
+   antes -- ver ADR 0013, Vencimientos y la sidebar navy: atenuar con
+   opacity sobre un fondo sólido puede caer por debajo de 4.5:1, acá
+   confirmado con axe-core real en .historial__hora y .badge-alerta--peligro
+   de una fila anulada). El badge "Anulada" ya es la señal real -- no hace
+   falta atenuar el resto de la fila para comunicar el estado. */
 .historial__fila--anulada {
-  opacity: 0.7;
+  border-color: var(--color-borde-fuerte);
 }
 
 .historial__hora {
@@ -852,10 +1066,20 @@ img {
   color: var(--color-texto);
 }
 
+/* El markup ya trae tabindex="0" + role="region" (patrón accesible de
+   región con scroll, ver index.html) pero faltaba el overflow real: sin
+   esto, una fila más ancha que el viewport (grid-template-columns fijo en
+   rem, ver .catalogo__fila de abajo) empujaba TODA la página a scrollear
+   horizontal en vez de scrollear solo esta región -- confirmado con
+   Puppeteer en 375/768px en Productos, Usuarios, Proveedores e Inventario
+   (los cuatro comparten esta clase). max-width:100% es lo que le permite
+   angostarse por debajo del ancho de sus filas en vez de heredarlo. */
 .catalogo__tabla {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .catalogo__fila {
@@ -873,8 +1097,15 @@ img {
    del mínimo WCAG (4.5:1) al mezclarse con el fondo — encontrado con
    axe-core en Vencimientos (ver ADR 0013), pero es una regla compartida
    con Productos/Usuarios: el fix mejora las tres, nunca las empeora. */
+/* Sin opacity (mismo bug de contraste ya encontrado y corregido varias
+   veces en este proyecto -- ver ADR 0013 y el historial de este cierre:
+   Vencimientos, la sidebar navy, y las filas anuladas de Historial. Acá
+   confirmado con axe-core real: un proveedor inactivo preexistente en la
+   base bajaba .badge-alerta--peligro a 4.28:1 en tema claro por esta
+   misma opacity). El badge "Inactivo" (Productos/Usuarios/Proveedores) o
+   el botón "Activar" (Vencimientos) ya son la señal real. */
 .catalogo__fila--inactivo {
-  opacity: 0.85;
+  border-color: var(--color-borde-fuerte);
 }
 
 .catalogo__fila--categoria {
@@ -891,6 +1122,58 @@ img {
 
 .catalogo__fila--proveedor {
   grid-template-columns: 1.2fr 8rem 8rem 1.3fr 6rem auto;
+}
+
+.catalogo__fila--movimiento {
+  grid-template-columns: 1.2fr 6rem 6rem 1.1fr 1fr 8rem;
+  align-items: center;
+}
+
+.catalogo__fila--auditoria {
+  grid-template-columns: 10rem 10rem 1fr 10rem auto;
+  align-items: start;
+}
+
+.catalogo__fila--gasto {
+  grid-template-columns: 6.5rem 1.3fr 8rem 7rem 6rem auto;
+}
+
+.auditoria__detalle summary {
+  cursor: pointer;
+  color: var(--color-acento);
+  font-size: 0.85rem;
+  width: fit-content;
+}
+
+.auditoria__detalle pre {
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--color-fondo);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 28rem;
+}
+
+.inventario__formulario {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.inventario__formulario .campo {
+  flex: 1;
+  min-width: 160px;
+  margin-bottom: 0;
+}
+
+.inventario__subtitulo {
+  font-size: 1.05rem;
+  margin-bottom: 0.75rem;
 }
 
 /* Sin esto, el <select> de rol solo hereda color: inherit (regla base) y
@@ -913,8 +1196,13 @@ img {
   justify-self: end;
 }
 
+/* min-height acá era 36px -- por debajo del mínimo táctil de 44px que rige
+   el resto del proyecto (ver ADR 0017, Bloque C). Sin ese override, los
+   botones de acción de fila (Editar/Desactivar/Activar en Productos,
+   Usuarios, Vencimientos, Proveedores) quedan al mismo estándar que
+   cualquier otro botón. */
 .catalogo__fila-acciones .boton-secundario {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 0.65rem;
   font-size: 0.8rem;
 }
@@ -955,6 +1243,35 @@ img {
   display: flex;
   gap: 0.75rem;
   margin-top: 0.5rem;
+}
+
+/* Agrupación del formulario de Productos (ver ADR 0017, Bloque D):
+   simplifica el flujo con encabezados de sección, sin convertirlo en un
+   wizard de varios pasos -- sigue siendo un único formulario que scrollea. */
+.formulario__grupo {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-texto-muted);
+  margin: 1.25rem 0 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-borde);
+}
+
+.formulario__grupo:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.formulario__advertencia {
+  font-size: 0.85rem;
+  color: var(--color-alerta);
+  background: var(--color-alerta-suave);
+  border-radius: var(--radio-chico);
+  padding: 0.6rem 0.75rem;
+  margin: -0.35rem 0 0.85rem;
 }
 
 .campo--switch {
@@ -1126,6 +1443,10 @@ img {
   background: var(--color-fondo);
 }
 
+.boton-icono--peligro {
+  color: var(--color-peligro);
+}
+
 .boton-icono svg {
   width: 22px;
   height: 22px;
@@ -1146,6 +1467,84 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Fila genérica label/badge + InfoTooltip, reutilizada en cualquier
+   pantalla (Productos, Inventario, Caja, Historial, Vencimientos): el
+   texto real (<label> o badge) sigue viviendo en su propio elemento, a
+   veces reescrito dinámicamente por JS (ej. "Stock inicial (kg)" vs
+   "(unidades)") -- el ícono de ayuda vive en un <span> hermano, nunca
+   adentro, para que ese reemplazo de texto nunca se lo lleve puesto. */
+.fila-con-ayuda {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* --- Ayuda contextual (InfoTooltip) --- */
+
+.info-tooltip {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 0.35rem;
+}
+
+.info-tooltip__boton {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-texto-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+}
+
+/* Área de toque real de 44x44 (regla del proyecto para todo elemento
+   interactivo) sin agrandar el ícono visualmente -- un ícono de ayuda
+   inline junto a un label no puede verse tan grande como un botón de
+   acción primario. Pseudo-elemento invisible en vez de padding real. */
+.info-tooltip__boton::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+
+.info-tooltip__boton:hover,
+.info-tooltip__boton[aria-expanded='true'] {
+  color: var(--color-acento);
+}
+
+.info-tooltip__boton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.info-tooltip__popover {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: 16rem;
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+  box-shadow: var(--sombra);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.info-tooltip__popover--derecha {
+  left: auto;
+  right: 0;
 }
 
 /* --- Campos --- */
@@ -1260,25 +1659,6 @@ img {
 
 .tarjeta-producto:active {
   transform: scale(0.98);
-}
-
-.tarjeta-producto__foto {
-  width: 100%;
-  aspect-ratio: 4 / 3;
-  background: var(--color-fondo);
-  object-fit: cover;
-}
-
-.tarjeta-producto__foto--vacia {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-texto-muted);
-}
-
-.tarjeta-producto__foto--vacia svg {
-  width: 40%;
-  height: 40%;
 }
 
 .tarjeta-producto__cuerpo {

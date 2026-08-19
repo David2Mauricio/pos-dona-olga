@@ -3,11 +3,16 @@
 // insertan siempre con textContent, nunca con innerHTML interpolado:
 // aunque el backend es propio y confiable, es el hábito correcto.
 
-import { iconoQuitar, iconoPaqueteVacio, iconoAlerta, iconoCheck, iconoEditar } from './icons.js';
+import { iconoQuitar, iconoAlerta, iconoCheck, iconoEditar } from './icons.js';
 import { formatearMoneda, gramosAKilosTexto, kilosTextoAGramos } from './utils.js';
 import { carrito } from './cart.js';
+import { crearInfoTooltip } from './info-tooltip.js';
 
-const UMBRAL_FOTOS_EAGER = 8; // primeras tarjetas: no son "lazy", ya están en el viewport inicial
+// Mismo texto que en Productos e Inventario (catalogo.js/inventario.js) --
+// las tres pantallas muestran el stock actual, así que comparten
+// exactamente la misma explicación.
+const TEXTO_AYUDA_STOCK =
+  'El stock se muestra en kilogramos para productos que se venden por peso, o en unidades para productos que se venden por pieza.';
 
 export function renderizarGrillaProductos(productos, contenedor, alAgregar) {
   contenedor.innerHTML = '';
@@ -20,40 +25,16 @@ export function renderizarGrillaProductos(productos, contenedor, alAgregar) {
     return;
   }
 
-  productos.forEach((producto, indice) => {
-    contenedor.appendChild(crearTarjetaProducto(producto, indice, alAgregar));
+  productos.forEach((producto) => {
+    contenedor.appendChild(crearTarjetaProducto(producto, alAgregar));
   });
 }
 
-function crearPlaceholderFoto() {
-  const elemento = document.createElement('div');
-  elemento.className = 'tarjeta-producto__foto tarjeta-producto__foto--vacia';
-  elemento.innerHTML = iconoPaqueteVacio;
-  return elemento;
-}
-
-function crearTarjetaProducto(producto, indice, alAgregar) {
+function crearTarjetaProducto(producto, alAgregar) {
   const boton = document.createElement('button');
   boton.type = 'button';
   boton.className = 'tarjeta-producto';
   boton.setAttribute('aria-label', `Agregar ${producto.nombre} al carrito, ${formatearPrecioTarjeta(producto)}`);
-
-  let elementoFoto;
-  if (producto.fotoNombreArchivo) {
-    elementoFoto = document.createElement('img');
-    elementoFoto.src = `/uploads/${producto.fotoNombreArchivo}`;
-    elementoFoto.alt = '';
-    elementoFoto.loading = indice < UMBRAL_FOTOS_EAGER ? 'eager' : 'lazy';
-    elementoFoto.className = 'tarjeta-producto__foto';
-    // Si el archivo referenciado no existe (borrado, movido, nunca subido de
-    // verdad) el navegador muestra su ícono de "imagen rota" por defecto —
-    // reemplazamos por el mismo placeholder que ya existe para "sin foto",
-    // en vez de dejar ese ícono genérico.
-    elementoFoto.addEventListener('error', () => elementoFoto.replaceWith(crearPlaceholderFoto()), { once: true });
-  } else {
-    elementoFoto = crearPlaceholderFoto();
-  }
-  boton.appendChild(elementoFoto);
 
   const cuerpo = document.createElement('div');
   cuerpo.className = 'tarjeta-producto__cuerpo';
@@ -150,9 +131,7 @@ function crearFilaCarrito(item, alCambiarCantidad, alQuitar, alAjustarPrecio, al
   filaPrecio.className = 'item-carrito__precio-unitario';
 
   if (item.precioModificado) {
-    const tipoPrecio = carrito.obtenerTipoPrecio();
-    const precioCatalogo =
-      tipoPrecio === 'mayorista' ? item.producto.precioMayorista ?? item.producto.precioPublico : item.producto.precioPublico;
+    const precioCatalogo = item.producto.precioPublico;
 
     const original = document.createElement('span');
     original.className = 'item-carrito__precio-original numero';
@@ -350,12 +329,21 @@ export function renderizarAlertas({ reporte, mapaProductos, botonAlertas, panelA
   botonAlertas.setAttribute('aria-label', total > 0 ? `Alertas: ${total} pendientes` : 'Sin alertas pendientes');
 
   panelAlertas.innerHTML = '';
-  panelAlertas.appendChild(crearSeccionAlertas('Stock bajo', stockBajo, (producto) => {
-    // GET /api/inventario/alertas ya devuelve stockActual resuelto según
-    // tipoVenta (ver inventario.repository.js) — no hace falta (ni existe)
-    // un stockGramos/stockUnidades separado en esta forma de la respuesta.
-    return `${producto.stockActual}/${producto.stockMinimo}`;
-  }, 'Ningún producto por debajo de su mínimo.'));
+  panelAlertas.appendChild(
+    crearSeccionAlertas(
+      'Stock bajo',
+      stockBajo,
+      (producto) => {
+        // GET /api/inventario/alertas ya devuelve stockActual resuelto según
+        // tipoVenta (ver inventario.repository.js) — no hace falta (ni existe)
+        // un stockGramos/stockUnidades separado en esta forma de la respuesta.
+        return `${producto.stockActual}/${producto.stockMinimo}`;
+      },
+      'Ningún producto por debajo de su mínimo.',
+      undefined,
+      crearInfoTooltip(TEXTO_AYUDA_STOCK, 'Ayuda sobre el formato de stock')
+    )
+  );
 
   const lotes = [
     ...vencidos.map((lote) => ({ ...lote, etiqueta: 'Vencido' })),
@@ -375,11 +363,15 @@ export function renderizarAlertas({ reporte, mapaProductos, botonAlertas, panelA
   );
 }
 
-function crearSeccionAlertas(titulo, items, obtenerValor, mensajeVacio, obtenerEtiqueta) {
+function crearSeccionAlertas(titulo, items, obtenerValor, mensajeVacio, obtenerEtiqueta, tooltipTitulo) {
   const seccion = document.createElement('div');
+  const encabezado = document.createElement('div');
+  encabezado.className = 'fila-con-ayuda';
   const h3 = document.createElement('h3');
   h3.textContent = titulo;
-  seccion.appendChild(h3);
+  encabezado.appendChild(h3);
+  if (tooltipTitulo) encabezado.appendChild(tooltipTitulo);
+  seccion.appendChild(encabezado);
 
   const lista = document.createElement('ul');
   if (items.length === 0) {

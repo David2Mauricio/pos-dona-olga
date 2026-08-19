@@ -2,26 +2,25 @@
 // renderizado vive en render.js, esto solo es estado + aritmética.
 //
 // Los cálculos replican EXACTO lo que hace ventas.service.js en el
-// backend (ADR 0002 y 0003): fallback a precio público cuando no hay
-// mayorista diferenciado, y redondeo una sola vez por línea. El backend
-// sigue siendo la autoridad final (vuelve a calcular todo al confirmar
-// la venta) — esto es solo para que el total en pantalla coincida con lo
-// que se va a cobrar de verdad, no una fuente de verdad paralela.
+// backend (ADR 0002 y 0003), con redondeo una sola vez por línea. El
+// backend sigue siendo la autoridad final (vuelve a calcular todo al
+// confirmar la venta) — esto es solo para que el total en pantalla
+// coincida con lo que se va a cobrar de verdad, no una fuente de verdad
+// paralela.
+//
+// Precio único (ver ADR de eliminación de precio_mayorista): ya no existe
+// una distinción público/mayorista, así que no hay tipoPrecio que
+// mantener acá -- solo precioPublico, salvo que la línea tenga un override.
 
 let items = []; // [{ producto, cantidad, override: null | { precioUnitarioOverride, motivoAjuste } }]
-let tipoPrecio = 'publico';
 
 // Fase 2 (ver ADR 0011/0013): un override es un precio absoluto que el
-// cajero fija para esa línea — no depende de tipoPrecio ni lo reemplaza
-// para el resto del carrito, sigue vigente aunque después se cambie
-// Público/Mayorista (igual criterio que el backend: el override, si
-// existe, siempre gana sobre resolverPrecioAplicado).
+// cajero fija para esa línea -- siempre gana sobre el precio de catálogo
+// (igual criterio que el backend: el override, si existe, siempre gana
+// sobre resolverPrecioAplicado).
 function calcularPrecioUnitarioItem(item) {
   if (item.override) {
     return item.override.precioUnitarioOverride;
-  }
-  if (tipoPrecio === 'mayorista') {
-    return item.producto.precioMayorista ?? item.producto.precioPublico;
   }
   return item.producto.precioPublico;
 }
@@ -78,14 +77,6 @@ export const carrito = {
     if (item) item.override = null;
   },
 
-  establecerTipoPrecio(nuevo) {
-    tipoPrecio = nuevo;
-  },
-
-  obtenerTipoPrecio() {
-    return tipoPrecio;
-  },
-
   obtenerTotal() {
     return this.obtenerItems().reduce((acumulado, item) => acumulado + item.subtotal, 0);
   },
@@ -96,7 +87,6 @@ export const carrito = {
 
   vaciar() {
     items = [];
-    tipoPrecio = 'publico';
   },
 
   // Shape exacto que espera POST /api/ventas (ventas.schema.js): solo

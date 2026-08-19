@@ -12,10 +12,13 @@ import { api, ErrorApi } from './api.js';
 import { formatearMoneda } from './utils.js';
 import { mostrarToast } from './render.js';
 import { iconoAnular } from './icons.js';
+import { crearInfoTooltip } from './info-tooltip.js';
 
 const listaHistorial = document.getElementById('lista-historial');
+const tituloHistorial = document.getElementById('titulo-vista-historial');
 
 let obtenerUsuarioActualFn = null;
+let rangoActual = null; // null = "hoy" (comportamiento original); {desde,hasta} = rango pedido desde Indicadores
 
 function mensajeDeError(error) {
   return error instanceof ErrorApi ? error.message : 'No se pudo completar la operación. Intentá de nuevo.';
@@ -28,17 +31,34 @@ function fechaDeHoy() {
   return `${ahora.getFullYear()}-${mes}-${dia}`;
 }
 
+// 'YYYY-MM-DD HH:MM:SS' (ver ventas.repository.js). Cuando el rango pedido
+// abarca más de un día (llegando desde Indicadores con semana/mes/trimestre),
+// la sola hora sería ambigua -- se antepone la fecha en ese caso.
 function formatearHora(creadaEn) {
-  // 'YYYY-MM-DD HH:MM:SS' (ver ventas.repository.js) — solo se muestra la hora,
-  // la fecha ya está implícita en que esta vista es "de hoy".
-  return creadaEn.split(' ')[1]?.slice(0, 5) ?? creadaEn;
+  const [fecha, hora] = creadaEn.split(' ');
+  const horaCorta = hora?.slice(0, 5) ?? creadaEn;
+  const esRangoDeUnDia = !rangoActual || rangoActual.desde === rangoActual.hasta;
+  return esRangoDeUnDia ? horaCorta : `${fecha} ${horaCorta}`;
+}
+
+function actualizarTitulo() {
+  if (!tituloHistorial) return;
+  const hoy = fechaDeHoy();
+  if (!rangoActual || (rangoActual.desde === hoy && rangoActual.hasta === hoy)) {
+    tituloHistorial.textContent = 'Historial de ventas de hoy';
+  } else if (rangoActual.desde === rangoActual.hasta) {
+    tituloHistorial.textContent = `Historial de ventas — ${rangoActual.desde}`;
+  } else {
+    tituloHistorial.textContent = `Historial de ventas — ${rangoActual.desde} a ${rangoActual.hasta}`;
+  }
 }
 
 async function cargarVentas() {
   listaHistorial.innerHTML = '<p class="historial__vacio">Cargando…</p>';
+  actualizarTitulo();
   try {
-    const hoy = fechaDeHoy();
-    const ventas = await api.listarVentas({ desde: hoy, hasta: hoy });
+    const { desde, hasta } = rangoActual ?? { desde: fechaDeHoy(), hasta: fechaDeHoy() };
+    const ventas = await api.listarVentas({ desde, hasta });
     renderizarVentas(ventas);
   } catch (error) {
     listaHistorial.innerHTML = '';
@@ -52,7 +72,7 @@ function renderizarVentas(ventas) {
   if (ventas.length === 0) {
     const vacio = document.createElement('p');
     vacio.className = 'historial__vacio';
-    vacio.textContent = 'Todavía no hay ventas registradas hoy.';
+    vacio.textContent = rangoActual ? 'No hay ventas registradas en ese período.' : 'Todavía no hay ventas registradas hoy.';
     listaHistorial.appendChild(vacio);
     return;
   }
@@ -86,11 +106,27 @@ function crearFilaVenta(venta, esAdmin) {
   estado.className = venta.estado === 'anulada' ? 'badge-alerta badge-alerta--peligro' : 'badge-alerta badge-alerta--exito';
   estado.textContent = venta.estado === 'anulada' ? 'Anulada' : 'Activa';
 
-  fila.append(hora, medioPago, total, estado);
+  const contenedorEstado = document.createElement('span');
+  contenedorEstado.className = 'fila-con-ayuda';
+  contenedorEstado.appendChild(estado);
 
   if (venta.estado === 'anulada' && venta.motivoAnulacion) {
     estado.title = venta.motivoAnulacion;
   }
+
+  // Solo en ventas anuladas: explica el concepto general (por qué sigue
+  // apareciendo, por qué no afecta los totales) -- distinto del `title`
+  // de arriba, que es el motivo puntual de ESTA anulación.
+  if (venta.estado === 'anulada') {
+    contenedorEstado.appendChild(
+      crearInfoTooltip(
+        'Una venta anulada no se borra del historial ni se cuenta en los totales de caja o reportes, pero queda registrada para trazabilidad.',
+        'Ayuda sobre venta anulada'
+      )
+    );
+  }
+
+  fila.append(hora, medioPago, total, contenedorEstado);
 
   if (venta.estado === 'activa' && esAdmin) {
     fila.appendChild(crearAccionAnular(venta));
@@ -169,7 +205,12 @@ function crearAccionAnular(venta) {
   return contenedor;
 }
 
-export function abrirHistorial() {
+// rango: {desde, hasta} en 'YYYY-MM-DD', opcional -- lo manda Indicadores
+// (ver kpis.js, link "Ver detalle en Historial") para abrir ya filtrado
+// por el período que estaba viendo ahí. Sin argumento, mismo
+// comportamiento de siempre: hoy.
+export function abrirHistorial(rango) {
+  rangoActual = rango ?? null;
   cargarVentas();
 }
 

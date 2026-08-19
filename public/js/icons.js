@@ -45,6 +45,13 @@ export const iconoAlerta = `
   <circle cx="12" cy="16.8" r="0.9" fill="currentColor" stroke="none" />
 </svg>`;
 
+export const iconoInfo = `
+<svg ${ATRIBUTOS_BASE}>
+  <circle cx="12" cy="12" r="9" />
+  <line x1="12" y1="11" x2="12" y2="16.2" />
+  <circle cx="12" cy="7.6" r="0.9" fill="currentColor" stroke="none" />
+</svg>`;
+
 export const iconoCandado = `
 <svg ${ATRIBUTOS_BASE}>
   <rect x="5" y="11" width="14" height="9" rx="1.8" />
@@ -68,6 +75,14 @@ export const iconoAnular = `
 <svg ${ATRIBUTOS_BASE}>
   <circle cx="12" cy="12" r="8.5" />
   <path d="M6.5 6.5l11 11" />
+</svg>`;
+
+export const iconoEliminar = `
+<svg ${ATRIBUTOS_BASE}>
+  <path d="M5 7h14" />
+  <path d="M9.5 7V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v2" />
+  <path d="M7 7l1 12.5A1.5 1.5 0 0 0 9.5 21h5a1.5 1.5 0 0 0 1.5-1.5L17 7" />
+  <path d="M10 11v6M14 11v6" />
 </svg>`;
 
 export const iconoHistorial = `
@@ -122,15 +137,6 @@ export const iconoInventario = `
   <path d="M3.5 8L12 3.5 20.5 8 12 12.5 3.5 8z" />
   <path d="M3.5 8v9L12 21.5 20.5 17V8" />
   <path d="M12 12.5V21.5" />
-</svg>`;
-
-// Placeholder para producto sin foto: un paquete envuelto en papel de
-// carnicería, no un ícono de "imagen rota" ni un cuadro gris genérico.
-export const iconoPaqueteVacio = `
-<svg viewBox="0 0 64 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-  <rect x="8" y="10" width="48" height="30" rx="3" />
-  <path d="M8 22h48M32 10v30" stroke-dasharray="3 3" />
-  <path d="M22 10c1-4 3-6 10-6s9 2 10 6" />
 </svg>`;
 
 export function crearIcono(marcadoSvg, claseAdicional = '') {

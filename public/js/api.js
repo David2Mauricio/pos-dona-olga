@@ -126,11 +126,79 @@ export const api = {
     if (cajaSesionId) parametros.set('cajaSesionId', cajaSesionId);
     return peticion(`/reportes/ventas?${parametros.toString()}`);
   },
+  // No usa peticion(): la respuesta es texto CSV, no JSON. Mismo manejo de
+  // 401/SIN_SESION que peticion() (ver ADR de sesión, Fase 4 Bloque 1) para
+  // no romper el hook centralizado de sesión vencida.
+  exportarVentasCsv: async ({ desde, hasta }) => {
+    const parametros = new URLSearchParams({ desde, hasta });
+    const respuesta = await fetch(`${BASE}/reportes/ventas/exportar?${parametros.toString()}`);
+
+    if (!respuesta.ok) {
+      const cuerpo = await respuesta.json().catch(() => null);
+      if (respuesta.status === 401 && cuerpo?.codigo === 'SIN_SESION' && onSesionExpirada) {
+        onSesionExpirada();
+      }
+      throw new ErrorApi(cuerpo?.error || 'No se pudo generar el archivo CSV', respuesta.status, cuerpo?.codigo, cuerpo?.detalles);
+    }
+
+    const disposicion = respuesta.headers.get('Content-Disposition') || '';
+    const coincidencia = disposicion.match(/filename="([^"]+)"/);
+    const nombreArchivo = coincidencia ? coincidencia[1] : 'ventas.csv';
+    const blob = await respuesta.blob();
+    return { blob, nombreArchivo };
+  },
+
+  // Movimientos de inventario (Fase 4, ver ADR 0015) — listar es de ambos
+  // roles, crear es solo-administrador (inventario.routes.js ya lo exigía
+  // desde antes de esta fase).
+  listarMovimientosInventario: ({ productoId, desde, hasta } = {}) => {
+    const parametros = new URLSearchParams();
+    if (productoId) parametros.set('productoId', productoId);
+    if (desde) parametros.set('desde', desde);
+    if (hasta) parametros.set('hasta', hasta);
+    const query = parametros.toString();
+    return peticion(`/inventario/movimientos${query ? `?${query}` : ''}`);
+  },
+  crearMovimientoInventario: (datos) => peticion('/inventario/movimientos', { method: 'POST', body: JSON.stringify(datos) }),
 
   // Proveedores (Fase 4, ver ADR 0013) — módulo entero solo-administrador
   // (app.js monta /api/proveedores con requiereRol('administrador'), ya
   // documentado desde ADR 0010).
-  listarProveedores: () => peticion('/proveedores'),
+  listarProveedores: ({ activo } = {}) => {
+    const parametros = new URLSearchParams();
+    if (activo !== undefined) parametros.set('activo', String(activo));
+    const query = parametros.toString();
+    return peticion(`/proveedores${query ? `?${query}` : ''}`);
+  },
   crearProveedor: (datos) => peticion('/proveedores', { method: 'POST', body: JSON.stringify(datos) }),
   actualizarProveedor: (id, cambios) => peticion(`/proveedores/${id}`, { method: 'PATCH', body: JSON.stringify(cambios) }),
+  borrarProveedor: (id) => peticion(`/proveedores/${id}`, { method: 'DELETE' }),
+
+  // Auditoría inmutable (ver ADR 0018) — módulo entero solo-administrador
+  // (app.js monta /api/auditoria con requiereRol('administrador')). Sin
+  // método de borrado acá a propósito: no existe ningún endpoint DELETE en
+  // el backend para esta entidad, ni por diseño debería existir uno nunca.
+  listarAuditoria: ({ accion, usuarioId } = {}) => {
+    const parametros = new URLSearchParams();
+    if (accion) parametros.set('accion', accion);
+    if (usuarioId) parametros.set('usuarioId', usuarioId);
+    const query = parametros.toString();
+    return peticion(`/auditoria${query ? `?${query}` : ''}`);
+  },
+
+  // Gastos (ver ADR de exportación CSV/gastos/redondeo/gráficos) — módulo
+  // entero solo-administrador (app.js monta /api/gastos con
+  // requiereRol('administrador')). Sin borrarGasto a propósito: no existe
+  // ningún DELETE en el backend, mismo patrón "no borrar" que proveedores/
+  // usuarios/productos.
+  listarGastos: ({ desde, hasta, categoria } = {}) => {
+    const parametros = new URLSearchParams();
+    if (desde) parametros.set('desde', desde);
+    if (hasta) parametros.set('hasta', hasta);
+    if (categoria) parametros.set('categoria', categoria);
+    const query = parametros.toString();
+    return peticion(`/gastos${query ? `?${query}` : ''}`);
+  },
+  crearGasto: (datos) => peticion('/gastos', { method: 'POST', body: JSON.stringify(datos) }),
+  desactivarGasto: (id) => peticion(`/gastos/${id}`, { method: 'PATCH', body: JSON.stringify({ activo: false }) }),
 };

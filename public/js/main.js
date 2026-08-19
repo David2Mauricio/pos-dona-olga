@@ -28,12 +28,12 @@ const anuncioLector = document.getElementById('anuncio-lector');
 const grillaProductos = document.getElementById('grilla-productos');
 const listaCarrito = document.getElementById('lista-carrito');
 const totalCarrito = document.getElementById('total-carrito');
-const selectTipoPrecio = document.getElementById('select-tipo-precio');
 const selectMedioPago = document.getElementById('select-medio-pago');
 const campoMontoRecibido = document.getElementById('campo-monto-recibido');
 const inputMontoRecibido = document.getElementById('input-monto-recibido');
 const filaVuelto = document.getElementById('fila-vuelto');
 const vueltoCarrito = document.getElementById('vuelto-carrito');
+const inputImprimirRecibo = document.getElementById('input-imprimir-recibo');
 const botonCobrar = document.getElementById('boton-cobrar');
 const navItems = document.querySelectorAll('.nav-lateral__item[data-vista]');
 const navHistorial = document.getElementById('nav-historial');
@@ -41,6 +41,11 @@ const navProductos = document.getElementById('nav-productos');
 const navUsuarios = document.getElementById('nav-usuarios');
 const navIndicadores = document.getElementById('nav-indicadores');
 const navProveedores = document.getElementById('nav-proveedores');
+const navAuditoria = document.getElementById('nav-auditoria');
+const navGastos = document.getElementById('nav-gastos');
+const navLateral = document.getElementById('nav-lateral');
+const botonMenu = document.getElementById('boton-menu');
+const fondoMenu = document.getElementById('fondo-menu');
 const overlayCaja = document.getElementById('overlay-caja-cerrada');
 const formularioAbrirCaja = document.getElementById('formulario-abrir-caja');
 const inputMontoApertura = document.getElementById('input-monto-apertura');
@@ -107,11 +112,6 @@ function agregarProductoAlCarrito(producto) {
   anunciar(`${producto.nombre} agregado al carrito`);
 }
 
-selectTipoPrecio.addEventListener('change', () => {
-  carrito.establecerTipoPrecio(selectTipoPrecio.value);
-  reRenderizarCarrito();
-});
-
 // --- Vuelto (Fase 3, ver ADR 0012/0013) ---
 // Mismo criterio tolerante a mayúsculas/espacios que usa el backend para
 // reconocer 'efectivo' (no hay catálogo cerrado de medios de pago, ADR 0004).
@@ -176,7 +176,25 @@ inputBusqueda.addEventListener('input', debounce(renderizarBusquedaActual, 200))
 
 // --- Lector de código de barras (HID, ver ADR de la interfaz) ---
 
+// El listener es único y global (ver barcode-scanner.js) -- este callback
+// decide qué hacer con el código según qué esté abierto en pantalla. Con
+// el formulario de alta/edición de Productos abierto, un escaneo completa
+// el campo en vez de buscar en el carrito del mostrador (antes solo hacía
+// esto último, sin importar qué pantalla estuviera activa -- el campo
+// "Código de barras" del formulario nunca se llenaba solo). No se toca el
+// bloqueo de #overlay-login (ver barcode-scanner.js): sigue aplicando acá
+// igual, un escaneo durante login nunca llega a este callback.
 iniciarLectorCodigoBarras(async (codigo) => {
+  const overlayProducto = document.getElementById('overlay-form-producto');
+  if (overlayProducto && !overlayProducto.hidden) {
+    const inputCodigoBarras = document.getElementById('input-producto-codigo-barras');
+    if (inputCodigoBarras) {
+      inputCodigoBarras.value = codigo;
+      inputCodigoBarras.focus();
+    }
+    return;
+  }
+
   try {
     const producto = await api.buscarProductoPorCodigoBarras(codigo);
     if (producto) {
@@ -207,10 +225,15 @@ botonCobrar.addEventListener('click', async () => {
     // el éxito se confirma acá, no se espera nada más.
     const venta = await api.crearVenta({
       cajaSesionId: cajaSesionActual.id,
-      tipoPrecio: carrito.obtenerTipoPrecio(),
+      // 'publico' fijo -- ya no hay distinción de precio que elegir (ver
+      // ADR de eliminación de precio_mayorista). El backend sigue
+      // aceptando el campo tipoPrecio tal cual (ADR: alcance acotado a
+      // quitar la columna/selector, no tocar el contrato de ventas).
+      tipoPrecio: 'publico',
       medioPago: selectMedioPago.value,
       ...(esEfectivo() ? { montoRecibido: Number.parseInt(inputMontoRecibido.value, 10) } : {}),
       items: carrito.obtenerItemsParaVenta(),
+      imprimir: inputImprimirRecibo.checked,
     });
 
     mostrarToast(
@@ -218,7 +241,6 @@ botonCobrar.addEventListener('click', async () => {
     );
     carrito.vaciar();
     ultimoIdAgregado = null;
-    selectTipoPrecio.value = 'publico';
     inputMontoRecibido.value = '';
     reRenderizarCarrito();
     cargarProductos();
@@ -316,7 +338,11 @@ reRenderizarCarrito();
 // mostrarVista() es el único lugar que decide qué <section
 // data-vista-contenido> queda visible. Los ítems deshabilitados (ver
 // index.html: Indicadores/Inventario "Próximamente") ignoran el click.
-function mostrarVista(nombre) {
+// Exportado para que otras vistas puedan navegar programáticamente (ver
+// kpis.js: el link "Ver detalle en Historial" abre Historial ya
+// filtrado por el rango de fecha actual de Indicadores, sin pasar por un
+// click real de la sidebar).
+export function mostrarVista(nombre) {
   document.querySelectorAll('[data-vista-contenido]').forEach((seccion) => {
     seccion.hidden = seccion.id !== `vista-${nombre}`;
   });
@@ -329,9 +355,40 @@ function mostrarVista(nombre) {
   });
 }
 
+// --- Menú lateral en anchos chicos (ver ADR 0017, Bloque C) ---
+// Por debajo de 768px .nav-lateral pasa de barra fija a cajón (ver CSS) —
+// esto solo maneja el estado abierto/cerrado; el CSS decide si el botón
+// de hamburguesa y el fondo son visibles según el ancho real.
+function abrirMenu() {
+  navLateral.classList.add('nav-lateral--abierta');
+  fondoMenu.hidden = false;
+  botonMenu.setAttribute('aria-expanded', 'true');
+}
+
+function cerrarMenu() {
+  navLateral.classList.remove('nav-lateral--abierta');
+  fondoMenu.hidden = true;
+  botonMenu.setAttribute('aria-expanded', 'false');
+}
+
+botonMenu.addEventListener('click', () => {
+  if (navLateral.classList.contains('nav-lateral--abierta')) {
+    cerrarMenu();
+  } else {
+    abrirMenu();
+  }
+});
+fondoMenu.addEventListener('click', cerrarMenu);
+document.addEventListener('keydown', (evento) => {
+  if (evento.key === 'Escape' && navLateral.classList.contains('nav-lateral--abierta')) {
+    cerrarMenu();
+  }
+});
+
 navItems.forEach((boton) => {
   boton.addEventListener('click', () => {
     if (boton.disabled) return;
+    cerrarMenu(); // navegar cierra el cajón -- sin esto, taparía la sección recién elegida
     const nombre = boton.dataset.vista;
     if (nombre === 'historial') {
       import('./historial.js').then(({ iniciarHistorial, abrirHistorial }) => {
@@ -353,6 +410,15 @@ navItems.forEach((boton) => {
     }
     if (nombre === 'proveedores') {
       import('./proveedores.js').then(({ abrirProveedores }) => abrirProveedores());
+    }
+    if (nombre === 'inventario') {
+      import('./inventario.js').then(({ abrirInventario }) => abrirInventario());
+    }
+    if (nombre === 'auditoria') {
+      import('./auditoria.js').then(({ abrirAuditoria }) => abrirAuditoria());
+    }
+    if (nombre === 'gastos') {
+      import('./gastos.js').then(({ abrirGastos }) => abrirGastos());
     }
     mostrarVista(nombre);
   });
@@ -397,7 +463,12 @@ async function cargarModuloCierreCaja() {
 // con requiereRol('administrador')); Indicadores (Bloque 3) el módulo
 // entero también (app.js monta /api/reportes con requiereRol('administrador'));
 // Proveedores el módulo entero también (app.js monta /api/proveedores con
-// requiereRol('administrador'), documentado desde ADR 0010).
+// requiereRol('administrador'), documentado desde ADR 0010). Auditoría el
+// módulo entero también (app.js monta /api/auditoria con
+// requiereRol('administrador'), ver ADR 0018). Gastos el módulo entero
+// también (app.js monta /api/gastos con requiereRol('administrador') —
+// mismo criterio de riesgo que ajuste manual de inventario, ver el ADR de
+// exportación CSV/gastos/redondeo/gráficos).
 // Inventario queda visible para ambos roles (ver inventario.routes.js:
 // listar/alertas es de ambos, solo crear un movimiento manual quedó
 // restringido a administrador). Vencimientos (nav-vencimientos, sin
@@ -413,6 +484,8 @@ function actualizarNavegacionPorRol(usuario) {
   navUsuarios.hidden = !esAdmin;
   navIndicadores.hidden = !esAdmin;
   navProveedores.hidden = !esAdmin;
+  navAuditoria.hidden = !esAdmin;
+  navGastos.hidden = !esAdmin;
 }
 
 async function iniciarMostrador() {
@@ -438,6 +511,8 @@ iniciarAuth({
     navUsuarios.hidden = true;
     navIndicadores.hidden = true;
     navProveedores.hidden = true;
+    navAuditoria.hidden = true;
+    navGastos.hidden = true;
     mostrarVista('mostrador');
     productosActivos = [];
     mapaProductos = new Map();

@@ -48,6 +48,7 @@
 </head>
 <body>
 <div id="shell">
+  <div id="fondo-menu" class="fondo-menu" hidden></div>
   <nav id="nav-lateral" class="nav-lateral" aria-label="Secciones">
     <div class="nav-lateral__marca">
       <!-- Ruta predecible para cuando exista el logo real (ver ADR de
@@ -129,14 +130,32 @@
         </button>
       </li>
       <li>
-        <button id="nav-inventario" type="button" class="nav-lateral__item" data-vista="inventario" disabled>
+        <button id="nav-inventario" type="button" class="nav-lateral__item" data-vista="inventario">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <path d="M3.5 8L12 3.5 20.5 8 12 12.5 3.5 8z" />
             <path d="M3.5 8v9L12 21.5 20.5 17V8" />
             <path d="M12 12.5V21.5" />
           </svg>
           <span>Inventario</span>
-          <span class="nav-lateral__etiqueta">Próximamente</span>
+        </button>
+      </li>
+      <li>
+        <button id="nav-auditoria" type="button" class="nav-lateral__item" data-vista="auditoria" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M12 3.5 4.5 6.5v5.5c0 5 3.2 7.9 7.5 8.5 4.3-.6 7.5-3.5 7.5-8.5V6.5L12 3.5z" />
+            <path d="M8.75 12.25l2.25 2.25 4.25-4.5" />
+          </svg>
+          <span>Auditoría</span>
+        </button>
+      </li>
+      <li>
+        <button id="nav-gastos" type="button" class="nav-lateral__item" data-vista="gastos" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <rect x="3" y="6.5" width="18" height="13" rx="1.8" />
+            <path d="M3 10.5h18" />
+            <path d="M7 14.5h4" />
+          </svg>
+          <span>Gastos</span>
         </button>
       </li>
     </ul>
@@ -163,6 +182,11 @@
     <h1 class="visualmente-oculto">Doña Olga — Punto de venta</h1>
 
     <header class="cabecera-contexto">
+      <button id="boton-menu" type="button" class="boton-icono boton-menu" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav-lateral">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
       <button id="estado-caja" type="button" class="cabecera__caja" data-estado="cerrada" disabled>Verificando caja…</button>
 
       <div class="cabecera__alertas-contenedor">
@@ -208,14 +232,6 @@
           <ul id="lista-carrito" class="lista-carrito" tabindex="0" aria-label="Ítems en el carrito"></ul>
 
           <div class="carrito__resumen">
-            <div class="campo">
-              <label for="select-tipo-precio">Tipo de precio</label>
-              <select id="select-tipo-precio">
-                <option value="publico">Público</option>
-                <option value="mayorista">Mayorista</option>
-              </select>
-            </div>
-
             <div class="carrito__total">
               <span>Total</span>
               <span id="total-carrito" class="total numero">$0</span>
@@ -239,6 +255,11 @@
             <div class="carrito__total" id="fila-vuelto" hidden>
               <span>Vuelto</span>
               <span id="vuelto-carrito" class="total numero">$0</span>
+            </div>
+
+            <div class="campo campo--switch">
+              <label for="input-imprimir-recibo">Imprimir recibo</label>
+              <input id="input-imprimir-recibo" type="checkbox" checked />
             </div>
 
             <button id="boton-cobrar" type="button" class="boton-primario" disabled>Cobrar</button>
@@ -310,31 +331,74 @@
     <section id="vista-indicadores" class="vista vista-secundaria" aria-labelledby="titulo-vista-indicadores" data-vista-contenido hidden>
       <header class="vista-secundaria__cabecera">
         <h2 id="titulo-vista-indicadores">Indicadores</h2>
+        <div class="indicadores__cabecera-acciones">
+          <div id="selector-periodo" class="selector-periodo" role="group" aria-label="Período de los indicadores">
+            <button type="button" class="selector-periodo__boton selector-periodo__boton--activo" data-periodo="dia" aria-pressed="true">Día</button>
+            <button type="button" class="selector-periodo__boton" data-periodo="semana" aria-pressed="false">Semana</button>
+            <button type="button" class="selector-periodo__boton" data-periodo="mes" aria-pressed="false">Mes</button>
+            <button type="button" class="selector-periodo__boton" data-periodo="trimestre" aria-pressed="false">Trimestre</button>
+          </div>
+          <button type="button" id="boton-exportar-csv" class="boton-secundario">Exportar CSV</button>
+        </div>
       </header>
 
       <p id="indicadores-cargando" class="catalogo__vacio">Cargando…</p>
 
-      <div id="indicadores-grilla" class="indicadores__grilla" hidden>
-        <article class="indicadores__tarjeta">
-          <h3 class="indicadores__etiqueta">Ventas totales (hoy)</h3>
-          <p id="indicadores-total-ventas" class="indicadores__valor total numero">$0</p>
-          <p id="indicadores-cantidad-ventas" class="indicadores__detalle"></p>
+      <div id="indicadores-contenido" hidden>
+        <div id="indicadores-grilla" class="indicadores__grilla">
+          <article class="indicadores__tarjeta">
+            <h3 id="indicadores-etiqueta-ventas" class="indicadores__etiqueta">Ventas totales (hoy)</h3>
+            <p id="indicadores-total-ventas" class="indicadores__valor total numero">$0</p>
+            <p id="indicadores-cantidad-ventas" class="indicadores__detalle"></p>
+            <div id="indicadores-desglose-ventas" class="indicadores__desglose"></div>
+            <button type="button" id="boton-ver-historial-filtrado" class="boton-enlace">Ver detalle en Historial</button>
+          </article>
+
+          <article class="indicadores__tarjeta">
+            <h3 class="indicadores__etiqueta">Ticket promedio</h3>
+            <p class="indicadores__descripcion">El monto promedio que dejó cada venta en este período.</p>
+            <p id="indicadores-ticket-promedio" class="indicadores__valor total numero">$0</p>
+          </article>
+
+          <article class="indicadores__tarjeta">
+            <h3 class="indicadores__etiqueta">Producto más vendido</h3>
+            <p id="indicadores-producto-top" class="indicadores__valor"></p>
+            <p id="indicadores-producto-top-monto" class="indicadores__detalle"></p>
+          </article>
+
+          <article class="indicadores__tarjeta">
+            <h3 id="indicadores-etiqueta-comparativa" class="indicadores__etiqueta">Comparativa contra ayer</h3>
+            <p class="indicadores__descripcion">Cuánto más (o menos) se vendió comparado con el período anterior equivalente.</p>
+            <p id="indicadores-comparativa" class="indicadores__valor"></p>
+            <div id="grafico-comparativa" class="indicadores__grafico"></div>
+          </article>
+
+          <article class="indicadores__tarjeta">
+            <h3 class="indicadores__etiqueta">Gastos del período</h3>
+            <p class="indicadores__descripcion">Proveedores, servicios, arriendo y otros gastos registrados en este período.</p>
+            <p id="indicadores-total-gastos" class="indicadores__valor total numero">$0</p>
+          </article>
+
+          <article class="indicadores__tarjeta">
+            <h3 class="indicadores__etiqueta">Ganancia real</h3>
+            <p class="indicadores__descripcion">Ventas totales menos gastos del período.</p>
+            <p id="indicadores-ganancia-real" class="indicadores__valor total numero">$0</p>
+          </article>
+        </div>
+
+        <article class="indicadores__tarjeta indicadores__tarjeta--ancha">
+          <h3 class="indicadores__etiqueta">Top productos</h3>
+          <div id="grafico-productos" class="indicadores__grafico"></div>
         </article>
 
-        <article class="indicadores__tarjeta">
-          <h3 class="indicadores__etiqueta">Ticket promedio</h3>
-          <p id="indicadores-ticket-promedio" class="indicadores__valor total numero">$0</p>
+        <article class="indicadores__tarjeta indicadores__tarjeta--ancha">
+          <h3 class="indicadores__etiqueta">Tendencia de ventas</h3>
+          <div id="grafico-tendencia" class="indicadores__grafico"></div>
         </article>
 
-        <article class="indicadores__tarjeta">
-          <h3 class="indicadores__etiqueta">Producto más vendido</h3>
-          <p id="indicadores-producto-top" class="indicadores__valor"></p>
-          <p id="indicadores-producto-top-monto" class="indicadores__detalle"></p>
-        </article>
-
-        <article class="indicadores__tarjeta">
-          <h3 class="indicadores__etiqueta">Comparativa contra ayer</h3>
-          <p id="indicadores-comparativa" class="indicadores__valor"></p>
+        <article class="indicadores__tarjeta indicadores__tarjeta--ancha">
+          <h3 class="indicadores__etiqueta">Ventas por medio de pago</h3>
+          <div id="grafico-medio-pago" class="indicadores__grafico indicadores__grafico--donut"></div>
         </article>
       </div>
     </section>
@@ -347,16 +411,78 @@
       <div id="tabla-proveedores" class="catalogo__tabla" role="region" aria-label="Listado de proveedores" tabindex="0"></div>
     </section>
 
-    <section id="vista-inventario" class="vista vista-proximamente" aria-labelledby="titulo-vista-inventario" data-vista-contenido hidden>
-      <div class="vista-proximamente__contenido">
-        <svg class="vista-proximamente__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <path d="M3.5 8L12 3.5 20.5 8 12 12.5 3.5 8z" />
-          <path d="M3.5 8v9L12 21.5 20.5 17V8" />
-          <path d="M12 12.5V21.5" />
-        </svg>
+    <section id="vista-inventario" class="vista vista-secundaria" aria-labelledby="titulo-vista-inventario" data-vista-contenido hidden>
+      <header class="vista-secundaria__cabecera">
         <h2 id="titulo-vista-inventario">Inventario</h2>
-        <p>Esta sección está en construcción — próximamente vas a poder ver el historial de movimientos de stock.</p>
+      </header>
+
+      <form id="formulario-movimiento-inventario" class="inventario__formulario">
+        <div class="campo">
+          <label for="input-movimiento-producto">Producto</label>
+          <select id="input-movimiento-producto" required></select>
+        </div>
+        <div class="campo">
+          <span class="fila-con-ayuda">
+            <label for="input-movimiento-cantidad" id="label-movimiento-cantidad">Cantidad (unidades)</label>
+            <span id="ayuda-movimiento-cantidad"></span>
+          </span>
+          <input id="input-movimiento-cantidad" type="number" inputmode="numeric" min="1" step="1" required />
+        </div>
+        <div class="campo">
+          <label for="input-movimiento-motivo">Motivo</label>
+          <input id="input-movimiento-motivo" type="text" value="Entrada de mercadería" required />
+        </div>
+        <div class="campo">
+          <label for="input-movimiento-proveedor">Proveedor (opcional)</label>
+          <select id="input-movimiento-proveedor">
+            <option value="">Sin proveedor</option>
+          </select>
+        </div>
+        <button type="submit" class="boton-primario">Registrar entrada</button>
+      </form>
+
+      <h3 class="inventario__subtitulo">Movimientos recientes</h3>
+      <div id="tabla-movimientos-inventario" class="catalogo__tabla" role="region" aria-label="Movimientos de inventario recientes" tabindex="0"></div>
+    </section>
+
+    <section id="vista-auditoria" class="vista vista-secundaria" aria-labelledby="titulo-vista-auditoria" data-vista-contenido hidden>
+      <header class="vista-secundaria__cabecera">
+        <h2 id="titulo-vista-auditoria">Auditoría</h2>
+      </header>
+
+      <div class="catalogo__filtros">
+        <label for="select-auditoria-accion" class="visualmente-oculto">Filtrar por tipo de acción</label>
+        <select id="select-auditoria-accion">
+          <option value="">Todas las acciones</option>
+        </select>
+
+        <label for="select-auditoria-usuario" class="visualmente-oculto">Filtrar por usuario</label>
+        <select id="select-auditoria-usuario">
+          <option value="">Todos los usuarios</option>
+        </select>
       </div>
+
+      <div id="tabla-auditoria" class="catalogo__tabla" role="region" aria-label="Registro de auditoría" tabindex="0"></div>
+    </section>
+
+    <section id="vista-gastos" class="vista vista-secundaria" aria-labelledby="titulo-vista-gastos" data-vista-contenido hidden>
+      <header class="vista-secundaria__cabecera">
+        <h2 id="titulo-vista-gastos">Gastos</h2>
+        <button id="boton-nuevo-gasto" type="button" class="boton-primario">+ Nuevo gasto</button>
+      </header>
+
+      <div class="catalogo__filtros">
+        <label for="select-gastos-categoria" class="visualmente-oculto">Filtrar por categoría</label>
+        <select id="select-gastos-categoria">
+          <option value="">Todas las categorías</option>
+          <option value="proveedores">Proveedores</option>
+          <option value="servicios">Servicios</option>
+          <option value="arriendo">Arriendo</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+
+      <div id="tabla-gastos" class="catalogo__tabla" role="region" aria-label="Listado de gastos" tabindex="0"></div>
     </section>
   </main>
 </div>
@@ -436,6 +562,7 @@
   <div class="overlay__panel overlay__panel--ancho">
     <h2 id="titulo-form-producto">Nuevo producto</h2>
     <form id="formulario-producto">
+      <h3 class="formulario__grupo">Información básica</h3>
       <div class="campo">
         <label for="input-producto-categoria">Categoría</label>
         <select id="input-producto-categoria" required></select>
@@ -451,21 +578,37 @@
           <option value="peso">Peso</option>
         </select>
       </div>
+      <p class="formulario__advertencia" id="advertencia-tipo-venta" hidden>
+        Cambiar el tipo de venta requiere volver a ingresar el stock actual, en el formato nuevo — no se puede convertir automáticamente entre kilos y unidades.
+      </p>
       <div class="campo">
         <label for="input-producto-codigo-barras">Código de barras (opcional)</label>
         <input id="input-producto-codigo-barras" type="text" />
       </div>
+
+      <h3 class="formulario__grupo">Precio</h3>
       <div class="campo">
-        <label for="input-producto-precio-publico">Precio público</label>
+        <span class="fila-con-ayuda">
+          <label for="input-producto-precio-publico">Precio</label>
+          <span id="ayuda-producto-precio"></span>
+        </span>
         <input id="input-producto-precio-publico" type="number" inputmode="numeric" min="0" step="1" required />
       </div>
-      <div class="campo">
-        <label for="input-producto-precio-mayorista">Precio mayorista (opcional)</label>
-        <input id="input-producto-precio-mayorista" type="number" inputmode="numeric" min="0" step="1" />
-      </div>
+
+      <h3 class="formulario__grupo">Stock</h3>
       <div class="campo" id="campo-producto-stock">
-        <label for="input-producto-stock" id="label-producto-stock">Stock inicial</label>
+        <span class="fila-con-ayuda">
+          <label for="input-producto-stock" id="label-producto-stock">Stock inicial</label>
+          <span id="ayuda-producto-stock"></span>
+        </span>
         <input id="input-producto-stock" type="number" inputmode="numeric" min="0" step="1" required />
+      </div>
+      <div class="campo" id="campo-producto-stock-nuevo" hidden>
+        <span class="fila-con-ayuda">
+          <label for="input-producto-stock-nuevo" id="label-producto-stock-nuevo">Stock actual (formato nuevo)</label>
+          <span id="ayuda-producto-stock-nuevo"></span>
+        </span>
+        <input id="input-producto-stock-nuevo" type="number" inputmode="numeric" min="0" step="1" />
       </div>
       <div class="campo">
         <label for="input-producto-stock-minimo" id="label-producto-stock-minimo">Stock mínimo para alerta (opcional)</label>
@@ -582,6 +725,40 @@
   </div>
 </div>
 
+<div id="overlay-form-gasto" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-form-gasto" hidden>
+  <div class="overlay__panel">
+    <h2 id="titulo-form-gasto">Nuevo gasto</h2>
+    <form id="formulario-gasto">
+      <div class="campo">
+        <label for="input-gasto-concepto">Concepto</label>
+        <input id="input-gasto-concepto" type="text" required />
+      </div>
+      <div class="campo">
+        <label for="input-gasto-monto">Monto</label>
+        <input id="input-gasto-monto" type="number" inputmode="numeric" min="1" step="1" required />
+      </div>
+      <div class="campo">
+        <label for="input-gasto-fecha">Fecha</label>
+        <input id="input-gasto-fecha" type="date" required />
+      </div>
+      <div class="campo">
+        <label for="input-gasto-categoria">Categoría (opcional)</label>
+        <select id="input-gasto-categoria">
+          <option value="">Sin categoría</option>
+          <option value="proveedores">Proveedores</option>
+          <option value="servicios">Servicios</option>
+          <option value="arriendo">Arriendo</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div class="overlay__acciones">
+        <button type="submit" class="boton-primario">Guardar</button>
+        <button type="button" id="boton-cancelar-gasto" class="boton-secundario">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="overlay-password-temporal" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-password-temporal" hidden>
   <div class="overlay__panel">
     <svg class="overlay__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -608,8 +785,18 @@
         <span id="cierre-total-ventas" class="numero">$0</span>
       </div>
       <div id="cierre-desglose" class="cierre-caja__desglose"></div>
+      <div id="cierre-ajuste-redondeo-contenedor" class="cierre-caja__fila" hidden>
+        <span class="fila-con-ayuda">
+          <span>Ajuste por redondeo de vuelto</span>
+          <span id="ayuda-caja-redondeo"></span>
+        </span>
+        <span id="cierre-ajuste-redondeo" class="numero">$0</span>
+      </div>
       <div class="cierre-caja__fila cierre-caja__fila--destacada">
-        <span>Monto teórico en efectivo</span>
+        <span class="fila-con-ayuda">
+          <span>Monto teórico en efectivo</span>
+          <span id="ayuda-caja-monto-teorico"></span>
+        </span>
         <span id="cierre-monto-teorico" class="numero">$0</span>
       </div>
     </div>

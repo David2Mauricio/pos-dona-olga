@@ -12,12 +12,28 @@
 import { api, ErrorApi } from './api.js';
 import { formatearMoneda } from './utils.js';
 import { mostrarToast } from './render.js';
+import { crearInfoTooltip } from './info-tooltip.js';
 
 const botonEstadoCaja = document.getElementById('estado-caja');
 const overlayCierre = document.getElementById('overlay-cierre-caja');
 const cierreTotalVentas = document.getElementById('cierre-total-ventas');
 const cierreDesglose = document.getElementById('cierre-desglose');
 const cierreMontoTeorico = document.getElementById('cierre-monto-teorico');
+const ajusteRedondeoContenedor = document.getElementById('cierre-ajuste-redondeo-contenedor');
+const ajusteRedondeoValor = document.getElementById('cierre-ajuste-redondeo');
+
+document.getElementById('ayuda-caja-monto-teorico').appendChild(
+  crearInfoTooltip(
+    'Es el dinero que debería haber en caja en efectivo, calculado a partir del monto de apertura más las ventas registradas en efectivo durante esta sesión.',
+    'Ayuda sobre el monto teórico de efectivo'
+  )
+);
+document.getElementById('ayuda-caja-redondeo').appendChild(
+  crearInfoTooltip(
+    'Diferencia entre el vuelto exacto y el vuelto redondeado que se entregó en efectivo durante esta sesión. No es un faltante ni un sobrante real de caja.',
+    'Ayuda sobre el ajuste por redondeo'
+  )
+);
 const formularioCierre = document.getElementById('formulario-cierre-caja');
 const inputMontoCierre = document.getElementById('input-monto-cierre');
 const diferenciaContenedor = document.getElementById('cierre-diferencia-contenedor');
@@ -80,6 +96,18 @@ async function abrirCierre() {
       fila.append(medio, total);
       cierreDesglose.appendChild(fila);
     });
+
+    // Renglón propio, separado de Sobra/Falta (ver ADR de exportación
+    // CSV/gastos/redondeo/gráficos): con el redondeo apagado (o sin ventas
+    // en efectivo redondeadas en este período) el ajuste es 0 y el
+    // renglón se oculta, para no meter ruido en el caso de siempre.
+    if (reporte.ajustePorRedondeo !== 0) {
+      const signo = reporte.ajustePorRedondeo > 0 ? '+' : '';
+      ajusteRedondeoValor.textContent = `${signo}${formatearMoneda(reporte.ajustePorRedondeo)}`;
+      ajusteRedondeoContenedor.hidden = false;
+    } else {
+      ajusteRedondeoContenedor.hidden = true;
+    }
 
     inputMontoCierre.value = '';
     diferenciaContenedor.hidden = true;

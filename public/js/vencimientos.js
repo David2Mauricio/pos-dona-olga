@@ -18,6 +18,7 @@
 import { api, ErrorApi } from './api.js';
 import { mostrarToast } from './render.js';
 import { kilosTextoAGramos, gramosAKilosTexto } from './utils.js';
+import { crearInfoTooltip } from './info-tooltip.js';
 
 const tablaVencimientos = document.getElementById('tabla-vencimientos');
 const botonNuevoLote = document.getElementById('boton-nuevo-lote');
@@ -132,12 +133,21 @@ function crearFilaLote(lote, hoyTexto) {
   fecha.textContent = lote.fechaVencimiento;
 
   const badge = document.createElement('span');
+  const contenedorBadge = document.createElement('span');
+  contenedorBadge.className = 'fila-con-ayuda';
+  contenedorBadge.appendChild(badge);
   if (estado === 'vencido') {
     badge.className = 'badge-alerta badge-alerta--peligro';
     badge.textContent = 'Vencido';
   } else if (estado === 'por-vencer') {
     badge.className = 'badge-alerta';
     badge.textContent = 'Por vencer';
+    contenedorBadge.appendChild(
+      crearInfoTooltip(
+        'Se muestra cuando la fecha de vencimiento del lote está dentro del rango de días configurado en el sistema.',
+        'Ayuda sobre próximo a vencer'
+      )
+    );
   } else {
     badge.className = 'catalogo__fila-muted';
     badge.textContent = 'Vigente';
@@ -169,7 +179,7 @@ function crearFilaLote(lote, hoyTexto) {
   });
 
   acciones.append(botonEditar, botonToggleActivo);
-  fila.append(nombre, cantidad, fecha, badge, acciones);
+  fila.append(nombre, cantidad, fecha, contenedorBadge, acciones);
   return fila;
 }
 
