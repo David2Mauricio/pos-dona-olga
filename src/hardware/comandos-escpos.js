@@ -33,6 +33,7 @@ const NOMBRE_NEGOCIO_LINEA_2 = 'Doña Olga';
 // partirlas como el nombre.
 const DIRECCION_NEGOCIO = 'Calle 33A Sur # 78-23';
 const TELEFONO_NEGOCIO = 'Tel: 312 501 2879';
+const NIT_NEGOCIO = 'NIT: 52.472.991-8';
 
 function inicializar() {
   // Solo ESC @ (reset). Se probó ESC t con varios valores (0-5, 16-19)
@@ -116,6 +117,7 @@ function construirRecibo(venta) {
     negrita(false),
     texto(centrar(DIRECCION_NEGOCIO)),
     texto(centrar(TELEFONO_NEGOCIO)),
+    texto(centrar(NIT_NEGOCIO)),
     texto('-'.repeat(ANCHO_TICKET)),
     texto(`Fecha: ${venta.creadaEn}`),
     texto(`Pago: ${venta.medioPago}`),

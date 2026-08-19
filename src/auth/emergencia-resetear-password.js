@@ -21,6 +21,7 @@ const repository = require('./usuarios.repository');
 const authService = require('./auth.service');
 const generarPasswordTemporal = require('./generar-password-temporal');
 const logger = require('../utils/logger');
+const { registrarAuditoria } = require('../modules/auditoria/auditoria.service');
 
 function correr(nombreUsuario) {
   if (!nombreUsuario) {
@@ -38,6 +39,19 @@ function correr(nombreUsuario) {
 
   const passwordTemporal = generarPasswordTemporal();
   repository.resetearPassword(usuario.id, authService.crearHash(passwordTemporal));
+
+  // ADR 0018: este script bypasea usuarios.service.js (llama al repository
+  // directo), así que el registro de auditoría no queda cubierto por el
+  // punto de escritura de ahí — hay que llamarlo acá también, a mano.
+  // usuarioId null porque no hay sesión ni administrador logueado: el
+  // actor es "quien tiene acceso a la máquina", no un usuario del sistema.
+  registrarAuditoria({
+    usuarioId: null,
+    accion: 'reseteo_password',
+    entidadTipo: 'usuario',
+    entidadId: usuario.id,
+    detalle: { nombre: usuario.nombre, usuario: usuario.usuario, via: 'emergencia' },
+  });
 
   logger.info(`Contraseña reseteada de emergencia para "${nombreUsuario}" (id ${usuario.id}, rol ${usuario.rol})`);
 

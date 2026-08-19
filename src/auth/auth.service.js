@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
+const db = require('../config/database');
 const repository = require('./usuarios.repository');
 const AppError = require('../utils/app-error');
+const { registrarAuditoria } = require('../modules/auditoria/auditoria.service');
 
 const RONDAS_SAL = 10;
 const MAX_INTENTOS_FALLIDOS = 5;
@@ -168,7 +170,17 @@ function recuperarPassword(usuarioTexto, respuesta, passwordNueva) {
 
   limpiarIntentos(usuarioTexto);
   const nuevoHash = bcrypt.hashSync(passwordNueva, RONDAS_SAL);
-  repository.actualizarPassword(usuario.id, nuevoHash);
+
+  db.transaction(() => {
+    repository.actualizarPassword(usuario.id, nuevoHash);
+    registrarAuditoria({
+      usuarioId: usuario.id,
+      accion: 'reseteo_password',
+      entidadTipo: 'usuario',
+      entidadId: usuario.id,
+      detalle: { nombre: usuario.nombre, usuario: usuario.usuario, via: 'autoservicio' },
+    });
+  })();
 }
 
 module.exports = {
