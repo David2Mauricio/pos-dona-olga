@@ -11,6 +11,7 @@
 
 import { api, ErrorApi } from './api.js';
 import { mostrarToast } from './render.js';
+import { iconoEliminar } from './icons.js';
 
 const tablaProveedores = document.getElementById('tabla-proveedores');
 const botonNuevoProveedor = document.getElementById('boton-nuevo-proveedor');
@@ -117,7 +118,32 @@ function crearFilaProveedor(proveedor) {
     }
   });
 
-  acciones.append(botonEditar, botonToggleActivo);
+  // Borrado real, distinto del toggle activar/desactivar de arriba (ver
+  // ADR de este cierre) -- visible siempre, no solo para proveedores sin
+  // movimientos: es más simple que el usuario lo intente y reciba el 409
+  // real del backend con el mensaje explicando qué hacer en su lugar, que
+  // adivinar de antemano en el cliente si tiene movimientos o no.
+  const botonEliminar = document.createElement('button');
+  botonEliminar.type = 'button';
+  botonEliminar.className = 'boton-icono boton-icono--peligro';
+  botonEliminar.setAttribute('aria-label', `Eliminar proveedor ${proveedor.nombre}`);
+  botonEliminar.innerHTML = iconoEliminar;
+  botonEliminar.addEventListener('click', async () => {
+    const confirmado = window.confirm(`¿Eliminar el proveedor "${proveedor.nombre}"? Esta acción no se puede deshacer.`);
+    if (!confirmado) return;
+
+    botonEliminar.disabled = true;
+    try {
+      await api.borrarProveedor(proveedor.id);
+      mostrarToast('Proveedor eliminado');
+      await cargarProveedores();
+    } catch (error) {
+      mostrarToast(mensajeDeError(error), 'error');
+      botonEliminar.disabled = false;
+    }
+  });
+
+  acciones.append(botonEditar, botonToggleActivo, botonEliminar);
   fila.append(nombre, nit, telefono, direccion, estado, acciones);
   return fila;
 }

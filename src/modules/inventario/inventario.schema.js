@@ -4,6 +4,10 @@ const { fechaSchema } = require('../../utils/schemas-comunes');
 const productoIdSchema = z.number().int().positive();
 const motivoSchema = z.string().trim().min(1, 'El motivo es obligatorio');
 const cantidadSchema = z.number().int().positive('La cantidad debe ser mayor a cero');
+// Solo tiene sentido en 'entrada' -- una salida o un ajuste de conteo no
+// vienen de ningún proveedor. Opcional: no todas las entradas necesitan
+// quedar atadas a uno (ver migración 012).
+const proveedorIdSchema = z.number().int().positive().optional();
 
 // Discriminado por `tipo` a propósito (ADR 0005): entrada/salida y ajuste
 // no comparten la misma forma de request. entrada/salida reciben la
@@ -17,6 +21,7 @@ const crearMovimientoSchema = z.discriminatedUnion('tipo', [
       productoId: productoIdSchema,
       cantidad: cantidadSchema,
       motivo: motivoSchema,
+      proveedorId: proveedorIdSchema,
     })
     .strict(),
   z

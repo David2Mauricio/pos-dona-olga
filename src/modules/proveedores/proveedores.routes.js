@@ -19,5 +19,6 @@ router.patch(
   validar(actualizarProveedorSchema, 'body'),
   controller.actualizar
 );
+router.delete('/:id', validar(idParamsSchema, 'params'), controller.borrar);
 
 module.exports = router;

@@ -1,7 +1,7 @@
 const inventarioService = require('./inventario.service');
 
 function crear(req, res) {
-  const movimiento = inventarioService.crear(req.body);
+  const movimiento = inventarioService.crear(req.body, req.session.usuario.id);
   res.status(201).json(movimiento);
 }
 

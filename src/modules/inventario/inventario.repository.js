@@ -11,17 +11,18 @@ function mapearFila(fila) {
     stockResultante: fila.stock_resultante,
     motivo: fila.motivo,
     referenciaVentaId: fila.referencia_venta_id,
+    proveedorId: fila.proveedor_id,
     creadoEn: fila.creado_en,
   };
 }
 
-function crearMovimiento({ productoId, tipo, cantidad, stockResultante, motivo, referenciaVentaId }) {
+function crearMovimiento({ productoId, tipo, cantidad, stockResultante, motivo, referenciaVentaId, proveedorId }) {
   const resultado = db
     .prepare(
       `INSERT INTO movimientos_inventario
-         (producto_id, tipo, cantidad, stock_resultante, motivo, referencia_venta_id)
+         (producto_id, tipo, cantidad, stock_resultante, motivo, referencia_venta_id, proveedor_id)
        VALUES
-         (@productoId, @tipo, @cantidad, @stockResultante, @motivo, @referenciaVentaId)`
+         (@productoId, @tipo, @cantidad, @stockResultante, @motivo, @referenciaVentaId, @proveedorId)`
     )
     .run({
       productoId,
@@ -30,9 +31,18 @@ function crearMovimiento({ productoId, tipo, cantidad, stockResultante, motivo, 
       stockResultante: stockResultante ?? null,
       motivo,
       referenciaVentaId: referenciaVentaId ?? null,
+      proveedorId: proveedorId ?? null,
     });
 
   return resultado.lastInsertRowid;
+}
+
+// Usado por proveedores.service.js para decidir si un borrado real es
+// seguro (ver ADR de este cierre): un proveedor con al menos un movimiento
+// asociado no puede borrarse, solo desactivarse.
+function contarPorProveedor(proveedorId) {
+  const fila = db.prepare('SELECT COUNT(*) AS total FROM movimientos_inventario WHERE proveedor_id = ?').get(proveedorId);
+  return fila.total;
 }
 
 function obtenerPorId(id) {
@@ -116,4 +126,5 @@ module.exports = {
   listarPorReferenciaVenta,
   listar,
   obtenerAlertas,
+  contarPorProveedor,
 };

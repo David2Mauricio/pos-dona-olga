@@ -20,4 +20,9 @@ function actualizar(req, res) {
   res.json(proveedor);
 }
 
-module.exports = { crear, listar, obtenerPorId, actualizar };
+function borrar(req, res) {
+  proveedoresService.borrar(req.params.id);
+  res.status(204).send();
+}
+
+module.exports = { crear, listar, obtenerPorId, actualizar, borrar };

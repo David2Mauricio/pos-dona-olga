@@ -83,4 +83,12 @@ function actualizar(id, cambios) {
   return obtenerPorId(id);
 }
 
-module.exports = { crear, obtenerPorId, listar, actualizar };
+// Borrado real (no desactivar) -- el service ya validó que no tiene
+// movimientos asociados antes de llegar acá. El FK proveedor_id de
+// movimientos_inventario (ON DELETE RESTRICT, ver migración 012) es la
+// segunda capa de esa misma regla, no la única.
+function borrar(id) {
+  db.prepare('DELETE FROM proveedores WHERE id = ?').run(id);
+}
+
+module.exports = { crear, obtenerPorId, listar, actualizar, borrar };

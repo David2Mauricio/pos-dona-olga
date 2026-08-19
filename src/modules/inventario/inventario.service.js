@@ -3,8 +3,14 @@ const repository = require('./inventario.repository');
 const productosService = require('../productos/productos.service');
 const productosRepository = require('../productos/productos.repository');
 const AppError = require('../../utils/app-error');
+const { registrarAuditoria } = require('../auditoria/auditoria.service');
 
-function crear(datos) {
+// ADR 0018: este es el único punto donde se crean movimientos manuales
+// (entrada/salida/ajuste desde la sección Inventario). Los movimientos
+// automáticos de venta/anulación llaman a repository.crearMovimiento()
+// directo, sin pasar por acá — por eso auditar esta función alcanza para
+// cubrir "ajustes manuales de inventario" sin necesitar más filtros.
+function crear(datos, usuarioId) {
   // 'venta' es un motivo reservado: solo lo genera ventas.service.js al
   // confirmar una venta real, con su propio referencia_venta_id. Permitir
   // que alguien lo escriba a mano acá crearía un movimiento que aparenta
@@ -66,14 +72,32 @@ function crear(datos) {
       productosRepository.fijarStock(producto.id, datos.stockNuevo);
     }
 
-    return repository.crearMovimiento({
+    const movimientoId = repository.crearMovimiento({
       productoId: producto.id,
       tipo: datos.tipo,
       cantidad: cantidadDelta,
       stockResultante,
       motivo: datos.motivo,
       referenciaVentaId: null,
+      proveedorId: datos.proveedorId ?? null,
     });
+
+    registrarAuditoria({
+      usuarioId,
+      accion: 'ajuste_inventario',
+      entidadTipo: 'movimiento_inventario',
+      entidadId: movimientoId,
+      detalle: {
+        productoId: producto.id,
+        nombreProducto: producto.nombre,
+        tipo: datos.tipo,
+        cantidadDelta,
+        stockResultante,
+        motivo: datos.motivo,
+      },
+    });
+
+    return movimientoId;
   });
 
   const movimientoId = crearMovimientoTransaccional();

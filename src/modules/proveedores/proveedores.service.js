@@ -1,4 +1,5 @@
 const repository = require('./proveedores.repository');
+const inventarioRepository = require('../inventario/inventario.repository');
 const AppError = require('../../utils/app-error');
 
 // Mismo criterio que productos (codigo_barras) y categorías (nombre): el
@@ -41,4 +42,26 @@ function actualizar(id, cambios) {
   }
 }
 
-module.exports = { crear, listar, obtenerPorId, actualizar };
+// Borrado real, no un PATCH activo:false -- caso confirmado con el
+// cliente: limpiar proveedores creados por error o duplicados. Regla no
+// negociable: si el proveedor ya tiene algún movimiento de inventario
+// asociado, se rechaza con 409 y un mensaje que dice explícitamente qué
+// hacer en su lugar (desactivar), en vez de dejar que el DELETE
+// simplemente falle. El FK ON DELETE RESTRICT (migración 012) es la
+// segunda capa de la misma regla, por si algo se le escapara a esta
+// validación explícita.
+function borrar(id) {
+  obtenerPorId(id); // 404 si no existe
+
+  const cantidadMovimientos = inventarioRepository.contarPorProveedor(id);
+  if (cantidadMovimientos > 0) {
+    throw new AppError(
+      'Este proveedor ya tiene entradas registradas — desactivalo en vez de borrarlo, para no perder el historial.',
+      409
+    );
+  }
+
+  repository.borrar(id);
+}
+
+module.exports = { crear, listar, obtenerPorId, actualizar, borrar };
