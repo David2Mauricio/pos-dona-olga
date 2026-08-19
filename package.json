@@ -2,6 +2,7 @@
   "name": "pos-dona-olga",
   "version": "0.1.0",
   "description": "Sistema de punto de venta para Avicola y Salsamentaria Doña Olga",
+  "author": "David Mauricio Herazo López (Dherazo Solutions) <dherazosolutions@gmail.com>",
   "private": true,
   "main": "src/server.js",
   "scripts": {

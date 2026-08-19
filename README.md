@@ -1,7 +1,10 @@
 # POS Doña Olga
 
 Sistema de punto de venta a medida para **Avícola y Salsamentaria Doña Olga**.
-Desarrollado por Dherazo Solutions.
+Desarrollado por David Mauricio Herazo López (Dherazo Solutions).
+
+**Software propietario y confidencial** — uso exclusivo autorizado para
+Avícola y Salsamentaria Doña Olga. Ver [LICENSE](./LICENSE).
 
 ## Stack
 
