@@ -10,18 +10,21 @@
 // la sidebar (main.js), pero eso es ayuda de UI — el 403 real lo pone el
 // backend.
 //
-// Decisión (confirmada con el cliente): el formulario de EDICIÓN no expone
-// stock ni tipo de venta. tipoVenta es inmutable en el backend (ni el
-// schema de PATCH lo acepta); stock si se dejara editable acá evitaría el
-// ledger de movimientos_inventario (ADR 0005) — corregir stock de un
-// producto activo es tarea de un movimiento de ajuste (Inventario), no de
-// este formulario. En ALTA sí se pide stock inicial: un producto nuevo no
-// tiene historial que romper.
+// Decisión (ver ADR 0017, Bloque D — revierte la decisión original de este
+// comentario): el stock normal de un producto activo SIGUE sin ser
+// editable acá (corregirlo es tarea de un movimiento de ajuste en
+// Inventario, ADR 0005) — "Stock inicial" solo se pide en ALTA. Pero
+// tipoVenta SÍ es editable ahora: como gramos y unidades no son
+// convertibles entre sí, cambiar el tipo de venta en edición revela un
+// campo de stock nuevo, obligatorio, con una advertencia visible — nunca
+// queda en blanco o en 0 sin que la persona lo note (ver
+// actualizarVisibilidadCambioTipoVenta).
 
 import { api, ErrorApi } from './api.js';
 import { formatearMoneda, gramosAKilosTexto, kilosTextoAGramos } from './utils.js';
 import { mostrarToast } from './render.js';
 import { iconoEditar } from './icons.js';
+import { crearInfoTooltip } from './info-tooltip.js';
 
 const tabProductos = document.getElementById('tab-productos');
 const tabCategorias = document.getElementById('tab-categorias');
@@ -40,17 +43,55 @@ const tituloFormProducto = document.getElementById('titulo-form-producto');
 const formularioProducto = document.getElementById('formulario-producto');
 const inputProductoCategoria = document.getElementById('input-producto-categoria');
 const inputProductoNombre = document.getElementById('input-producto-nombre');
-const campoProductoTipoVenta = document.getElementById('campo-producto-tipo-venta');
 const inputProductoTipoVenta = document.getElementById('input-producto-tipo-venta');
 const inputProductoCodigoBarras = document.getElementById('input-producto-codigo-barras');
 const inputProductoPrecioPublico = document.getElementById('input-producto-precio-publico');
-const inputProductoPrecioMayorista = document.getElementById('input-producto-precio-mayorista');
 const campoProductoStock = document.getElementById('campo-producto-stock');
 const labelProductoStock = document.getElementById('label-producto-stock');
 const inputProductoStock = document.getElementById('input-producto-stock');
+const advertenciaTipoVenta = document.getElementById('advertencia-tipo-venta');
+const campoProductoStockNuevo = document.getElementById('campo-producto-stock-nuevo');
+const labelProductoStockNuevo = document.getElementById('label-producto-stock-nuevo');
+const inputProductoStockNuevo = document.getElementById('input-producto-stock-nuevo');
 const labelProductoStockMinimo = document.getElementById('label-producto-stock-minimo');
 const inputProductoStockMinimo = document.getElementById('input-producto-stock-minimo');
 const campoProductoActivo = document.getElementById('campo-producto-activo');
+
+// Ayuda contextual: se crea una sola vez (no en cada render del
+// formulario) y vive como hermano del <label>, nunca adentro -- el label
+// cambia de texto dinámicamente según tipoVenta (ver
+// actualizarCampoStockSegunTipo), y reemplazar textContent se llevaría
+// puesto cualquier hijo.
+document.getElementById('ayuda-producto-stock').appendChild(
+  crearInfoTooltip(
+    'El stock se muestra en kilogramos para productos que se venden por peso, o en unidades para productos que se venden por pieza.',
+    'Ayuda sobre el formato de stock'
+  )
+);
+
+// Solo aplica a productos por peso (el precio de un producto por unidad
+// es por pieza, no por kilogramo) -- el contenedor se oculta/muestra
+// según tipoVenta en actualizarCampoStockSegunTipo(), mismo criterio que
+// el resto de los campos que dependen del tipo de venta.
+const contenedorAyudaPrecio = document.getElementById('ayuda-producto-precio');
+contenedorAyudaPrecio.appendChild(
+  crearInfoTooltip(
+    'Este precio corresponde a un kilogramo. El total de cada venta se calcula según el peso real registrado en el mostrador.',
+    'Ayuda sobre el precio por peso'
+  )
+);
+
+// campo-producto-stock-nuevo entero (label, input y este tooltip) ya
+// arranca hidden y lo maneja actualizarVisibilidadCambioTipoVenta() --
+// no hace falta lógica de visibilidad aparte para el tooltip acá,
+// aparece/desaparece junto con el resto del campo.
+document.getElementById('ayuda-producto-stock-nuevo').appendChild(
+  crearInfoTooltip(
+    'Aparece solo al editar un producto existente y cambiar su tipo de venta. Ingresá la cantidad real que hay hoy en existencia, en el nuevo formato — este valor reemplaza al stock anterior, que quedó registrado en la unidad vieja.',
+    'Ayuda sobre el stock actual en el formato nuevo'
+  )
+);
+
 const inputProductoActivo = document.getElementById('input-producto-activo');
 const botonCancelarProducto = document.getElementById('boton-cancelar-producto');
 
@@ -253,9 +294,7 @@ function renderizarProductos(lista) {
 
     const precios = document.createElement('span');
     precios.className = 'numero';
-    precios.textContent = producto.precioMayorista
-      ? `${formatearMoneda(producto.precioPublico)} / ${formatearMoneda(producto.precioMayorista)}`
-      : formatearMoneda(producto.precioPublico);
+    precios.textContent = formatearMoneda(producto.precioPublico);
 
     const stock = document.createElement('span');
     stock.className = 'numero';
@@ -291,7 +330,6 @@ function abrirFormularioProducto(producto) {
   inputProductoNombre.value = producto ? producto.nombre : '';
   inputProductoCodigoBarras.value = producto?.codigoBarras ?? '';
   inputProductoPrecioPublico.value = producto ? String(producto.precioPublico) : '';
-  inputProductoPrecioMayorista.value = producto?.precioMayorista ?? '';
   const tipoVentaActual = producto ? producto.tipoVenta : 'unidad';
   const esPesoActual = tipoVentaActual === 'peso';
   labelProductoStockMinimo.textContent = esPesoActual ? 'Stock mínimo para alerta, en kg (opcional)' : 'Stock mínimo para alerta (opcional)';
@@ -299,17 +337,18 @@ function abrirFormularioProducto(producto) {
     ? (esPesoActual ? (producto.stockMinimo != null ? gramosAKilosTexto(producto.stockMinimo) : '') : producto.stockMinimo ?? '')
     : '';
 
-  // tipoVenta y stock: solo en alta (ver comentario de cabecera del archivo).
+  // tipoVenta: visible siempre ahora (alta y edición, ver ADR 0017).
+  // "Stock inicial" sigue siendo solo de alta.
   const esAlta = !producto;
-  campoProductoTipoVenta.hidden = !esAlta;
   campoProductoStock.hidden = !esAlta;
-  inputProductoTipoVenta.required = esAlta;
+  inputProductoTipoVenta.required = true;
   inputProductoStock.required = esAlta;
+  inputProductoTipoVenta.value = producto ? producto.tipoVenta : 'unidad';
   if (esAlta) {
-    inputProductoTipoVenta.value = 'unidad';
     inputProductoStock.value = '';
-    actualizarCampoStockSegunTipo();
   }
+  actualizarCampoStockSegunTipo();
+  actualizarVisibilidadCambioTipoVenta();
 
   // activo: solo en edición.
   campoProductoActivo.hidden = esAlta;
@@ -322,6 +361,9 @@ function abrirFormularioProducto(producto) {
 function cerrarFormularioProducto() {
   overlayFormProducto.hidden = true;
   formularioProducto.reset();
+  advertenciaTipoVenta.hidden = true;
+  campoProductoStockNuevo.hidden = true;
+  inputProductoStockNuevo.required = false;
 }
 
 function actualizarCampoStockSegunTipo() {
@@ -330,9 +372,39 @@ function actualizarCampoStockSegunTipo() {
   inputProductoStock.type = esPeso ? 'text' : 'number';
   inputProductoStock.inputMode = esPeso ? 'decimal' : 'numeric';
   labelProductoStockMinimo.textContent = esPeso ? 'Stock mínimo para alerta, en kg (opcional)' : 'Stock mínimo para alerta (opcional)';
+  contenedorAyudaPrecio.hidden = !esPeso;
 }
 
-inputProductoTipoVenta.addEventListener('change', actualizarCampoStockSegunTipo);
+// Solo aplica en edición: si la persona cambia el tipo de venta a algo
+// distinto del que ya tenía el producto, gramos y unidades no son
+// convertibles entre sí (ver ADR 0017), así que se exige declarar de
+// nuevo el stock actual, en el formato nuevo -- nunca queda en blanco o
+// en 0 sin que lo note. Sin cambio real (o en alta, donde no aplica),
+// el campo extra queda oculto y no se manda nada de más.
+function actualizarVisibilidadCambioTipoVenta() {
+  const cambioReal = productoEnEdicion && inputProductoTipoVenta.value !== productoEnEdicion.tipoVenta;
+  advertenciaTipoVenta.hidden = !cambioReal;
+  campoProductoStockNuevo.hidden = !cambioReal;
+  inputProductoStockNuevo.required = cambioReal;
+
+  if (cambioReal) {
+    const esPeso = inputProductoTipoVenta.value === 'peso';
+    labelProductoStockNuevo.textContent = esPeso ? 'Stock actual, en kg (formato nuevo)' : 'Stock actual, en unidades (formato nuevo)';
+    inputProductoStockNuevo.type = esPeso ? 'text' : 'number';
+    inputProductoStockNuevo.inputMode = esPeso ? 'decimal' : 'numeric';
+    inputProductoStockNuevo.value = '';
+    // El stock mínimo ya cargado también está en la unidad vieja -- lo
+    // limpiamos para no dejar un número que ahora se leería mal (ver
+    // mismo criterio en productos.service.js: el backend lo limpia igual
+    // si no se manda de nuevo).
+    inputProductoStockMinimo.value = '';
+  }
+}
+
+inputProductoTipoVenta.addEventListener('change', () => {
+  actualizarCampoStockSegunTipo();
+  actualizarVisibilidadCambioTipoVenta();
+});
 botonNuevoProducto.addEventListener('click', () => abrirFormularioProducto(null));
 botonCancelarProducto.addEventListener('click', cerrarFormularioProducto);
 
@@ -344,22 +416,34 @@ formularioProducto.addEventListener('submit', async (evento) => {
 
   try {
     if (productoEnEdicion) {
-      // stockMinimo se manda en la unidad nativa del producto (gramos si es
-      // peso, unidades si no) — tipoVenta no está en el DOM en edición (el
-      // campo queda oculto, ver comentario de cabecera), pero sí lo
-      // conservamos en productoEnEdicion desde que se abrió el formulario.
-      const esPeso = productoEnEdicion.tipoVenta === 'peso';
+      const tipoVentaNuevo = inputProductoTipoVenta.value;
+      const cambioTipoVenta = tipoVentaNuevo !== productoEnEdicion.tipoVenta;
+      // stockMinimo se manda en la unidad del tipoVenta VIGENTE al momento
+      // de guardar (el nuevo si cambió, el de siempre si no) — mismo
+      // criterio que el resto del formulario.
+      const esPeso = tipoVentaNuevo === 'peso';
       const cambios = {
         categoriaId: Number.parseInt(inputProductoCategoria.value, 10),
         nombre: inputProductoNombre.value.trim(),
+        tipoVenta: tipoVentaNuevo,
         codigoBarras: inputProductoCodigoBarras.value.trim() || null,
         precioPublico: Number.parseInt(inputProductoPrecioPublico.value, 10),
-        precioMayorista: inputProductoPrecioMayorista.value ? Number.parseInt(inputProductoPrecioMayorista.value, 10) : null,
         activo: inputProductoActivo.checked,
         stockMinimo: inputProductoStockMinimo.value
           ? (esPeso ? kilosTextoAGramos(inputProductoStockMinimo.value) : Number.parseInt(inputProductoStockMinimo.value, 10))
           : null,
       };
+      // Cambiar tipoVenta exige declarar el stock actual en el formato
+      // nuevo (ver actualizarVisibilidadCambioTipoVenta y ADR 0017) — el
+      // backend igual lo exige y rechaza si falta, esto es solo para no
+      // depender únicamente de esa validación del lado del servidor.
+      if (cambioTipoVenta) {
+        if (esPeso) {
+          cambios.stockGramos = kilosTextoAGramos(inputProductoStockNuevo.value);
+        } else {
+          cambios.stockUnidades = Number.parseInt(inputProductoStockNuevo.value, 10);
+        }
+      }
       await api.actualizarProducto(productoEnEdicion.id, cambios);
       mostrarToast('Producto actualizado');
     } else {
@@ -371,7 +455,6 @@ formularioProducto.addEventListener('submit', async (evento) => {
         tipoVenta,
         codigoBarras: inputProductoCodigoBarras.value.trim() || null,
         precioPublico: Number.parseInt(inputProductoPrecioPublico.value, 10),
-        precioMayorista: inputProductoPrecioMayorista.value ? Number.parseInt(inputProductoPrecioMayorista.value, 10) : null,
         stockMinimo: inputProductoStockMinimo.value
           ? (esPeso ? kilosTextoAGramos(inputProductoStockMinimo.value) : Number.parseInt(inputProductoStockMinimo.value, 10))
           : null,

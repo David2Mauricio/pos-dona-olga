@@ -78,15 +78,45 @@ function obtenerPorCodigoBarras(codigoBarras) {
   return producto;
 }
 
-function actualizar(id, cambios) {
+function actualizar(id, cambiosOriginales) {
   const productoActual = obtenerPorId(id); // ya lanza 404 si no existe
+  const cambios = { ...cambiosOriginales };
 
-  // tipoVenta nunca viene en `cambios` (el schema lo excluye a propósito),
-  // pero stockUnidades/stockGramos sí pueden venir sueltos, y hay que
-  // validarlos contra el tipoVenta ya fijado del producto.
+  // tipoVenta ahora sí se puede cambiar (ver ADR 0017) -- pero gramos y
+  // unidades no son convertibles entre sí, así que cambiar el tipo exige
+  // declarar de nuevo el stock actual, en el formato nuevo, nunca lo deja
+  // en blanco/0 sin que la persona lo note. El campo del tipo anterior se
+  // limpia a NULL explícito (no alcanza con "no mandarlo": si quedara el
+  // valor viejo puesto, violaría el CHECK de exclusión mutua de la
+  // migración 002 apenas se intente guardar el tipo nuevo).
+  const tipoVentaCambia = cambios.tipoVenta !== undefined && cambios.tipoVenta !== productoActual.tipoVenta;
+
+  if (tipoVentaCambia) {
+    if (cambios.tipoVenta === 'unidad') {
+      if (cambios.stockUnidades === undefined || cambios.stockUnidades === null) {
+        throw new AppError('Al cambiar el tipo de venta a "unidad" hay que indicar el stock actual, en unidades', 400);
+      }
+      cambios.stockGramos = null;
+    } else {
+      if (cambios.stockGramos === undefined || cambios.stockGramos === null) {
+        throw new AppError('Al cambiar el tipo de venta a "peso" hay que indicar el stock actual, en gramos', 400);
+      }
+      cambios.stockUnidades = null;
+    }
+
+    // stockMinimo también está en la unidad del tipo de venta (ver
+    // catalogo.js) -- dejarlo con el valor viejo sería un umbral de alerta
+    // silenciosamente equivocado (ej. "500" pensado como gramos,
+    // reinterpretado como 500 unidades). Se limpia igual que el stock: si
+    // se quiere un umbral en el formato nuevo, se vuelve a definir aparte.
+    if (cambios.stockMinimo === undefined) {
+      cambios.stockMinimo = null;
+    }
+  }
+
   if ('stockUnidades' in cambios || 'stockGramos' in cambios) {
     validarCoherenciaStock({
-      tipoVenta: productoActual.tipoVenta,
+      tipoVenta: cambios.tipoVenta ?? productoActual.tipoVenta,
       stockUnidades: 'stockUnidades' in cambios ? cambios.stockUnidades : productoActual.stockUnidades,
       stockGramos: 'stockGramos' in cambios ? cambios.stockGramos : productoActual.stockGramos,
     });
@@ -96,11 +126,14 @@ function actualizar(id, cambios) {
     throw new AppError(`No existe la categoría con id ${cambios.categoriaId}`, 400);
   }
 
+  let productoActualizado;
   try {
-    return repository.actualizar(id, cambios);
+    productoActualizado = repository.actualizar(id, cambios);
   } catch (error) {
     throw traducirErrorSqlite(error);
   }
+
+  return productoActualizado;
 }
 
 module.exports = {

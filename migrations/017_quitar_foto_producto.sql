@@ -1,0 +1,12 @@
+-- Retiro completo de la funcionalidad de fotos de producto (ver ADR 0020):
+-- decisión de negocio, no un descarte de algo nunca terminado -- la
+-- funcionalidad funcionaba (ADR 0017, Bloque G1). Se retira por la
+-- complejidad operativa real de fotografiar todo el catálogo, que no se
+-- justifica frente al valor que aporta.
+--
+-- DROP COLUMN nativo: SQLite 3.35.0+ lo soporta directo (confirmado
+-- 3.53.4 en este proyecto), sin el truco de recrear la tabla completa.
+-- Ningún producto real de negocio tenía foto cargada -- los únicos 3 con
+-- foto_nombre_archivo eran datos de demo (activo=0), se van con la
+-- columna sin necesidad de preservarlos.
+ALTER TABLE productos DROP COLUMN foto_nombre_archivo;

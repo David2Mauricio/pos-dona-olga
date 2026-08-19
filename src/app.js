@@ -6,6 +6,7 @@ const AppError = require('./utils/app-error');
 const manejadorDeErrores = require('./middlewares/error-handler');
 const { opcionesSession } = require('./auth/session-config');
 const { requiereSesion, requiereRol } = require('./auth/auth.middleware');
+const { registrarAcceso } = require('./middlewares/access-log');
 
 const app = express();
 
@@ -15,13 +16,18 @@ const app = express();
 // detecta y no los toca dos veces).
 app.use(compression());
 
+// Log de acceso (ver ADR de exportación CSV/gastos/redondeo/gráficos, y el
+// incidente que lo motivó): antes que cualquier otra cosa, para que quede
+// registrada TODA petición, sin importar en qué capa termine resuelta o
+// rechazada.
+app.use(registrarAcceso);
+
 app.use(express.json());
 
-// Interfaz de mostrador (SPA estática) y fotos de producto. Van antes de
-// cualquier chequeo de sesión: la pantalla de login (HTML/CSS/JS/fuentes)
-// tiene que poder cargar sin estar logueado.
+// Interfaz de mostrador (SPA estática). Antes de cualquier chequeo de
+// sesión: la pantalla de login (HTML/CSS/JS/fuentes) tiene que poder
+// cargar sin estar logueado.
 app.use(express.static(path.join(__dirname, '..', 'public')));
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.use(session(opcionesSession));
 
@@ -56,6 +62,8 @@ app.use('/api/proveedores', requiereRol('administrador'), require('./modules/pro
 app.use('/api/vencimientos', require('./modules/vencimientos/vencimientos.routes'));
 app.use('/api/reportes', requiereRol('administrador'), require('./modules/reportes/reportes.routes'));
 app.use('/api/usuarios', requiereRol('administrador'), require('./modules/usuarios/usuarios.routes'));
+app.use('/api/auditoria', requiereRol('administrador'), require('./modules/auditoria/auditoria.routes'));
+app.use('/api/gastos', requiereRol('administrador'), require('./modules/gastos/gastos.routes'));
 
 // Cualquier ruta que no coincida con nada anterior cae acá.
 app.use((req, res, next) => {

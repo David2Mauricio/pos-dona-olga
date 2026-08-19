@@ -9,10 +9,6 @@ node_modules/
 *.sqlite-shm
 *.sqlite-wal
 
-# Fotos de producto subidas por el usuario
-uploads/*
-!uploads/.gitkeep
-
 # Logs de la aplicación
 logs/*
 !logs/.gitkeep
@@ -20,6 +16,11 @@ logs/*
 # Backups automáticos de la base de datos (datos reales del negocio)
 backups/*
 !backups/.gitkeep
+
+# Copia en disco del registro de auditoría (append-only, ver ADR 0018) —
+# datos reales del negocio, no van al repo
+auditoria/*
+!auditoria/.gitkeep
 
 # Archivos de sistema operativo / editor / herramientas locales
 .DS_Store

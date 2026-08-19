@@ -91,6 +91,8 @@ Dos productos ("Pechuga de pollo", "Salchicha paquete x10") mostraban un bloque 
 
 Separado de eso, sí había un gap real: el `<img>` nunca tuvo `onerror`, así que un archivo genuinamente faltante (404) habría mostrado el ícono roto del navegador en vez del placeholder. Se agregó (`render.js`: `crearPlaceholderFoto()` reemplaza al `<img>` en el evento `error`) — corrección defensiva, no estaba causando el bug reportado pero es la misma clase de problema.
 
+**Toda la funcionalidad de fotos de producto descrita acá (`foto_nombre_archivo`, placeholder, `onerror`) fue removida por completo más adelante — ver ADR 0020.** Se deja esta sección intacta como registro histórico del bug real que existió en su momento.
+
 ### Sidebar izquierda, no barra horizontal
 
 Con 4 secciones (Mostrador, Historial, Indicadores, Inventario) más los controles de cuenta (usuario, tema, salir), el header horizontal que ya tenía marca+caja+alertas+tema+usuario+salir no tenía lugar para crecer. La sidebar separa navegación entre secciones (izquierda, persistente) de controles de cuenta (agrupados al final de la misma sidebar, en vez de mezclados con la navegación) y de contexto por sección (`.cabecera-contexto`, la franja superior angosta con estado de caja + alertas, que ahora es parte del marco fijo, no del contenido de cada vista).

@@ -13,10 +13,8 @@ function mapearFila(fila) {
     tipoVenta: fila.tipo_venta,
     codigoBarras: fila.codigo_barras,
     precioPublico: fila.precio_publico,
-    precioMayorista: fila.precio_mayorista,
     stockUnidades: fila.stock_unidades,
     stockGramos: fila.stock_gramos,
-    fotoNombreArchivo: fila.foto_nombre_archivo,
     activo: fila.activo === 1,
     stockMinimo: fila.stock_minimo,
     creadoEn: fila.creado_en,
@@ -30,12 +28,11 @@ function mapearFila(fila) {
 const COLUMNA_POR_CAMPO = {
   categoriaId: 'categoria_id',
   nombre: 'nombre',
+  tipoVenta: 'tipo_venta',
   codigoBarras: 'codigo_barras',
   precioPublico: 'precio_publico',
-  precioMayorista: 'precio_mayorista',
   stockUnidades: 'stock_unidades',
   stockGramos: 'stock_gramos',
-  fotoNombreArchivo: 'foto_nombre_archivo',
   activo: 'activo',
   stockMinimo: 'stock_minimo',
 };
@@ -45,12 +42,12 @@ function crear(producto) {
     .prepare(
       `INSERT INTO productos (
          categoria_id, nombre, tipo_venta, codigo_barras,
-         precio_publico, precio_mayorista, stock_unidades, stock_gramos,
-         foto_nombre_archivo, activo, stock_minimo
+         precio_publico, stock_unidades, stock_gramos,
+         activo, stock_minimo
        ) VALUES (
          @categoriaId, @nombre, @tipoVenta, @codigoBarras,
-         @precioPublico, @precioMayorista, @stockUnidades, @stockGramos,
-         @fotoNombreArchivo, @activo, @stockMinimo
+         @precioPublico, @stockUnidades, @stockGramos,
+         @activo, @stockMinimo
        )`
     )
     .run({
@@ -59,10 +56,8 @@ function crear(producto) {
       tipoVenta: producto.tipoVenta,
       codigoBarras: producto.codigoBarras ?? null,
       precioPublico: producto.precioPublico,
-      precioMayorista: producto.precioMayorista ?? null,
       stockUnidades: producto.stockUnidades ?? null,
       stockGramos: producto.stockGramos ?? null,
-      fotoNombreArchivo: producto.fotoNombreArchivo ?? null,
       activo: producto.activo ? 1 : 0,
       stockMinimo: producto.stockMinimo ?? null,
     });

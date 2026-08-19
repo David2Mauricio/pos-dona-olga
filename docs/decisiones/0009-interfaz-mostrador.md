@@ -151,4 +151,4 @@ se instalaron con `--no-save` solo para esta verificación.
   endpoint de búsqueda por nombre en el backend. No es el caso hoy.
 - La foto de producto (`foto_nombre_archivo`) se sirve desde `/uploads`
   vía `express.static`, agregado en `app.js` junto con el estático de
-  `public/`.
+  `public/`. **Removido por completo más adelante — ver ADR 0020.**

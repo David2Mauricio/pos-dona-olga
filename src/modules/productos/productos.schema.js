@@ -15,7 +15,6 @@ const stockSchema = z
   .int('La cantidad debe ser un número entero')
   .nonnegative('La cantidad no puede ser negativa');
 const codigoBarrasSchema = z.string().trim().min(1, 'El código de barras no puede ser una cadena vacía');
-const fotoNombreArchivoSchema = z.string().trim().min(1, 'El nombre de archivo no puede ser una cadena vacía');
 
 const crearProductoSchema = z
   .object({
@@ -24,30 +23,28 @@ const crearProductoSchema = z
     tipoVenta: z.enum(['unidad', 'peso']),
     codigoBarras: codigoBarrasSchema.nullish(),
     precioPublico: precioSchema,
-    precioMayorista: precioSchema.nullish(),
     stockUnidades: stockSchema.nullish(),
     stockGramos: stockSchema.nullish(),
-    fotoNombreArchivo: fotoNombreArchivoSchema.nullish(),
     activo: z.boolean().default(true),
     stockMinimo: stockSchema.nullish(),
   })
   .strict();
 
-// tipoVenta NO aparece acá a propósito: una vez creado el producto no se
-// puede cambiar (invalidaría el historial de stock). Si el negocio lo
-// necesita, se desactiva el producto y se crea uno nuevo. Con .strict(),
-// si el cliente igual manda tipoVenta, zod lo rechaza como campo
-// desconocido en vez de ignorarlo en silencio.
+// tipoVenta SÍ se puede cambiar (ver ADR 0017, revierte la decisión
+// original de esta misma sección) — la validación de que venga con el
+// stock nuevo en el formato correcto, y que el campo del tipo anterior
+// quede en null, vive en productos.service.js:actualizar(), porque
+// depende de comparar contra el tipoVenta actual del producto (algo que
+// el schema, sin acceso a la base, no puede evaluar).
 const actualizarProductoSchema = z
   .object({
     categoriaId: z.number().int().positive(),
     nombre: nombreSchema,
+    tipoVenta: z.enum(['unidad', 'peso']),
     codigoBarras: codigoBarrasSchema.nullish(),
     precioPublico: precioSchema,
-    precioMayorista: precioSchema.nullish(),
     stockUnidades: stockSchema.nullish(),
     stockGramos: stockSchema.nullish(),
-    fotoNombreArchivo: fotoNombreArchivoSchema.nullish(),
     activo: z.boolean(),
     stockMinimo: stockSchema.nullish(),
   })
