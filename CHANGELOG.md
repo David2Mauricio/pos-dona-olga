@@ -4,6 +4,182 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Corregido (rutas de datos ancladas a la raíz real del proyecto — ver ADR 0008)
+
+- `DB_PATH`, `DIRECTORIO_BACKUPS`, `DIRECTORIO_LOGS`, `DIRECTORIO_ACCESO` y
+  `DIRECTORIO_AUDITORIA` resolvían por `process.cwd()`: un arranque desde
+  la carpeta equivocada escribía (y podaba por retención) datos reales en
+  un lugar accidental, o abría una base de datos vacía nueva enmascarando
+  la real. Causó la pérdida real de un backup durante la auditoría final
+  de 2026-08-19. Ahora anclados a la raíz real del proyecto (o a `DB_PATH`
+  en el caso de los backups), verificado idéntico lanzando el proceso
+  desde tres directorios de trabajo distintos. El arranque además logea
+  un `WARN` si se lanza desde una carpeta distinta a la esperada.
+
+### Auditoría final previa a instalación real
+
+- Ronda de cierre de pruebas contra copia aislada de la base real:
+  seguridad de rutas (matriz completa de middleware por endpoint),
+  regresión de los 12 módulos de backend (41/41), simulación de un día
+  completo de operación con verificación numérica exacta (32/32),
+  accesibilidad de las 10 secciones de la interfaz + login (0 violaciones
+  axe-core, Lighthouse accesibilidad 100/100 en las 11), y consistencia de
+  esquema aplicando las 16 migraciones desde cero. Reporte completo en
+  `docs/auditoria-final/auditoria-final-2026-08-19.md`. Hallazgo real: la
+  base de datos de producción todavía no tiene aplicadas las migraciones
+  016/017 — confirma que el reinicio del servidor real sigue pendiente.
+
+### Agregado (ayuda contextual — ver ADR 0021)
+
+- Componente reutilizable `InfoTooltip` (ícono "i" con popover corto al
+  activarlo, completamente operable por teclado): Stock inicial, Precio y
+  Stock actual (formato nuevo) en Productos, Cantidad en Inventario,
+  sección "Stock bajo" del panel de alertas, Monto teórico y Ajuste por
+  redondeo en Caja, badge "Anulada" en Historial, badge "Por vencer" en
+  Vencimientos.
+
+### Quitado (fotos de producto — ver ADR 0020)
+
+- Retirada por completo la funcionalidad de fotos de producto (decisión
+  de negocio, no un fallo técnico): columna `foto_nombre_archivo`,
+  endpoint `POST /api/productos/foto`, `multer`, carpeta `uploads/`, y
+  su visualización en Mostrador/Productos/Inventario.
+
+### Agregado (borrado real de usuarios, trazabilidad de ventas/caja — ver extensión al ADR 0010)
+
+- `ventas` y `caja_sesiones` ahora guardan `usuario_id` (quién creó la
+  venta / quién abrió la caja). `NULL` en filas anteriores a esta
+  migración — limitación conocida, sin backfill posible.
+- `DELETE /api/usuarios/:id` (admin-only): borrado real, solo si el
+  usuario nunca tuvo actividad registrada (ventas, caja, auditoría,
+  gastos). Con actividad, `409` sugiriendo desactivar en su lugar. Sin
+  auto-eliminación (`400`), sin poder borrar al único administrador
+  activo (`400`). Auditado (`eliminacion_usuario`).
+
+### Agregado (herramientas de mantenimiento)
+
+- `npm run limpiar:demo` (`limpiar-datos-demo.js`): borra de una sola vez
+  todos los datos de demo identificados por el sufijo "(demo)" (productos,
+  categorías, proveedor, ventas, movimientos de inventario, gastos).
+  Backup de seguridad automático antes de borrar.
+
+### Agregado (exportación CSV, gastos, redondeo de vuelto, gráficos, log de acceso — ver ADR 0019)
+
+- **Exportar ventas a CSV**: nuevo botón en Indicadores, exporta el rango
+  actualmente seleccionado (`GET /api/reportes/ventas/exportar`,
+  admin-only). Incluye ventas anuladas con su estado y motivo. BOM UTF-8
+  para que Excel en Windows no rompa los acentos.
+- **Módulo de gastos**: sección nueva en la sidebar (admin-only) para
+  registrar gastos (concepto, monto, fecha, categoría opcional) y
+  desactivarlos — mismo patrón "no borrar" que proveedores/usuarios.
+  Auditado (`registro_gasto`/`baja_gasto`). Dos tarjetas nuevas en
+  Indicadores: "Gastos del período" y "Ganancia real" (ventas − gastos).
+- **Redondeo de vuelto configurable** (`REDONDEAR_VUELTO`, apagado por
+  defecto): redondea el vuelto en efectivo a la unidad de $100. El cierre
+  de caja muestra el ajuste agregado como su propio renglón explícito,
+  separado de "Sobra/Falta".
+- **Indicadores**: gráfico de tendencia (ventas día por día del período) y
+  donut de desglose por medio de pago, ambos SVG dibujados a mano, sin
+  librería.
+- **Log de acceso HTTP** (`logs/acceso/`): registra método, ruta, status,
+  timestamp y usuario de cada petición, exitosa o no — cierra un hueco de
+  visibilidad real encontrado durante una investigación de esta misma
+  ronda (ver ADR 0019).
+
+### Agregado (registro de auditoría inmutable — ver ADR 0018)
+
+- Registro de auditoría centralizado para acciones sensibles: cierre de
+  caja, anulación de venta, override de precio, alta/baja/cambio de rol de
+  usuarios, los tres caminos de reseteo de contraseña (admin, autoservicio,
+  emergencia), y ajuste manual de inventario.
+- Inmutable por diseño: no existe ningún endpoint ni función de
+  actualización o borrado para esta entidad, en ningún nivel (repository,
+  service o ruta) — no hay nada que restringir con un rol.
+- Copia en disco independiente además de la fila en SQLite: un archivo
+  append-only por día en `auditoria/` (nunca reescrito).
+- Nueva sección "Auditoría" (admin-only): listado cronológico filtrable
+  por tipo de acción y por usuario, sin ningún botón de borrado.
+
+### Corregido / Quitado (correcciones de UX, precio único — ver ADR 0017)
+
+- Lector de código de barras: completa el campo "Código de barras" con el
+  formulario de Productos abierto (antes solo alimentaba el carrito del
+  mostrador, sin importar la pantalla activa).
+- Formulario de alta de Productos: ya no se desborda del viewport (panel
+  sin `max-height`/`overflow-y`, la mitad de arriba quedaba inalcanzable).
+- Gráfico "Comparativa" de Indicadores: la etiqueta de monto de la barra
+  más alta ya no se recorta contra el badge de variación.
+- **Quitado de raíz**: `precio_mayorista` y el selector "Tipo de precio"
+  (formulario de Productos, mostrador, schema del backend) — sin datos
+  reales afectados, auditado antes de tocar nada.
+- Dos bugs de contraste preexistentes (mismo patrón ya documentado en ADR
+  0013: opacity sobre fondo sólido) encontrados con axe-core y corregidos:
+  filas anuladas de Historial, y la clase compartida de fila inactiva
+  (Productos/Usuarios/Vencimientos/Proveedores).
+
+### Agregado (correcciones de UX, precio único — ver ADR 0017)
+
+- **Subida real de imagen de producto**: nuevo endpoint `POST
+  /api/productos/foto` (multipart, admin-only, `multer`), guardado en
+  `uploads/` con nombre de archivo aleatorio, validación de tipo
+  (JPG/PNG) y tamaño (3MB) en cliente y servidor, borrado del archivo
+  viejo al reemplazar una foto (solo después de que el guardado en base
+  tenga éxito).
+- Inventario: cada movimiento muestra la foto del producto o el
+  placeholder ya existente, tamaño fijo.
+- Indicadores: desglose de ventas (hora, medio de pago, monto) bajo
+  "Ventas totales", con link a Historial ya filtrado por ese período, más
+  una descripción corta debajo de "Ticket promedio" y "Comparativa".
+- Sidebar: por debajo de 768px pasa a cajón (drawer) con botón de
+  hamburguesa, en vez de ocupar el 59% de la pantalla a 375px.
+- Formulario de Productos: agrupado en tres secciones (Información básica
+  → Precio → Stock); `tipoVenta` ahora es editable (alta y edición), con
+  reingreso obligatorio del stock actual en el formato nuevo al cambiarlo
+  — gramos y unidades no son convertibles entre sí.
+- Botones de acción de fila en Usuarios/Proveedores ahora cumplen el
+  mínimo táctil de 44x44px (antes 36px).
+- Regla de proceso nueva: ningún bloque de backend se da por cerrado sin
+  verificar contra el proceso real de la Tarea Programada, no solo una
+  instancia temporal (ver el hallazgo que la motivó en ADR 0017).
+- Regla de CSS nueva: nunca `opacity` para señalar estado inactivo sobre
+  texto o badges — mismo bug de contraste ya visto tres veces (ver ADR
+  0017).
+
+### Agregado (proveedor en inventario, borrado real de proveedores — ver ADR 0016)
+
+- Movimientos de inventario admiten un proveedor opcional (solo en
+  entradas); el formulario de Inventario y su listado ya lo usan.
+- `DELETE /api/proveedores/:id`: borrado real, rechazado con 409 si el
+  proveedor tiene movimientos asociados (desactivar sigue siendo la vía
+  para esos casos). Botón "Eliminar" nuevo en la sección Proveedores.
+
+### Agregado (NIT en el recibo, checkbox de impresión, fix de tabla responsive)
+
+- NIT del negocio (52.472.991-8) agregado al recibo térmico.
+- Checkbox "Imprimir recibo" en el cobro — si no está marcada, la venta se
+  registra igual pero no se envía nada a la impresora (el cajón monedero
+  sigue abriendo igual en efectivo, es independiente del papel).
+- `.catalogo__tabla` (Productos/Usuarios/Proveedores/Inventario) ahora
+  scrollea horizontal dentro de su propia región en vez de desbordar toda
+  la página en anchos chicos — el markup accesible (`tabindex="0"`,
+  `role="region"`) ya estaba, faltaba el `overflow-x` real.
+
+### Agregado (Inventario, Indicadores avanzado, blur de sesión — ver ADR 0015)
+
+- Sección Inventario: alta de entradas de mercadería (producto, cantidad,
+  motivo) y listado de movimientos recientes (entrada/salida/ajuste).
+  Admin-only para el alta (ya lo era en el backend), ambos roles para el
+  listado.
+- Indicadores: selector de período (Día/Semana/Mes/Trimestre, comparando
+  contra el período anterior equivalente) y dos gráficos de barras en SVG
+  dibujado a mano, sin librería ni CDN.
+- `backdrop-filter: blur` en el overlay de sesión (login, cambio de
+  contraseña obligatorio, recuperación) para no dejar datos del mostrador
+  visibles detrás cuando la sesión expira.
+- Bug real encontrado y corregido: el lector de código de barras
+  interceptaba el tipeo en la pantalla de login y podía forzar un logout
+  espurio justo después de un login exitoso (ver ADR 0015).
+
 ### Agregado (cierre previo a instalación real — ver ADR 0014)
 
 - Recibo: dirección y teléfono del negocio, quita número de venta y tipo
