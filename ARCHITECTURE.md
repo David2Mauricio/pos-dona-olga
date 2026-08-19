@@ -79,10 +79,13 @@ middleware de errores sin necesidad de `try/catch` manual en cada controller.
 Logger propio a archivo de texto (`src/utils/logger.js`, escribe en `logs/app.log`),
 sin dependencias externas. En desarrollo también imprime en consola.
 
-## Archivos (fotos de producto)
+## Archivos (fotos de producto — removido)
 
-Se guardan como archivo en `/uploads`; la base de datos solo guarda el nombre
-del archivo, nunca el binario.
+Existió (`/uploads`, `multer`, `foto_nombre_archivo` en `productos`) y llegó
+a funcionar en tres pantallas (Mostrador, Productos, Inventario), pero se
+retiró por completo: decisión de negocio, la complejidad operativa de
+fotografiar todo el catálogo no se justificaba frente al valor que
+aportaba. Ver ADR 0020.
 
 ## Hardware
 
