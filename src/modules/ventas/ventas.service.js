@@ -4,6 +4,7 @@ const repository = require('./ventas.repository');
 const productosService = require('../productos/productos.service');
 const productosRepository = require('../productos/productos.repository');
 const inventarioRepository = require('../inventario/inventario.repository');
+const { registrarAuditoria } = require('../auditoria/auditoria.service');
 const impresionService = require('../../hardware/impresion.service');
 const logger = require('../../utils/logger');
 const AppError = require('../../utils/app-error');
@@ -15,6 +16,20 @@ const AppError = require('../../utils/app-error');
 function calcularSubtotal({ tipoVenta, precioUnitarioAplicado, cantidad }) {
   const divisor = tipoVenta === 'peso' ? 1000 : 1;
   return Math.round((precioUnitarioAplicado * cantidad) / divisor);
+}
+
+// Redondeo de vuelto configurable (env.redondearVuelto, apagado por
+// defecto). Unidad fija de $100 -- evita entregar $50, que casi nadie
+// tiene en la caja (pedido explícito del cliente); no se hizo
+// configurable aparte para no sumar una perilla que no se pidió. Devuelve
+// el DELTA (vuelto redondeado - vuelto exacto, con signo), no el vuelto
+// redondeado en sí -- caja.repository.js lo resta directo de `total` para
+// que montoTeoricoEfectivo siga siendo exacto (ver caja.repository.js:
+// obtenerTotalEfectivo).
+const UNIDAD_REDONDEO_VUELTO = 100;
+function calcularRedondeoVuelto(vueltoExacto) {
+  const vueltoRedondeado = Math.round(vueltoExacto / UNIDAD_REDONDEO_VUELTO) * UNIDAD_REDONDEO_VUELTO;
+  return vueltoRedondeado - vueltoExacto;
 }
 
 // ADR 0003: si el producto no tiene precio mayorista definido (NULL),
@@ -111,7 +126,10 @@ function abrirCajonSiEsEfectivo(venta) {
   }
 }
 
-function crear({ cajaSesionId, tipoPrecio, medioPago, montoRecibido, items }) {
+// usuarioId: quién cobra (ver ADR 0018) -- solo se usa si la venta trae
+// algún item con override de precio; una venta normal no es una acción
+// sensible, no genera auditoría.
+function crear({ cajaSesionId, tipoPrecio, medioPago, montoRecibido, items, imprimir = true }, usuarioId) {
   const cajaSesion = repository.obtenerCajaSesionPorId(cajaSesionId);
   if (!cajaSesion) {
     throw new AppError(`No existe una sesión de caja con id ${cajaSesionId}`, 400);
@@ -176,13 +194,19 @@ function crear({ cajaSesionId, tipoPrecio, medioPago, montoRecibido, items }) {
     throw new AppError(`El monto recibido (${montoRecibido}) es menor al total de la venta (${total})`, 400);
   }
 
+  // Redondeo de vuelto: 0 si está apagado, si no es efectivo, o si no hay
+  // vuelto que dar (montoRecibido === total). Guardado como delta, no
+  // aplicado al `total` de la venta -- lo que se cobró no cambia, solo lo
+  // que se entrega de vuelto.
+  const redondeoVuelto = env.redondearVuelto && esEfectivo ? calcularRedondeoVuelto(montoRecibido - total) : 0;
+
   // La transacción vive acá porque el service es quien orquesta más de un
   // repository (ventas y productos) — ver ADR 0003 y ARCHITECTURE.md.
   // Si algo falla en cualquier punto (incluido el descuento de stock),
   // better-sqlite3 revierte todo: no queda venta, ni items, ni stock
   // descontado a medias.
   const crearVentaTransaccional = db.transaction(() => {
-    const ventaId = repository.crear({ cajaSesionId, tipoPrecio, medioPago, total, montoRecibido });
+    const ventaId = repository.crear({ cajaSesionId, tipoPrecio, medioPago, total, montoRecibido, redondeoVuelto, usuarioId });
 
     for (const item of itemsCalculados) {
       repository.crearItem({
@@ -200,6 +224,30 @@ function crear({ cajaSesionId, tipoPrecio, medioPago, montoRecibido, items }) {
       }
     }
 
+    // Override de precio (ver ADR 0018, punto confirmado 4): una sola
+    // entrada de auditoría por venta, no una por item -- todos los
+    // overrides de esta misma transacción de cobro quedan juntos en el
+    // detalle, en vez de fragmentar un solo cobro en N filas.
+    const itemsConOverride = itemsCalculados.filter((item) => item.precioModificado);
+    if (itemsConOverride.length > 0) {
+      registrarAuditoria({
+        usuarioId,
+        accion: 'override_precio',
+        entidadTipo: 'venta',
+        entidadId: ventaId,
+        detalle: {
+          total,
+          items: itemsConOverride.map((item) => ({
+            productoId: item.producto.id,
+            nombreProducto: item.producto.nombre,
+            precioCatalogo: resolverPrecioAplicado(item.producto, tipoPrecio),
+            precioAplicado: item.precioUnitarioAplicado,
+            motivoAjuste: item.motivoAjuste,
+          })),
+        },
+      });
+    }
+
     return ventaId;
   });
 
@@ -208,7 +256,11 @@ function crear({ cajaSesionId, tipoPrecio, medioPago, montoRecibido, items }) {
 
   // La transacción ya hizo commit acá arriba: lo que pase con la
   // impresión o el cajón de ahora en adelante no puede afectar la venta.
-  imprimirReciboDeVenta(venta);
+  // El cajón se abre igual aunque no se imprima recibo -- es sobre
+  // entregar cambio en efectivo, no depende de si el cliente quiere papel.
+  if (imprimir) {
+    imprimirReciboDeVenta(venta);
+  }
   abrirCajonSiEsEfectivo(venta);
 
   return venta;
@@ -241,7 +293,10 @@ function compensarStockPorAnulacion(ventaId) {
   }
 }
 
-function anular(id, motivoAnulacion) {
+// usuarioId: quién anula (ver ADR 0018) -- mismo criterio que el resto,
+// el registro de auditoría entra en la misma transacción que la
+// anulación y la reposición de stock.
+function anular(id, motivoAnulacion, usuarioId) {
   const venta = obtenerPorId(id); // 404 si no existe
   if (venta.estado === 'anulada') {
     throw new AppError(`La venta ${id} ya está anulada`, 400);
@@ -250,6 +305,13 @@ function anular(id, motivoAnulacion) {
   const anularTransaccional = db.transaction(() => {
     repository.anular(id, motivoAnulacion);
     compensarStockPorAnulacion(id);
+    registrarAuditoria({
+      usuarioId,
+      accion: 'anulacion_venta',
+      entidadTipo: 'venta',
+      entidadId: id,
+      detalle: { motivoAnulacion, totalVenta: venta.total, medioPago: venta.medioPago },
+    });
   });
 
   anularTransaccional();

@@ -121,3 +121,107 @@ intento casual, no un ataque real.
 - `SESSION_SECRET` es obligatorio (sin valor por defecto): el proceso no
   arranca sin él, a propósito — un secreto con un default adivinable es
   peor que un arranque que falla con un mensaje claro.
+
+## Extensión: borrado real de usuarios sin actividad
+
+El resto del proyecto sostiene consistentemente "nunca borrar lo que
+tiene historia, solo lo que no la tiene" (ventas se anulan, movimientos de
+inventario nunca se editan, proveedores con movimientos rechazan el
+`DELETE`). Un usuario sin ninguna actividad real (uno creado por error, un
+cajero que nunca llegó a trabajar) es el caso simétrico: no tiene historia
+que perder, así que sí puede borrarse limpio en vez de quedar desactivado
+para siempre como ruido en el listado.
+
+### El hueco que había que cerrar primero: nada registraba quién actuaba
+
+Antes de esta extensión, ni `ventas` ni `caja_sesiones` tenían columna
+`usuario_id` — nunca se guardó quién creaba una venta común ni quién
+abría una caja. Lo único que sabía "quién hizo qué" era `auditoria`
+(ver ADR 0018), y solo para las acciones ya marcadas como sensibles
+(anulación, override de precio, cierre de caja, ajuste manual de
+inventario) — una venta común sin override, o la apertura de una caja,
+no quedaban ligadas a nadie en ningún lado.
+
+Sin resolver esto primero, el chequeo de "¿este usuario tuvo actividad?"
+para el borrado hubiera sido necesariamente incompleto: un cajero que
+solo hizo ventas comunes habría pasado como "sin actividad" aunque
+hubiera trabajado. Se decidió cerrar el hueco de raíz en vez de construir
+el borrado sobre una base incompleta:
+
+- Migración 016: `usuario_id INTEGER REFERENCES usuarios(id) ON DELETE
+  RESTRICT`, agregada a `ventas` y `caja_sesiones`.
+- `ventas.service.js:crear()` y `caja.service.js:abrir()` ahora reciben
+  el actor de la sesión (`req.session.usuario.id`, ya disponible desde el
+  middleware de auth) y lo guardan en la fila nueva — un cambio de pocas
+  líneas en cada service, no un rediseño del flujo de venta ni de caja.
+- **Nullable, sin backfill, a propósito**: toda fila anterior a esta
+  migración queda con `usuario_id = NULL`. No hay forma de reconstruir
+  retroactivamente quién creó una venta o abrió una caja de antes de este
+  cambio, y no vale la pena inventar un valor falso solo para llenar la
+  columna. Es una limitación conocida y aceptada, no un descuido: el
+  chequeo de actividad para borrado de usuarios (ver abajo) simplemente
+  no puede detectar actividad anterior a esta migración.
+
+### El chequeo de "sin actividad", y por qué es más amplio que los cuatro criterios originales
+
+El pedido original enumeraba cuatro tipos de actividad (creó una venta,
+registró un movimiento de inventario, abrió/cerró una sesión de caja,
+anuló una venta). La implementación final (`usuarios.repository.js:
+tieneActividad`) consulta las **cuatro tablas que hoy tienen una FK
+`usuario_id -> usuarios(id) ON DELETE RESTRICT`**: `ventas`,
+`caja_sesiones` (ambas nuevas en esta extensión), `auditoria` (ADR 0018,
+sin filtrar por tipo de acción) y `gastos` (migración 015). No es una
+lista arbitraria más amplia que lo pedido por gusto — es exactamente lo
+que el motor rechazaría igual si este chequeo no existiera, así que
+nunca puede quedar desalineada del esquema real:
+
+- `ventas`/`caja_sesiones` cubren directo "creó una venta" y "abrió una
+  caja".
+- `auditoria` sin filtrar cubre "anuló una venta", "cerró una caja",
+  "hizo un ajuste manual de inventario" (los tres únicos criterios
+  originales que solo viven ahí) — y de paso cualquier otra acción
+  sensible que el usuario haya hecho como actor (resetear la contraseña
+  de otro, dar de alta a otro usuario, registrar un gasto), que igual
+  bloquearía el `DELETE` a nivel de esquema si se la dejara afuera del
+  chequeo explícito.
+- `gastos` queda cubierto también por `auditoria` (`registro_gasto` fija
+  el mismo `usuario_id`), pero se consulta directo además, para que el
+  chequeo nunca dependa de que ninguna fila de auditoría se haya
+  preservado intacta — coincide 1 a 1 con la FK real de la tabla.
+
+Si tiene actividad en cualquiera de las cuatro, `DELETE /api/usuarios/:id`
+responde `409` con un mensaje explícito sugiriendo desactivar
+(`PATCH .../:id` con `activo:false`, que ya existía). El `ON DELETE
+RESTRICT` en las cuatro tablas queda como segunda capa de protección a
+nivel de motor — nunca la única: el 409 con mensaje de negocio siempre
+dispara primero desde el service.
+
+### Otras dos salvaguardas, mismo criterio que `actualizar()`
+
+- **Auto-eliminación bloqueada** (`400`): un administrador no puede
+  borrar su propio usuario mientras tiene la sesión activa — mismo
+  espíritu que no poder desactivarse a sí mismo por accidente.
+- **Último administrador activo protegido** (`400`): mismo chequeo que ya
+  existía en `actualizar()` para desactivar/cambiar de rol, reutilizado
+  acá — borrar al único administrador activo dejaría el sistema sin
+  nadie que pueda volver a gestionar usuarios.
+
+### Auditoría
+
+Acción nueva, `eliminacion_usuario`, en el mismo punto único de escritura
+que el resto de las acciones sobre usuarios (ver ADR 0018) — dentro de la
+misma transacción que el `DELETE` real. Aunque el usuario borrado nunca
+tuvo actividad de negocio, el hecho de que un administrador lo haya
+eliminado sigue siendo una acción sensible que vale la pena dejar
+registrada.
+
+### Verificación
+
+Contra una copia aislada de la base real: `usuario_id` queda poblado al
+crear una venta nueva y al abrir una caja nueva (confirmado que una
+sesión de caja *anterior* a la migración sigue con `usuario_id NULL`, tal
+como se espera); borrado real de un usuario sin actividad (204,
+confirmado ausente del listado después); intento de auto-eliminación
+(400); intento de borrar un usuario con actividad real de venta/caja
+(409, mensaje sugiriendo desactivar); `eliminacion_usuario` presente en
+Auditoría para cada borrado. 18/18 verificaciones.

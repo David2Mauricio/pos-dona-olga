@@ -14,12 +14,25 @@ function mapearVenta(fila) {
     // tercer valor derivado abriría la puerta a que quede inconsistente si
     // alguno de los otros dos cambiara (no deberían, pero es la misma razón
     // por la que ADR 0011 no duplica el precio ajustado).
+    // redondeo_vuelto (ver ADR de exportación CSV/gastos/redondeo/gráficos)
+    // sí se guarda aparte: a diferencia de vuelto, no es derivable de
+    // total/montoRecibido — es la decisión real de cuánto se entregó de
+    // más o de menos por redondear. `vuelto` expuesto acá ya es el vuelto
+    // REAL entregado (exacto + el ajuste), lo que el cajero entrega en la
+    // mano; redondeoVuelto queda expuesto aparte para quien necesite el
+    // detalle (cierre de caja, auditoría).
     montoRecibido: fila.monto_recibido,
-    vuelto: fila.monto_recibido !== null ? fila.monto_recibido - fila.total : null,
+    vuelto: fila.monto_recibido !== null ? fila.monto_recibido - fila.total + fila.redondeo_vuelto : null,
+    redondeoVuelto: fila.redondeo_vuelto,
     estado: fila.estado,
     motivoAnulacion: fila.motivo_anulacion,
     anuladaEn: fila.anulada_en,
     creadaEn: fila.creada_en,
+    // NULL en ventas anteriores a la migración 016 -- nunca se guardó
+    // quién las creó, y no hay forma de reconstruirlo (ver ADR 0010,
+    // extensión de borrado de usuarios). No confundir con "sin usuario":
+    // toda venta desde la migración 016 en adelante sí lo trae.
+    usuarioId: fila.usuario_id,
   };
 }
 
@@ -45,13 +58,21 @@ function obtenerCajaSesionPorId(id) {
   return db.prepare('SELECT id, estado FROM caja_sesiones WHERE id = ?').get(id);
 }
 
-function crear({ cajaSesionId, tipoPrecio, medioPago, total, montoRecibido }) {
+function crear({ cajaSesionId, tipoPrecio, medioPago, total, montoRecibido, redondeoVuelto, usuarioId }) {
   const resultado = db
     .prepare(
-      `INSERT INTO ventas (caja_sesion_id, tipo_precio, medio_pago, total, monto_recibido)
-       VALUES (@cajaSesionId, @tipoPrecio, @medioPago, @total, @montoRecibido)`
+      `INSERT INTO ventas (caja_sesion_id, tipo_precio, medio_pago, total, monto_recibido, redondeo_vuelto, usuario_id)
+       VALUES (@cajaSesionId, @tipoPrecio, @medioPago, @total, @montoRecibido, @redondeoVuelto, @usuarioId)`
     )
-    .run({ cajaSesionId, tipoPrecio, medioPago, total, montoRecibido: montoRecibido ?? null });
+    .run({
+      cajaSesionId,
+      tipoPrecio,
+      medioPago,
+      total,
+      montoRecibido: montoRecibido ?? null,
+      redondeoVuelto: redondeoVuelto ?? 0,
+      usuarioId: usuarioId ?? null,
+    });
 
   return resultado.lastInsertRowid;
 }

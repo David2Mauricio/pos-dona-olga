@@ -1,12 +1,12 @@
 const cajaService = require('./caja.service');
 
 function abrir(req, res) {
-  const sesion = cajaService.abrir(req.body.montoApertura);
+  const sesion = cajaService.abrir(req.body.montoApertura, req.session.usuario.id);
   res.status(201).json(sesion);
 }
 
 function cerrar(req, res) {
-  const sesion = cajaService.cerrar(req.params.id, req.body.montoCierre);
+  const sesion = cajaService.cerrar(req.params.id, req.body.montoCierre, req.session.usuario.id);
   res.json(sesion);
 }
 

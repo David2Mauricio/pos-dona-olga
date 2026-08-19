@@ -30,6 +30,12 @@ const crearVentaSchema = z
     medioPago: z.string().trim().min(1, 'El medio de pago es obligatorio'),
     montoRecibido: z.number().int().nonnegative().optional(),
     items: z.array(itemSchema).min(1, 'La venta debe tener al menos un item'),
+    // Checkbox "Imprimir recibo" del mostrador (ver ADR de este cierre) —
+    // por defecto true para no cambiar el comportamiento de nadie que no
+    // mande este campo. No afecta la apertura del cajón monedero en
+    // efectivo: eso sigue siendo incondicional, es sobre entregar cambio,
+    // no sobre el papel.
+    imprimir: z.boolean().optional().default(true),
   })
   .strict();
 

@@ -10,13 +10,16 @@ function mapearFila(fila) {
     estado: fila.estado,
     abiertaEn: fila.abierta_en,
     cerradaEn: fila.cerrada_en,
+    // NULL en sesiones anteriores a la migración 016 -- mismo criterio que
+    // usuario_id en ventas (ver ADR 0010, extensión de borrado de usuarios).
+    usuarioId: fila.usuario_id,
   };
 }
 
-function crear(montoApertura) {
+function crear(montoApertura, usuarioId) {
   const resultado = db
-    .prepare("INSERT INTO caja_sesiones (monto_apertura, estado) VALUES (?, 'abierta')")
-    .run(montoApertura);
+    .prepare("INSERT INTO caja_sesiones (monto_apertura, estado, usuario_id) VALUES (?, 'abierta', ?)")
+    .run(montoApertura, usuarioId ?? null);
 
   return obtenerPorId(resultado.lastInsertRowid);
 }
@@ -57,14 +60,34 @@ function obtenerTotalVentas(cajaSesionId) {
 // ADR 0004: sin catálogo de medios de pago todavía, así que "efectivo" se
 // reconoce por comparación de texto tolerante (mayúsculas/espacios), no
 // por un enum. Ambas consultas de acá usan el mismo criterio.
+// Redondeo de vuelto (ver ADR de exportación CSV/gastos/redondeo/gráficos):
+// el efectivo que realmente queda en la caja es total - redondeo_vuelto
+// (si se dio de MENOS vuelto por redondear hacia abajo, queda MÁS efectivo
+// del que `total` solo sugeriría, y viceversa). redondeo_vuelto es 0 en
+// toda venta creada con el redondeo apagado o que no sea en efectivo, así
+// que esta resta no cambia nada para quien nunca activó la función.
 function obtenerTotalEfectivo(cajaSesionId) {
   return db
     .prepare(
-      `SELECT COALESCE(SUM(total), 0) AS total
+      `SELECT COALESCE(SUM(total - redondeo_vuelto), 0) AS total
        FROM ventas
        WHERE caja_sesion_id = ? AND estado = 'activa' AND TRIM(LOWER(medio_pago)) = 'efectivo'`
     )
     .get(cajaSesionId).total;
+}
+
+// Ajuste agregado por redondeo del período: se expone como su PROPIO
+// renglón en el reporte de cierre (ver cierre-caja.js), separado de
+// "Sobra/Falta" -- para que el redondeo nunca se confunda con una
+// diferencia real sin explicación conocida (pedido explícito del cliente).
+function obtenerAjustePorRedondeo(cajaSesionId) {
+  return db
+    .prepare(
+      `SELECT COALESCE(SUM(redondeo_vuelto), 0) AS ajuste
+       FROM ventas
+       WHERE caja_sesion_id = ? AND estado = 'activa' AND TRIM(LOWER(medio_pago)) = 'efectivo'`
+    )
+    .get(cajaSesionId).ajuste;
 }
 
 function obtenerDesglosePorMedioPago(cajaSesionId) {
@@ -86,5 +109,6 @@ module.exports = {
   cerrar,
   obtenerTotalVentas,
   obtenerTotalEfectivo,
+  obtenerAjustePorRedondeo,
   obtenerDesglosePorMedioPago,
 };

@@ -15,5 +15,6 @@ router.post('/', validar(crearUsuarioSchema, 'body'), controller.crear);
 router.get('/', controller.listar);
 router.patch('/:id', validar(idParamsSchema, 'params'), validar(actualizarUsuarioSchema, 'body'), controller.actualizar);
 router.patch('/:id/resetear-password', validar(idParamsSchema, 'params'), controller.resetearPassword);
+router.delete('/:id', validar(idParamsSchema, 'params'), controller.borrar);
 
 module.exports = router;

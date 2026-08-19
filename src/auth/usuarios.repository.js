@@ -122,6 +122,38 @@ function establecerPreguntaSeguridad(id, pregunta, respuestaHash) {
   return obtenerPorId(id);
 }
 
+// Borrado real de usuarios (ver extensión al ADR 0010): "sin actividad"
+// se verifica contra las CUATRO tablas que hoy tienen una FK
+// usuario_id -> usuarios(id) ON DELETE RESTRICT -- ventas y caja_sesiones
+// (migración 016), auditoria (ADR 0018) y gastos (migración 015). No es
+// una lista arbitraria: es exactamente lo que el motor rechazaría igual
+// si este chequeo no existiera, así que nunca puede quedar desalineada
+// con el esquema real. Cubre de más los cuatro criterios originales
+// pedidos (venta creada, movimiento manual, caja abierta/cerrada, venta
+// anulada -- estos tres últimos solo viven en auditoria) más cualquier
+// otra acción sensible que el usuario haya hecho (reseteo de otra
+// contraseña, alta de otro usuario, registro de un gasto), que también
+// bloquearía el borrado a nivel de esquema si se lo dejara pasar.
+function tieneActividad(id) {
+  const enVentas = db.prepare('SELECT 1 FROM ventas WHERE usuario_id = ? LIMIT 1').get(id);
+  if (enVentas) return true;
+
+  const enCaja = db.prepare('SELECT 1 FROM caja_sesiones WHERE usuario_id = ? LIMIT 1').get(id);
+  if (enCaja) return true;
+
+  const enAuditoria = db.prepare('SELECT 1 FROM auditoria WHERE usuario_id = ? LIMIT 1').get(id);
+  if (enAuditoria) return true;
+
+  const enGastos = db.prepare('SELECT 1 FROM gastos WHERE usuario_id = ? LIMIT 1').get(id);
+  if (enGastos) return true;
+
+  return false;
+}
+
+function borrar(id) {
+  db.prepare('DELETE FROM usuarios WHERE id = ?').run(id);
+}
+
 module.exports = {
   crear,
   obtenerPorId,
@@ -132,4 +164,6 @@ module.exports = {
   actualizarPassword,
   resetearPassword,
   establecerPreguntaSeguridad,
+  tieneActividad,
+  borrar,
 };

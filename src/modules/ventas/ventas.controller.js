@@ -1,7 +1,7 @@
 const ventasService = require('./ventas.service');
 
 function crear(req, res) {
-  const venta = ventasService.crear(req.body);
+  const venta = ventasService.crear(req.body, req.session.usuario.id);
   res.status(201).json(venta);
 }
 
@@ -21,7 +21,7 @@ function reimprimir(req, res) {
 }
 
 function anular(req, res) {
-  const venta = ventasService.anular(req.params.id, req.body.motivoAnulacion);
+  const venta = ventasService.anular(req.params.id, req.body.motivoAnulacion, req.session.usuario.id);
   res.json(venta);
 }
 

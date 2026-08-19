@@ -1,4 +1,6 @@
+const db = require('../../config/database');
 const repository = require('./caja.repository');
+const { registrarAuditoria } = require('../auditoria/auditoria.service');
 const AppError = require('../../utils/app-error');
 
 function obtenerPorId(id) {
@@ -16,7 +18,7 @@ function calcularMontoTeoricoEfectivo(sesion) {
   return sesion.montoApertura + repository.obtenerTotalEfectivo(sesion.id);
 }
 
-function abrir(montoApertura) {
+function abrir(montoApertura, usuarioId) {
   // Regla de negocio: solo una sesión abierta a la vez. Sin esto, dos
   // aperturas por error repartirían las ventas del día entre dos cajas
   // sin ningún sentido.
@@ -25,10 +27,13 @@ function abrir(montoApertura) {
     throw new AppError(`Ya existe una sesión de caja abierta (id ${sesionAbierta.id})`, 409);
   }
 
-  return repository.crear(montoApertura);
+  return repository.crear(montoApertura, usuarioId);
 }
 
-function cerrar(id, montoCierre) {
+// usuarioId: quién cierra la caja (ver ADR 0018) -- cerrar.repository()
+// y el registro de auditoría corren en la misma transacción, para que
+// "la caja cerró pero no quedó auditada" no sea un estado posible.
+function cerrar(id, montoCierre, usuarioId) {
   const sesion = obtenerPorId(id); // 404 si no existe
 
   if (sesion.estado === 'cerrada') {
@@ -36,12 +41,28 @@ function cerrar(id, montoCierre) {
   }
 
   const montoTeoricoEfectivo = calcularMontoTeoricoEfectivo(sesion);
-  const sesionCerrada = repository.cerrar(id, montoCierre);
+  const diferencia = montoCierre - montoTeoricoEfectivo;
+  const ajustePorRedondeo = repository.obtenerAjustePorRedondeo(id);
+
+  const cerrarTransaccional = db.transaction(() => {
+    const sesionCerrada = repository.cerrar(id, montoCierre);
+    registrarAuditoria({
+      usuarioId,
+      accion: 'cierre_caja',
+      entidadTipo: 'caja_sesion',
+      entidadId: id,
+      detalle: { montoApertura: sesion.montoApertura, montoCierre, montoTeoricoEfectivo, diferencia, ajustePorRedondeo },
+    });
+    return sesionCerrada;
+  });
+
+  const sesionCerrada = cerrarTransaccional();
 
   return {
     ...sesionCerrada,
     montoTeoricoEfectivo,
-    diferencia: montoCierre - montoTeoricoEfectivo,
+    diferencia,
+    ajustePorRedondeo,
   };
 }
 
@@ -57,6 +78,7 @@ function obtenerReporte(id) {
     montoTeoricoEfectivo,
     // La diferencia solo tiene sentido si ya se declaró un monto de cierre.
     diferencia: sesion.estado === 'cerrada' ? sesion.montoCierre - montoTeoricoEfectivo : null,
+    ajustePorRedondeo: repository.obtenerAjustePorRedondeo(id),
   };
 }
 
