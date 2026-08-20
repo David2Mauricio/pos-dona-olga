@@ -337,6 +337,13 @@ export function renderizarAlertas({ reporte, mapaProductos, botonAlertas, panelA
         // GET /api/inventario/alertas ya devuelve stockActual resuelto según
         // tipoVenta (ver inventario.repository.js) — no hace falta (ni existe)
         // un stockGramos/stockUnidades separado en esta forma de la respuesta.
+        // Para 'peso' viene en gramos crudos (mismo criterio que toda la
+        // base) -- se muestra en kg con la misma función que usa Productos,
+        // si no un "70" sin unidad es ilegible (¿70 qué?). Bug real
+        // encontrado en uso real: un cajero no pudo interpretar el número.
+        if (producto.tipoVenta === 'peso') {
+          return `${gramosAKilosTexto(producto.stockActual)}/${gramosAKilosTexto(producto.stockMinimo)} kg`;
+        }
         return `${producto.stockActual}/${producto.stockMinimo}`;
       },
       'Ningún producto por debajo de su mínimo.',
