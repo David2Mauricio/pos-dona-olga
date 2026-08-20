@@ -418,6 +418,13 @@
 
       <form id="formulario-movimiento-inventario" class="inventario__formulario">
         <div class="campo">
+          <label for="input-movimiento-tipo">Tipo de movimiento</label>
+          <select id="input-movimiento-tipo" required>
+            <option value="entrada">Entrada (mercadería nueva)</option>
+            <option value="ajuste">Ajuste (corregir el conteo actual)</option>
+          </select>
+        </div>
+        <div class="campo">
           <label for="input-movimiento-producto">Producto</label>
           <select id="input-movimiento-producto" required></select>
         </div>
@@ -432,13 +439,13 @@
           <label for="input-movimiento-motivo">Motivo</label>
           <input id="input-movimiento-motivo" type="text" value="Entrada de mercadería" required />
         </div>
-        <div class="campo">
+        <div class="campo" id="campo-movimiento-proveedor">
           <label for="input-movimiento-proveedor">Proveedor (opcional)</label>
           <select id="input-movimiento-proveedor">
             <option value="">Sin proveedor</option>
           </select>
         </div>
-        <button type="submit" class="boton-primario">Registrar entrada</button>
+        <button type="submit" class="boton-primario" id="boton-movimiento-submit">Registrar entrada</button>
       </form>
 
       <h3 class="inventario__subtitulo">Movimientos recientes</h3>

@@ -10,10 +10,15 @@
 // inyectado desde auth.js) — la protección real sigue siendo el 403 del
 // backend, esto es solo para no mostrar una acción que va a fallar.
 //
-// Este formulario solo cubre "entrada" (lo único pedido: registrar
-// mercadería entrante) — "salida"/"ajuste" del mismo endpoint existen para
-// otros casos (ventas.service.js genera salidas automáticas; ajustes
-// manuales de stock quedan fuera de este punto) pero no tienen UI acá.
+// El formulario cubre "entrada" (registrar mercadería entrante) y
+// "ajuste" (corregir el conteo actual a un número real, ej. un error de
+// tipeo al cargar una entrada) -- agregado tras un caso real: sin esto no
+// había forma de corregir un excedente cargado por error. "salida" del
+// mismo endpoint sigue sin UI acá (ventas.service.js ya genera salidas
+// automáticas por cada venta; una salida manual fuera de eso no se pidió).
+// Ajuste manda `stockNuevo` (el conteo físico real, no un delta) --
+// distinto de "entrada", que manda `cantidad` (cuánto entra, sumado a lo
+// que ya había).
 //
 // Cantidad: mismo criterio que Vencimientos/Productos
 // (kilosTextoAGramos/gramosAKilosTexto) — para un producto tipo_venta='peso'
@@ -33,8 +38,11 @@ import { obtenerUsuarioActual } from './auth.js';
 import { crearInfoTooltip } from './info-tooltip.js';
 
 const formularioMovimiento = document.getElementById('formulario-movimiento-inventario');
+const inputMovimientoTipo = document.getElementById('input-movimiento-tipo');
 const inputMovimientoProducto = document.getElementById('input-movimiento-producto');
 const labelMovimientoCantidad = document.getElementById('label-movimiento-cantidad');
+const campoMovimientoProveedor = document.getElementById('campo-movimiento-proveedor');
+const botonMovimientoSubmit = document.getElementById('boton-movimiento-submit');
 
 document.getElementById('ayuda-movimiento-cantidad').appendChild(
   crearInfoTooltip(
@@ -50,7 +58,10 @@ const tablaMovimientos = document.getElementById('tabla-movimientos-inventario')
 let mapaProductos = new Map();
 let mapaProveedores = new Map();
 
-const MOTIVO_POR_DEFECTO = 'Entrada de mercadería';
+const MOTIVO_POR_DEFECTO = {
+  entrada: 'Entrada de mercadería',
+  ajuste: 'Corrección de conteo',
+};
 
 const ETIQUETAS_TIPO = {
   entrada: { texto: 'Entrada', clase: 'badge-alerta badge-alerta--exito' },
@@ -80,12 +91,30 @@ function formatearCantidad(movimiento, producto) {
 function actualizarCampoCantidadSegunProducto() {
   const producto = mapaProductos.get(Number(inputMovimientoProducto.value));
   const esPeso = producto?.tipoVenta === 'peso';
-  labelMovimientoCantidad.textContent = esPeso ? 'Cantidad (kg)' : 'Cantidad (unidades)';
+  const esAjuste = inputMovimientoTipo.value === 'ajuste';
+  const unidad = esPeso ? 'kg' : 'unidades';
+  labelMovimientoCantidad.textContent = esAjuste ? `Cantidad real en existencia (${unidad})` : `Cantidad (${unidad})`;
   inputMovimientoCantidad.type = esPeso ? 'text' : 'number';
   inputMovimientoCantidad.inputMode = esPeso ? 'decimal' : 'numeric';
 }
 
+// Ajuste no viene de ningún proveedor (es una corrección de conteo, no una
+// compra) y el motivo por defecto cambia según el tipo -- pero solo si el
+// motivo todavía tiene el valor por defecto del OTRO tipo, para no
+// pisarle a alguien un motivo ya escrito a mano.
+function actualizarFormularioSegunTipo() {
+  const esAjuste = inputMovimientoTipo.value === 'ajuste';
+  campoMovimientoProveedor.hidden = esAjuste;
+  botonMovimientoSubmit.textContent = esAjuste ? 'Guardar corrección' : 'Registrar entrada';
+  const motivoActual = inputMovimientoMotivo.value.trim();
+  if (motivoActual === '' || motivoActual === MOTIVO_POR_DEFECTO.entrada || motivoActual === MOTIVO_POR_DEFECTO.ajuste) {
+    inputMovimientoMotivo.value = esAjuste ? MOTIVO_POR_DEFECTO.ajuste : MOTIVO_POR_DEFECTO.entrada;
+  }
+  actualizarCampoCantidadSegunProducto();
+}
+
 inputMovimientoProducto.addEventListener('change', actualizarCampoCantidadSegunProducto);
+inputMovimientoTipo.addEventListener('change', actualizarFormularioSegunTipo);
 
 function poblarSelectProductos(productos) {
   inputMovimientoProducto.innerHTML = '';
@@ -187,7 +216,7 @@ async function cargarInventario() {
     const productos = await api.listarProductosActivos();
     mapaProductos = new Map(productos.map((producto) => [producto.id, producto]));
     poblarSelectProductos(productos);
-    actualizarCampoCantidadSegunProducto();
+    actualizarFormularioSegunTipo();
   } catch (error) {
     mostrarToast(mensajeDeError(error), 'error');
   }
@@ -212,23 +241,28 @@ async function cargarInventario() {
 formularioMovimiento.addEventListener('submit', async (evento) => {
   evento.preventDefault();
 
+  const tipo = inputMovimientoTipo.value;
+  const esAjuste = tipo === 'ajuste';
   const producto = mapaProductos.get(Number(inputMovimientoProducto.value));
   const esPeso = producto?.tipoVenta === 'peso';
-  const cantidad = esPeso ? kilosTextoAGramos(inputMovimientoCantidad.value) : Number.parseInt(inputMovimientoCantidad.value, 10);
+  const magnitud = esPeso ? kilosTextoAGramos(inputMovimientoCantidad.value) : Number.parseInt(inputMovimientoCantidad.value, 10);
 
   const boton = formularioMovimiento.querySelector('button[type="submit"]');
   boton.disabled = true;
   try {
     await api.crearMovimientoInventario({
-      tipo: 'entrada',
+      tipo,
       productoId: Number(inputMovimientoProducto.value),
-      cantidad,
+      // Ajuste manda el conteo físico real (stockNuevo, un valor
+      // absoluto); entrada manda cuánto entra (cantidad, sumado a lo que
+      // ya había) -- ver inventario.schema.js, discriminatedUnion por tipo.
+      ...(esAjuste ? { stockNuevo: magnitud } : { cantidad: magnitud }),
       motivo: inputMovimientoMotivo.value.trim(),
-      ...(inputMovimientoProveedor.value ? { proveedorId: Number(inputMovimientoProveedor.value) } : {}),
+      ...(!esAjuste && inputMovimientoProveedor.value ? { proveedorId: Number(inputMovimientoProveedor.value) } : {}),
     });
-    mostrarToast('Entrada registrada');
+    mostrarToast(esAjuste ? 'Corrección guardada' : 'Entrada registrada');
     inputMovimientoCantidad.value = '';
-    inputMovimientoMotivo.value = MOTIVO_POR_DEFECTO;
+    inputMovimientoMotivo.value = MOTIVO_POR_DEFECTO[tipo];
     inputMovimientoProveedor.value = '';
     await cargarMovimientos();
   } catch (error) {
