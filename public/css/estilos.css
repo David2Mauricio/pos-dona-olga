@@ -776,20 +776,34 @@ img {
 /* --- Indicadores (Bloque 3, ver ADR 0013): tarjetas de KPI, sin
    librería de gráficos — reusa los mismos tokens de color/tipografía que
    el resto de la interfaz. --- */
-.indicadores__grilla {
+/* .tarjeta-kpi* es el mismo componente que .indicadores__tarjeta*, con
+   nombre genérico para reusarlo fuera de Indicadores (Tablero,
+   Productos, Inventario, Vencimientos, Proveedores -- rediseño visual).
+   Reglas combinadas para que las dos familias de clases no se
+   desincronicen con el tiempo; Indicadores no se retocó, solo se
+   extendió el selector. */
+.indicadores__grilla,
+.tarjeta-kpi__grilla {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
 }
 
-.indicadores__tarjeta {
+.indicadores__tarjeta,
+.tarjeta-kpi {
   background: var(--color-superficie);
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-chico);
   padding: 1.25rem;
 }
 
-.indicadores__etiqueta {
+.tarjeta-kpi--alerta {
+  border-color: var(--color-peligro);
+  background: var(--color-peligro-suave);
+}
+
+.indicadores__etiqueta,
+.tarjeta-kpi__etiqueta {
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--color-texto-muted);
@@ -802,15 +816,26 @@ img {
   margin: -0.3rem 0 0.6rem;
 }
 
-.indicadores__valor {
+.indicadores__valor,
+.tarjeta-kpi__valor {
   font-size: 1.75rem;
   font-weight: 700;
+  font-family: var(--fuente-numerica);
 }
 
-.indicadores__detalle {
+.indicadores__detalle,
+.tarjeta-kpi__detalle {
   margin-top: 0.35rem;
   color: var(--color-texto-muted);
   font-size: 0.9rem;
+}
+
+.tarjeta-kpi__variacion--positiva {
+  color: var(--color-exito);
+}
+
+.tarjeta-kpi__variacion--negativa {
+  color: var(--color-peligro);
 }
 
 .indicadores__tarjeta--ancha {
@@ -1239,10 +1264,47 @@ img {
   max-width: 640px;
 }
 
+/* Grid de 2 columnas SOLO para el formulario de Producto (rediseño
+   visual) -- acotado por id, no por .overlay__panel--ancho, porque esa
+   clase también la usa Cierre de caja (un resumen + un solo campo, se
+   vería roto en 2 columnas). Los bloques que deben ocupar el ancho
+   completo (encabezado de sección, advertencia, switch, botones) se
+   sacan del flujo de 2 columnas con grid-column: 1 / -1. Especificidad
+   (0,2,1) sigue ganándole a la regla .overlay__panel form[hidden]
+   (0,2,1 también, pero esta va después en el archivo) -- confirmado que
+   el form oculto de cambio de tipo de venta sigue ocultándose bien. */
+@media (min-width: 640px) {
+  #overlay-form-producto form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1.25rem;
+    row-gap: 1rem;
+    align-items: start;
+  }
+
+  #overlay-form-producto form[hidden] {
+    display: none;
+  }
+
+  #overlay-form-producto .formulario__grupo,
+  #overlay-form-producto .formulario__advertencia,
+  #overlay-form-producto .campo--switch {
+    grid-column: 1 / -1;
+  }
+}
+
+/* row-reverse en vez de reordenar el HTML: el DOM se queda con el botón
+   primario primero (buen orden de tabulación, se llega a él con el
+   primer Tab), pero visualmente queda a la derecha con el secundario
+   ("Cancelar") a la izquierda -- convención estándar de diálogos, ver
+   rediseño visual. */
 .overlay__acciones {
   display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
   gap: 0.75rem;
   margin-top: 0.5rem;
+  grid-column: 1 / -1;
 }
 
 /* Agrupación del formulario de Productos (ver ADR 0017, Bloque D):
