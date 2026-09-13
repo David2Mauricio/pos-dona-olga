@@ -11,10 +11,11 @@
 
 import { api, ErrorApi } from './api.js';
 import { mostrarToast } from './render.js';
-import { iconoEliminar } from './icons.js';
+import { iconoEliminar, iconoTelefono, iconoWhatsapp } from './icons.js';
 
 const tablaProveedores = document.getElementById('tabla-proveedores');
 const botonNuevoProveedor = document.getElementById('boton-nuevo-proveedor');
+const kpiProveedoresActivos = document.getElementById('kpi-proveedores-activos');
 
 const overlayFormProveedor = document.getElementById('overlay-form-proveedor');
 const tituloFormProveedor = document.getElementById('titulo-form-proveedor');
@@ -44,6 +45,7 @@ async function cargarProveedores() {
 
   try {
     const proveedores = await api.listarProveedores();
+    kpiProveedoresActivos.textContent = String(proveedores.filter((proveedor) => proveedor.activo).length);
     renderizarProveedores(proveedores);
   } catch (error) {
     tablaProveedores.innerHTML = '';
@@ -67,6 +69,36 @@ function renderizarProveedores(proveedores) {
   });
 }
 
+// Acciones rápidas de contacto (rediseño visual, Fase 5) -- solo cuando
+// el proveedor tiene teléfono cargado (confirmado antes de esta fase:
+// telefono/direccion ya existen en el esquema desde la migración 006, el
+// "—" que se veía era un dato vacío real, no una columna faltante). Para
+// WhatsApp se antepone el indicativo de Colombia (57) solo si el número
+// tiene el largo de un celular local (10 dígitos) -- si ya viene con
+// indicativo (más largo), se usa tal cual.
+function numeroWhatsapp(telefono) {
+  const digitos = telefono.replace(/\D/g, '');
+  return digitos.length === 10 ? `57${digitos}` : digitos;
+}
+
+function crearAccionesContacto(proveedor) {
+  const botonLlamar = document.createElement('a');
+  botonLlamar.href = `tel:${proveedor.telefono.replace(/\s+/g, '')}`;
+  botonLlamar.className = 'catalogo__fila-contacto';
+  botonLlamar.setAttribute('aria-label', `Llamar a ${proveedor.nombre}`);
+  botonLlamar.innerHTML = iconoTelefono;
+
+  const botonWhatsapp = document.createElement('a');
+  botonWhatsapp.href = `https://wa.me/${numeroWhatsapp(proveedor.telefono)}`;
+  botonWhatsapp.target = '_blank';
+  botonWhatsapp.rel = 'noopener noreferrer';
+  botonWhatsapp.className = 'catalogo__fila-contacto';
+  botonWhatsapp.setAttribute('aria-label', `Escribir a ${proveedor.nombre} por WhatsApp`);
+  botonWhatsapp.innerHTML = iconoWhatsapp;
+
+  return [botonLlamar, botonWhatsapp];
+}
+
 function crearFilaProveedor(proveedor) {
   const fila = document.createElement('div');
   fila.className = proveedor.activo
@@ -82,8 +114,15 @@ function crearFilaProveedor(proveedor) {
   nit.textContent = proveedor.nit || '—';
 
   const telefono = document.createElement('span');
-  telefono.className = 'catalogo__fila-muted';
-  telefono.textContent = proveedor.telefono || '—';
+  telefono.className = 'catalogo__fila-muted catalogo__fila-telefono';
+  if (proveedor.telefono) {
+    const texto = document.createElement('span');
+    texto.textContent = proveedor.telefono;
+    telefono.appendChild(texto);
+    telefono.append(...crearAccionesContacto(proveedor));
+  } else {
+    telefono.textContent = '—';
+  }
 
   const direccion = document.createElement('span');
   direccion.className = 'catalogo__fila-muted';

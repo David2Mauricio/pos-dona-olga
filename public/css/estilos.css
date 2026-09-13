@@ -802,6 +802,14 @@ img {
   background: var(--color-peligro-suave);
 }
 
+/* Ámbar, distinto del rojo de --alerta: "por vencer"/"advertencia" no es
+   lo mismo que "vencido"/"crítico" -- mismo lenguaje semántico que el
+   resto del sistema (rojo = peligro, ámbar = advertencia). */
+.tarjeta-kpi--advertencia {
+  border-color: var(--color-alerta);
+  background: var(--color-alerta-suave);
+}
+
 .indicadores__etiqueta,
 .tarjeta-kpi__etiqueta {
   font-size: 0.85rem;
@@ -1215,8 +1223,73 @@ img {
   grid-template-columns: 1.3fr 7rem 7rem 7rem auto;
 }
 
+/* Agrupado por urgencia (rediseño visual, Fase 5): borde a la izquierda
+   de cada fila según el grupo -- refuerza al badge de texto que ya
+   existía, no lo reemplaza (mismo criterio de no depender solo del
+   color). */
+.vencimientos__grupo-titulo {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-texto-muted);
+  margin: 1.25rem 0 0.5rem;
+}
+
+.vencimientos__grupo-titulo:first-child {
+  margin-top: 0;
+}
+
+.catalogo__fila--vencido {
+  border-left: 3px solid var(--color-peligro);
+}
+
+.catalogo__fila--por-vencer {
+  border-left: 3px solid var(--color-alerta);
+}
+
+.catalogo__fila--vigente {
+  border-left: 3px solid var(--color-borde);
+}
+
 .catalogo__fila--proveedor {
-  grid-template-columns: 1.2fr 8rem 8rem 1.3fr 6rem auto;
+  grid-template-columns: 1.2fr 8rem 11rem 1.3fr 6rem auto;
+}
+
+/* Acciones de contacto (llamar/WhatsApp) junto al teléfono, Fase 5 del
+   rediseño visual -- solo se agregan cuando el proveedor tiene teléfono
+   cargado (ver proveedores.js:crearAccionesContacto). */
+.catalogo__fila-telefono {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.catalogo__fila-contacto {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-texto-muted);
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Mismo criterio que .info-tooltip__boton: área de toque real de 44x44
+   sin agrandar el ícono visualmente. */
+.catalogo__fila-contacto::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+
+.catalogo__fila-contacto:hover {
+  color: var(--color-exito);
+}
+
+.catalogo__fila-contacto svg {
+  width: 16px;
+  height: 16px;
 }
 
 .catalogo__fila--movimiento {

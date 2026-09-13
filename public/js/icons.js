@@ -148,6 +148,18 @@ export const iconoInventario = `
   <path d="M12 12.5V21.5" />
 </svg>`;
 
+// Acciones de contacto en Proveedores (rediseño visual, Fase 5).
+export const iconoTelefono = `
+<svg ${ATRIBUTOS_BASE}>
+  <path d="M5.5 4h3l1.5 4-2 1.5a11 11 0 0 0 5.5 5.5l1.5-2 4 1.5v3a2 2 0 0 1-2 2C10.5 19.5 4.5 13.5 4.5 6a2 2 0 0 1 1-2z" />
+</svg>`;
+
+export const iconoWhatsapp = `
+<svg ${ATRIBUTOS_BASE}>
+  <path d="M6.5 20.5 7.6 16.7A8.5 8.5 0 1 1 11 18.9c-1 0-2-.2-2.9-.6z" />
+  <path d="M9 9.2c0-.6.5-1 1-1h.4c.3 0 .6.2.7.5l.5 1.3c.1.3 0 .6-.2.8l-.5.5c.4 1 1.2 1.8 2.2 2.2l.5-.5c.2-.2.5-.3.8-.2l1.3.5c.3.1.5.4.5.7v.4c0 .5-.4 1-1 1-3 0-6.2-3.2-6.2-6.2z" />
+</svg>`;
+
 export const iconoCarrito = `
 <svg ${ATRIBUTOS_BASE}>
   <circle cx="9.5" cy="20" r="1.4" fill="currentColor" stroke="none" />

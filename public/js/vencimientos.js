@@ -22,6 +22,10 @@ import { crearInfoTooltip } from './info-tooltip.js';
 
 const tablaVencimientos = document.getElementById('tabla-vencimientos');
 const botonNuevoLote = document.getElementById('boton-nuevo-lote');
+const kpiVencidos = document.getElementById('kpi-vencimientos-vencidos');
+const kpiVencidosTarjeta = document.getElementById('kpi-vencimientos-vencidos-tarjeta');
+const kpiPorVencer = document.getElementById('kpi-vencimientos-por-vencer');
+const kpiPorVencerTarjeta = document.getElementById('kpi-vencimientos-por-vencer-tarjeta');
 
 const overlayFormLote = document.getElementById('overlay-form-lote');
 const tituloFormLote = document.getElementById('titulo-form-lote');
@@ -35,29 +39,24 @@ const botonCancelarLote = document.getElementById('boton-cancelar-lote');
 let mapaProductos = new Map();
 let loteEnEdicion = null; // null = alta; objeto completo en edición
 
-const DIA_MS = 24 * 60 * 60 * 1000;
-
 function mensajeDeError(error) {
   return error instanceof ErrorApi ? error.message : 'No se pudo completar la operación. Intentá de nuevo.';
 }
 
-function fechaDeHoyTexto() {
-  const ahora = new Date();
-  const mes = String(ahora.getMonth() + 1).padStart(2, '0');
-  const dia = String(ahora.getDate()).padStart(2, '0');
-  return `${ahora.getFullYear()}-${mes}-${dia}`;
-}
-
-// Mismo cálculo que vencimientos.service.js:obtenerAlertas() (comparación
-// de texto YYYY-MM-DD, ADR 0006) — replicado acá solo para pintar el
-// badge de cada fila sin pedir /alertas aparte, ya que el listado
-// (/lotes) ya trae fechaVencimiento.
-function calcularEstadoLote(fechaVencimiento, hoyTexto) {
-  if (fechaVencimiento < hoyTexto) return 'vencido';
-  const limite = new Date(hoyTexto);
-  limite.setDate(limite.getDate() + 3); // DIAS_ALERTA_VENCIMIENTO por defecto; el badge exacto se recalcula server-side en /alertas
-  const limiteTexto = `${limite.getFullYear()}-${String(limite.getMonth() + 1).padStart(2, '0')}-${String(limite.getDate()).padStart(2, '0')}`;
-  if (fechaVencimiento <= limiteTexto) return 'por-vencer';
+// El umbral de "próximo a vencer" (DIAS_ALERTA_VENCIMIENTO) vive UNA sola
+// vez, en el backend (env.js / vencimientos.service.js:obtenerAlertas).
+// Acá NO se recalcula con una fecha límite propia -- eso ya duplicaba el
+// umbral una vez (un "+3" hardcodeado, coincidiendo por casualidad con el
+// valor real de .env) y agregar el agrupado en 3 cubetas de esta fase
+// sobre esa misma base hubiera sido una tercera copia del mismo número.
+// En su lugar, se pide /alertas (que YA aplica el umbral real una sola
+// vez, server-side) y se clasifica cada lote por pertenencia a esos dos
+// conjuntos -- Tablero (Fase 3) ya consume esta misma respuesta para su
+// tarjeta de Alertas, así que las dos pantallas están garantizadas a
+// coincidir siempre, sin importar qué valor tenga configurado el umbral.
+function calcularEstadoLote(loteId, idsVencidos, idsPorVencer) {
+  if (idsVencidos.has(loteId)) return 'vencido';
+  if (idsPorVencer.has(loteId)) return 'por-vencer';
   return 'vigente';
 }
 
@@ -76,10 +75,22 @@ async function cargarLotes() {
   tablaVencimientos.appendChild(cargando);
 
   try {
-    const [lotes, productos] = await Promise.all([api.listarLotesVencimiento(), api.listarProductosActivos()]);
+    const [lotes, productos, alertas] = await Promise.all([
+      api.listarLotesVencimiento(),
+      api.listarProductosActivos(),
+      api.obtenerAlertasVencimientos(),
+    ]);
     mapaProductos = new Map(productos.map((producto) => [producto.id, producto]));
     poblarSelectProductos(productos);
-    renderizarLotes(lotes);
+
+    const idsVencidos = new Set(alertas.vencidos.map((lote) => lote.id));
+    const idsPorVencer = new Set(alertas.porVencer.map((lote) => lote.id));
+    kpiVencidos.textContent = String(idsVencidos.size);
+    kpiVencidosTarjeta.classList.toggle('tarjeta-kpi--alerta', idsVencidos.size > 0);
+    kpiPorVencer.textContent = String(idsPorVencer.size);
+    kpiPorVencerTarjeta.classList.toggle('tarjeta-kpi--advertencia', idsPorVencer.size > 0);
+
+    renderizarLotes(lotes, idsVencidos, idsPorVencer);
   } catch (error) {
     tablaVencimientos.innerHTML = '';
     mostrarToast(mensajeDeError(error), 'error');
@@ -96,7 +107,17 @@ function poblarSelectProductos(productos) {
   });
 }
 
-function renderizarLotes(lotes) {
+// Agrupado por urgencia (rediseño visual, Fase 5): tres cubetas fijas, en
+// vez de una sola lista plana -- cada una con su encabezado y un borde de
+// color a la izquierda de cada fila según el grupo (ver
+// .catalogo__fila--vencido/--por-vencer/--vigente en el CSS).
+const GRUPOS = [
+  { estado: 'vencido', titulo: 'Vencidos' },
+  { estado: 'por-vencer', titulo: 'Por vencer' },
+  { estado: 'vigente', titulo: 'Vigentes' },
+];
+
+function renderizarLotes(lotes, idsVencidos, idsPorVencer) {
   tablaVencimientos.innerHTML = '';
 
   if (lotes.length === 0) {
@@ -107,18 +128,35 @@ function renderizarLotes(lotes) {
     return;
   }
 
-  const hoyTexto = fechaDeHoyTexto();
+  const porGrupo = new Map(GRUPOS.map((g) => [g.estado, []]));
   lotes.forEach((lote) => {
-    tablaVencimientos.appendChild(crearFilaLote(lote, hoyTexto));
+    const estado = calcularEstadoLote(lote.id, idsVencidos, idsPorVencer);
+    porGrupo.get(estado).push(lote);
+  });
+
+  GRUPOS.forEach(({ estado, titulo }) => {
+    const lotesDelGrupo = porGrupo.get(estado);
+    if (lotesDelGrupo.length === 0) return;
+
+    const encabezado = document.createElement('h3');
+    encabezado.className = 'vencimientos__grupo-titulo';
+    encabezado.textContent = `${titulo} (${lotesDelGrupo.length})`;
+    tablaVencimientos.appendChild(encabezado);
+
+    lotesDelGrupo.forEach((lote) => {
+      tablaVencimientos.appendChild(crearFilaLote(lote, estado));
+    });
   });
 }
 
-function crearFilaLote(lote, hoyTexto) {
+function crearFilaLote(lote, estado) {
   const producto = mapaProductos.get(lote.productoId);
-  const estado = calcularEstadoLote(lote.fechaVencimiento, hoyTexto);
 
   const fila = document.createElement('div');
-  fila.className = lote.activo ? 'catalogo__fila catalogo__fila--lote' : 'catalogo__fila catalogo__fila--lote catalogo__fila--inactivo';
+  const claseEstado = `catalogo__fila--${estado}`;
+  fila.className = lote.activo
+    ? `catalogo__fila catalogo__fila--lote ${claseEstado}`
+    : `catalogo__fila catalogo__fila--lote ${claseEstado} catalogo__fila--inactivo`;
 
   const nombre = document.createElement('span');
   nombre.className = 'catalogo__fila-nombre';

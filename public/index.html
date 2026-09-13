@@ -392,6 +392,18 @@
         <h2 id="titulo-vista-vencimientos">Vencimientos</h2>
         <button id="boton-nuevo-lote" type="button" class="boton-primario">+ Nuevo lote</button>
       </header>
+
+      <div class="tarjeta-kpi__grilla tablero__grilla">
+        <div class="tarjeta-kpi" id="kpi-vencimientos-vencidos-tarjeta">
+          <p class="tarjeta-kpi__etiqueta">Vencidos</p>
+          <p class="tarjeta-kpi__valor" id="kpi-vencimientos-vencidos">0</p>
+        </div>
+        <div class="tarjeta-kpi" id="kpi-vencimientos-por-vencer-tarjeta">
+          <p class="tarjeta-kpi__etiqueta">Por vencer</p>
+          <p class="tarjeta-kpi__valor" id="kpi-vencimientos-por-vencer">0</p>
+        </div>
+      </div>
+
       <div id="tabla-vencimientos" class="catalogo__tabla" role="region" aria-label="Listado de lotes de vencimiento" tabindex="0"></div>
     </section>
 
@@ -475,6 +487,14 @@
         <h2 id="titulo-vista-proveedores">Proveedores</h2>
         <button id="boton-nuevo-proveedor" type="button" class="boton-primario">+ Nuevo proveedor</button>
       </header>
+
+      <div class="tarjeta-kpi__grilla tablero__grilla">
+        <div class="tarjeta-kpi">
+          <p class="tarjeta-kpi__etiqueta">Proveedores activos</p>
+          <p class="tarjeta-kpi__valor" id="kpi-proveedores-activos">0</p>
+        </div>
+      </div>
+
       <div id="tabla-proveedores" class="catalogo__tabla" role="region" aria-label="Listado de proveedores" tabindex="0"></div>
     </section>
 
