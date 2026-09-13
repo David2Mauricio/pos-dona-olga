@@ -30,6 +30,7 @@ const elementoEtiquetaVentas = document.getElementById('indicadores-etiqueta-ven
 const elementoTotalVentas = document.getElementById('indicadores-total-ventas');
 const elementoCantidadVentas = document.getElementById('indicadores-cantidad-ventas');
 const elementoTicketPromedio = document.getElementById('indicadores-ticket-promedio');
+const elementoUnidadesVendidas = document.getElementById('indicadores-unidades-vendidas');
 const elementoProductoTop = document.getElementById('indicadores-producto-top');
 const elementoProductoTopMonto = document.getElementById('indicadores-producto-top-monto');
 const elementoEtiquetaComparativa = document.getElementById('indicadores-etiqueta-comparativa');
@@ -40,6 +41,11 @@ const graficoComparativa = document.getElementById('grafico-comparativa');
 const graficoProductos = document.getElementById('grafico-productos');
 const graficoTendencia = document.getElementById('grafico-tendencia');
 const graficoMedioPago = document.getElementById('grafico-medio-pago');
+const graficoCategorias = document.getElementById('grafico-categorias');
+const resumenProductos = document.getElementById('grafico-productos-resumen');
+const resumenTendencia = document.getElementById('grafico-tendencia-resumen');
+const resumenMedioPago = document.getElementById('grafico-medio-pago-resumen');
+const resumenCategorias = document.getElementById('grafico-categorias-resumen');
 const selectorPeriodo = document.getElementById('selector-periodo');
 const contenedorDesgloseVentas = document.getElementById('indicadores-desglose-ventas');
 const botonVerHistorialFiltrado = document.getElementById('boton-ver-historial-filtrado');
@@ -270,66 +276,101 @@ function renderizarGraficoComparativa(totalAnterior, totalActual, etiquetaAnteri
 // varía mucho (de "Pollo" a nombres compuestos largos), así que barras
 // horizontales con el nombre a la izquierda leen mejor que barras
 // verticales con nombres rotados o truncados.
-function renderizarGraficoProductos(topProductos) {
-  graficoProductos.innerHTML = '';
+// --- Chart.js (rediseño visual, Fase 6) ---
+// Vendorizado como archivo estático local (public/js/vendor/chart.umd.min.js,
+// ver ADR 0022) -- reemplaza los gráficos grandes que antes eran SVG a
+// mano (tendencia, top productos, donut de medio de pago) y agrega el
+// donut nuevo de categoría. La comparativa chica (arriba) se queda como
+// estaba: un solo bloque de 2 barras no justificaba la dependencia, y ya
+// usa var(--color-x) directo en SVG (sí soportado ahí, a diferencia de
+// canvas) -- ya está en la misma paleta sin tocar nada.
+//
+// Un <canvas> no es accesible por sí solo (a diferencia del SVG a mano,
+// que llevaba su propio role="img"/aria-label) -- cada gráfico tiene un
+// <p class="visualmente-oculto"> hermano (aria-describedby en el canvas,
+// ver index.html) con el mismo resumen en texto que ya se armaba antes.
+// Sin datos, ese mismo párrafo se muestra (deja de estar oculto) con el
+// mensaje vacío, en vez de dejar un canvas en blanco sin explicación.
+//
+// Chart.js lanza error si se crea una instancia nueva sobre un <canvas>
+// que ya tiene una activa -- con el selector de período reejecutando el
+// render en cada cambio, hay que destruir la instancia anterior antes de
+// crear la próxima. Un registro (Map) por id de canvas alcanza.
+const graficosChart = new Map();
 
+function crearOReemplazarChart(canvas, config) {
+  graficosChart.get(canvas.id)?.destroy();
+  const grafico = new Chart(canvas, config);
+  graficosChart.set(canvas.id, grafico);
+  return grafico;
+}
+
+// Resueltos en cada render, no una vez al cargar el módulo: un <canvas>
+// dibuja con valores de color reales, no puede usar var(--color-x) como sí
+// hacen los SVG a mano -- si el tema cambia entre una carga y otra, el
+// próximo render ya toma los valores nuevos sin lógica aparte.
+function coloresDelTema() {
+  const estilos = getComputedStyle(document.documentElement);
+  const leer = (variable) => estilos.getPropertyValue(variable).trim();
+  return {
+    acento: leer('--color-acento'),
+    exito: leer('--color-exito'),
+    alerta: leer('--color-alerta'),
+    peligro: leer('--color-peligro'),
+    textoMuted: leer('--color-texto-muted'),
+    texto: leer('--color-texto'),
+    borde: leer('--color-borde'),
+  };
+}
+
+function mostrarResumenVacio(elementoResumen, canvas, textoVacio) {
+  graficosChart.get(canvas.id)?.destroy();
+  graficosChart.delete(canvas.id);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  elementoResumen.textContent = textoVacio;
+  elementoResumen.classList.remove('visualmente-oculto');
+  elementoResumen.classList.add('catalogo__vacio');
+}
+
+function ocultarResumenAccesible(elementoResumen, texto) {
+  elementoResumen.textContent = texto;
+  elementoResumen.classList.add('visualmente-oculto');
+  elementoResumen.classList.remove('catalogo__vacio');
+}
+
+function renderizarGraficoProductos(topProductos) {
   if (topProductos.length === 0) {
-    limpiarGrafico(graficoProductos, 'Sin ventas registradas en este período.');
+    mostrarResumenVacio(resumenProductos, graficoProductos, 'Sin ventas registradas en este período.');
     return;
   }
 
   const productos = topProductos.slice(0, 5);
-  const ANCHO = 480;
-  const ALTO_FILA = 34;
-  const ALTO = productos.length * ALTO_FILA + 8;
-  const ANCHO_ETIQUETA = 140;
-  const ANCHO_MAX_BARRA = ANCHO - ANCHO_ETIQUETA - 70;
-  const maximo = Math.max(...productos.map((producto) => producto.totalVendido), 1);
+  const colores = coloresDelTema();
+  ocultarResumenAccesible(
+    resumenProductos,
+    `Top productos por monto vendido en el período: ${productos.map((p) => `${p.nombre}: ${formatearMoneda(p.totalVendido)}`).join('; ')}.`
+  );
 
-  const resumenAccesible = productos.map((producto) => `${producto.nombre}: ${formatearMoneda(producto.totalVendido)}`).join('; ');
-
-  const svg = crearElementoSvg('svg', {
-    viewBox: `0 0 ${ANCHO} ${ALTO}`,
-    role: 'img',
-    'aria-label': `Top productos por monto vendido en el período: ${resumenAccesible}.`,
-    class: 'indicadores__svg indicadores__svg--productos',
+  crearOReemplazarChart(graficoProductos, {
+    type: 'bar',
+    data: {
+      labels: productos.map((p) => p.nombre),
+      datasets: [{ data: productos.map((p) => p.totalVendido), backgroundColor: colores.acento, borderRadius: 4 }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (item) => formatearMoneda(item.parsed.x) } },
+      },
+      scales: {
+        x: { ticks: { color: colores.textoMuted, callback: (valor) => formatearMoneda(valor) }, grid: { color: colores.borde } },
+        y: { ticks: { color: colores.texto }, grid: { display: false } },
+      },
+    },
   });
-
-  productos.forEach((producto, indice) => {
-    const y = indice * ALTO_FILA;
-    const anchoBarra = Math.max((producto.totalVendido / maximo) * ANCHO_MAX_BARRA, producto.totalVendido > 0 ? 3 : 0);
-
-    const nombre = crearElementoSvg('text', {
-      x: 0,
-      y: y + ALTO_FILA / 2 + 4,
-      class: 'indicadores__svg-etiqueta indicadores__svg-etiqueta--nombre',
-      'aria-hidden': 'true',
-    });
-    nombre.textContent = producto.nombre.length > 20 ? `${producto.nombre.slice(0, 19)}…` : producto.nombre;
-    svg.appendChild(nombre);
-
-    const rect = crearElementoSvg('rect', {
-      x: ANCHO_ETIQUETA,
-      y: y + 5,
-      width: anchoBarra,
-      height: ALTO_FILA - 14,
-      rx: 4,
-      'aria-hidden': 'true',
-    });
-    rect.style.fill = 'var(--color-acento)';
-    svg.appendChild(rect);
-
-    const valor = crearElementoSvg('text', {
-      x: ANCHO_ETIQUETA + anchoBarra + 8,
-      y: y + ALTO_FILA / 2 + 4,
-      class: 'indicadores__svg-valor',
-      'aria-hidden': 'true',
-    });
-    valor.textContent = formatearMoneda(producto.totalVendido);
-    svg.appendChild(valor);
-  });
-
-  graficoProductos.appendChild(svg);
 }
 
 function formatearEtiquetaFechaCorta(fechaIso) {
@@ -344,158 +385,118 @@ function formatearEtiquetaFechaCorta(fechaIso) {
 // (el período "Día" del selector), así que ahí se pasa directo al mensaje
 // vacío en vez de dibujar una línea degenerada de un solo punto.
 function renderizarGraficoTendencia(ventasPorDia) {
-  graficoTendencia.innerHTML = '';
-
   if (ventasPorDia.length < 2) {
-    limpiarGrafico(graficoTendencia, 'Elegí un período de más de un día para ver la tendencia.');
+    mostrarResumenVacio(resumenTendencia, graficoTendencia, 'Elegí un período de más de un día para ver la tendencia.');
     return;
   }
 
   const totalGeneral = ventasPorDia.reduce((suma, dia) => suma + dia.total, 0);
   if (totalGeneral === 0) {
-    limpiarGrafico(graficoTendencia, 'Sin ventas para graficar todavía.');
+    mostrarResumenVacio(resumenTendencia, graficoTendencia, 'Sin ventas para graficar todavía.');
     return;
   }
 
-  const ANCHO = 640;
-  const ALTO = 160;
-  const MARGEN_IZQ = 8;
-  const MARGEN_DER = 8;
-  const MARGEN_SUP = 16;
-  const ALTO_EJE = 28; // espacio para las etiquetas de fecha abajo
-  const ALTO_UTIL = ALTO - MARGEN_SUP - ALTO_EJE;
-  const ANCHO_UTIL = ANCHO - MARGEN_IZQ - MARGEN_DER;
+  const colores = coloresDelTema();
+  const maximo = Math.max(...ventasPorDia.map((dia) => dia.total));
+  const minimo = Math.min(...ventasPorDia.map((dia) => dia.total));
+  ocultarResumenAccesible(
+    resumenTendencia,
+    `Tendencia de ventas del ${ventasPorDia[0].fecha} al ${ventasPorDia[ventasPorDia.length - 1].fecha}, entre ${formatearMoneda(minimo)} y ${formatearMoneda(maximo)} por día.`
+  );
 
-  const maximo = Math.max(...ventasPorDia.map((dia) => dia.total), 1);
-  const paso = ANCHO_UTIL / (ventasPorDia.length - 1);
-
-  const puntos = ventasPorDia.map((dia, indice) => ({
-    x: MARGEN_IZQ + paso * indice,
-    y: MARGEN_SUP + ALTO_UTIL - (dia.total / maximo) * ALTO_UTIL,
-    dia,
-  }));
-
-  const resumenAccesible = `Tendencia de ventas del ${ventasPorDia[0].fecha} al ${ventasPorDia[ventasPorDia.length - 1].fecha}, entre ${formatearMoneda(Math.min(...ventasPorDia.map((dia) => dia.total)))} y ${formatearMoneda(maximo)} por día.`;
-
-  const svg = crearElementoSvg('svg', {
-    viewBox: `0 0 ${ANCHO} ${ALTO}`,
-    role: 'img',
-    'aria-label': resumenAccesible,
-    class: 'indicadores__svg indicadores__svg--tendencia',
+  crearOReemplazarChart(graficoTendencia, {
+    type: 'line',
+    data: {
+      labels: ventasPorDia.map((dia) => formatearEtiquetaFechaCorta(dia.fecha)),
+      datasets: [
+        {
+          data: ventasPorDia.map((dia) => dia.total),
+          borderColor: colores.acento,
+          backgroundColor: `${colores.acento}26`, // relleno suave bajo la línea (~15% opacidad)
+          pointBackgroundColor: colores.acento,
+          tension: 0.2,
+          fill: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (item) => formatearMoneda(item.parsed.y) } },
+      },
+      scales: {
+        x: { ticks: { color: colores.textoMuted, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { display: false } },
+        y: { ticks: { color: colores.textoMuted, callback: (valor) => formatearMoneda(valor) }, grid: { color: colores.borde } },
+      },
+    },
   });
-
-  const polilinea = crearElementoSvg('polyline', {
-    points: puntos.map((p) => `${p.x},${p.y}`).join(' '),
-    fill: 'none',
-    'stroke-width': 2,
-    'aria-hidden': 'true',
-  });
-  polilinea.style.stroke = 'var(--color-acento)';
-  svg.appendChild(polilinea);
-
-  puntos.forEach((p) => {
-    const circulo = crearElementoSvg('circle', { cx: p.x, cy: p.y, r: 3, 'aria-hidden': 'true' });
-    circulo.style.fill = 'var(--color-acento)';
-    svg.appendChild(circulo);
-  });
-
-  // Densidad de etiquetas: todas si son pocos días (semana), repartidas si
-  // son muchos (mes/trimestre) -- sin esto, un trimestre (~90 puntos) las
-  // amontonaría hasta volverlas ilegibles.
-  const CANTIDAD_ETIQUETAS_MAXIMA = 6;
-  const cadaCuanto = puntos.length <= CANTIDAD_ETIQUETAS_MAXIMA ? 1 : Math.ceil(puntos.length / CANTIDAD_ETIQUETAS_MAXIMA);
-  puntos.forEach((p, indice) => {
-    const esUltimo = indice === puntos.length - 1;
-    if (indice % cadaCuanto !== 0 && !esUltimo) return;
-    const etiqueta = crearElementoSvg('text', {
-      x: p.x,
-      y: ALTO - 6,
-      'text-anchor': indice === 0 ? 'start' : esUltimo ? 'end' : 'middle',
-      class: 'indicadores__svg-etiqueta',
-      'aria-hidden': 'true',
-    });
-    etiqueta.textContent = formatearEtiquetaFechaCorta(p.dia.fecha);
-    svg.appendChild(etiqueta);
-  });
-
-  graficoTendencia.appendChild(svg);
 }
-
-const COLORES_MEDIO_PAGO = ['var(--color-acento)', 'var(--color-exito)', 'var(--color-alerta)', 'var(--color-peligro)', 'var(--color-texto-muted)'];
 
 function capitalizar(texto) {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
-// Donut de desglose por medio de pago -- reutiliza desglosePorMedioPago,
-// que el backend ya devuelve (sin cambio de backend para esto, a
-// diferencia de la tendencia). Técnica de círculos con
-// stroke-dasharray/stroke-dashoffset acumulado, rotados -90° para que el
-// primer segmento arranque a las 12 en vez de a las 3.
-function renderizarGraficoDonutMedioPago(desglosePorMedioPago) {
-  graficoMedioPago.innerHTML = '';
+// Paleta compartida por los dos donuts (medio de pago y categoría) -- los
+// mismos tonos semánticos ya establecidos en el resto del rediseño
+// visual, nunca los colores por defecto de Chart.js (pedido explícito del
+// cliente): azul de marca primero, después éxito/alerta/peligro, gris
+// neutro si sobran categorías.
+function paletaCategorica(colores) {
+  return [colores.acento, colores.exito, colores.alerta, colores.peligro, colores.textoMuted];
+}
 
-  const totalGeneral = desglosePorMedioPago.reduce((suma, item) => suma + item.total, 0);
-  if (totalGeneral === 0) {
-    limpiarGrafico(graficoMedioPago, 'Sin ventas para graficar todavía.');
+// Donut genérico: medio de pago y categoría son la misma forma de datos
+// (lista de {etiqueta, valor}), solo cambia de dónde sale la lista -- ver
+// renderizarGraficoDonutMedioPago/renderizarGraficoDonutCategoria abajo.
+function crearGraficoDonut(canvas, elementoResumen, items, tituloResumen) {
+  const total = items.reduce((suma, item) => suma + item.valor, 0);
+  if (total === 0) {
+    mostrarResumenVacio(elementoResumen, canvas, 'Sin ventas para graficar todavía.');
     return;
   }
 
-  const TAMANO = 160;
-  const RADIO = 60;
-  const GROSOR = 24;
-  const CENTRO = TAMANO / 2;
-  const CIRCUNFERENCIA = 2 * Math.PI * RADIO;
+  const colores = coloresDelTema();
+  const paleta = paletaCategorica(colores);
+  ocultarResumenAccesible(
+    elementoResumen,
+    `${tituloResumen}: ${items.map((item) => `${item.etiqueta}: ${Math.round((item.valor / total) * 100)}% (${formatearMoneda(item.valor)})`).join('; ')}.`
+  );
 
-  const resumenAccesible = desglosePorMedioPago
-    .map((item) => `${capitalizar(item.medioPago)}: ${Math.round((item.total / totalGeneral) * 100)}% (${formatearMoneda(item.total)})`)
-    .join('; ');
-
-  const svg = crearElementoSvg('svg', {
-    viewBox: `0 0 ${TAMANO} ${TAMANO}`,
-    role: 'img',
-    'aria-label': `Desglose de ventas por medio de pago: ${resumenAccesible}.`,
-    class: 'indicadores__svg indicadores__svg--donut',
+  crearOReemplazarChart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: items.map((item) => item.etiqueta),
+      datasets: [{ data: items.map((item) => item.valor), backgroundColor: items.map((_item, indice) => paleta[indice % paleta.length]) }],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: colores.texto, boxWidth: 12, padding: 12 } },
+        tooltip: {
+          callbacks: {
+            label: (item) => `${item.label}: ${formatearMoneda(item.parsed)} (${Math.round((item.parsed / total) * 100)}%)`,
+          },
+        },
+      },
+    },
   });
+}
 
-  const grupo = crearElementoSvg('g', { transform: `rotate(-90 ${CENTRO} ${CENTRO})` });
-  let acumulado = 0;
+// Reutiliza desglosePorMedioPago, que el backend ya devuelve (sin cambio
+// de backend para esto, a diferencia de unidadesVendidas/ventasPorCategoria).
+function renderizarGraficoDonutMedioPago(desglosePorMedioPago) {
+  const items = desglosePorMedioPago.map((item) => ({ etiqueta: capitalizar(item.medioPago), valor: item.total }));
+  crearGraficoDonut(graficoMedioPago, resumenMedioPago, items, 'Desglose de ventas por medio de pago');
+}
 
-  desglosePorMedioPago.forEach((item, indice) => {
-    const largoSegmento = (item.total / totalGeneral) * CIRCUNFERENCIA;
-    const circulo = crearElementoSvg('circle', {
-      cx: CENTRO,
-      cy: CENTRO,
-      r: RADIO,
-      fill: 'none',
-      'stroke-width': GROSOR,
-      'stroke-dasharray': `${largoSegmento} ${CIRCUNFERENCIA - largoSegmento}`,
-      'stroke-dashoffset': -acumulado,
-      'aria-hidden': 'true',
-    });
-    circulo.style.stroke = COLORES_MEDIO_PAGO[indice % COLORES_MEDIO_PAGO.length];
-    grupo.appendChild(circulo);
-    acumulado += largoSegmento;
-  });
-
-  svg.appendChild(grupo);
-  graficoMedioPago.appendChild(svg);
-
-  const leyenda = document.createElement('ul');
-  leyenda.className = 'indicadores__leyenda-donut';
-  desglosePorMedioPago.forEach((item, indice) => {
-    const fila = document.createElement('li');
-    const swatch = document.createElement('span');
-    swatch.className = 'indicadores__leyenda-swatch';
-    swatch.style.backgroundColor = COLORES_MEDIO_PAGO[indice % COLORES_MEDIO_PAGO.length];
-    swatch.setAttribute('aria-hidden', 'true');
-    const texto = document.createElement('span');
-    const porcentaje = Math.round((item.total / totalGeneral) * 100);
-    texto.textContent = `${capitalizar(item.medioPago)} — ${porcentaje}% (${formatearMoneda(item.total)})`;
-    fila.append(swatch, texto);
-    leyenda.appendChild(fila);
-  });
-  graficoMedioPago.appendChild(leyenda);
+// Distribución por categoría (rediseño visual, Fase 6) -- ventasPorCategoria
+// es un agregado nuevo de backend (reportes.repository.js), no derivado de
+// topProductos en el cliente: ese solo trae el top 10, una categoría con
+// muchos productos chicos podría quedar subrepresentada.
+function renderizarGraficoDonutCategoria(ventasPorCategoria) {
+  const items = ventasPorCategoria.map((item) => ({ etiqueta: item.nombre, valor: item.total }));
+  crearGraficoDonut(graficoCategorias, resumenCategorias, items, 'Distribución de ventas por categoría');
 }
 
 // creadaEn: 'YYYY-MM-DD HH:MM:SS' (ver ventas.repository.js). Con el
@@ -569,6 +570,7 @@ function renderizar(reporteActual, reporteAnterior, rangos) {
 
   elementoTicketPromedio.textContent =
     reporteActual.ticketPromedio === null ? '—' : formatearMoneda(reporteActual.ticketPromedio);
+  elementoUnidadesVendidas.textContent = String(reporteActual.unidadesVendidas);
 
   const masVendido = reporteActual.topProductos[0];
   if (masVendido) {
@@ -588,6 +590,7 @@ function renderizar(reporteActual, reporteAnterior, rangos) {
   renderizarGraficoProductos(reporteActual.topProductos);
   renderizarGraficoTendencia(reporteActual.ventasPorDia);
   renderizarGraficoDonutMedioPago(reporteActual.desglosePorMedioPago);
+  renderizarGraficoDonutCategoria(reporteActual.ventasPorCategoria);
 
   rangoActualParaHistorial = rangos.actual;
   cargarYRenderizarDesglose(rangos.actual);

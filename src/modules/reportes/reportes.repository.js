@@ -68,6 +68,48 @@ function obtenerVentasPorDia(filtros) {
     .all(parametros);
 }
 
+// Mismo JOIN/filtro que obtenerTopProductos, sin LIMIT ni GROUP BY --
+// unidades vendidas del período completo, no solo del top (rediseño
+// visual, Fase 6). Solo productos tipo_venta='unidad': sumar unidades
+// junto con gramos de productos por peso daría un número sin significado
+// real (2 "unidades" de gaseosa + 500 "unidades" de pechuga no es una
+// cifra que diga nada) -- se deja fuera de este total, no se inventa una
+// conversión que no existe en el resto del sistema.
+function obtenerUnidadesVendidas(filtros) {
+  const { clausulaWhere, parametros } = construirFiltro(filtros, 'v');
+  const fila = db
+    .prepare(
+      `SELECT COALESCE(SUM(vi.cantidad), 0) AS unidades
+       FROM ventas_items vi
+       JOIN ventas v ON v.id = vi.venta_id
+       JOIN productos p ON p.id = vi.producto_id
+       WHERE ${clausulaWhere} AND p.tipo_venta = 'unidad'`
+    )
+    .get(parametros);
+  return fila.unidades;
+}
+
+// Mismo molde que obtenerTopProductos, agrupado por categoría en vez de
+// producto, sin LIMIT (rediseño visual, Fase 6 -- donut de distribución
+// por categoría). No se deriva de topProductos en el cliente porque ese
+// solo trae el top 10: una categoría con muchos productos chicos podría
+// vender más en total que el top 10 y quedar subrepresentada.
+function obtenerVentasPorCategoria(filtros) {
+  const { clausulaWhere, parametros } = construirFiltro(filtros, 'v');
+  return db
+    .prepare(
+      `SELECT c.id AS categoriaId, c.nombre AS nombre, SUM(vi.subtotal) AS total
+       FROM ventas_items vi
+       JOIN ventas v ON v.id = vi.venta_id
+       JOIN productos p ON p.id = vi.producto_id
+       JOIN categorias c ON c.id = p.categoria_id
+       WHERE ${clausulaWhere}
+       GROUP BY c.id, c.nombre
+       ORDER BY total DESC`
+    )
+    .all(parametros);
+}
+
 function obtenerTopProductos(filtros, limite) {
   const { clausulaWhere, parametros } = construirFiltro(filtros, 'v');
   return db
@@ -112,5 +154,7 @@ module.exports = {
   obtenerDesglosePorMedioPago,
   obtenerVentasPorDia,
   obtenerTopProductos,
+  obtenerVentasPorCategoria,
+  obtenerUnidadesVendidas,
   obtenerValorEstimadoInventario,
 };

@@ -53,6 +53,8 @@ function reporteVentas({ desde, hasta, cajaSesionId }) {
     desglosePorMedioPago: repository.obtenerDesglosePorMedioPago(filtros),
     ventasPorDia,
     topProductos: repository.obtenerTopProductos(filtros, LIMITE_TOP_PRODUCTOS),
+    ventasPorCategoria: repository.obtenerVentasPorCategoria(filtros),
+    unidadesVendidas: repository.obtenerUnidadesVendidas(filtros),
     totalGastos,
     gananciaReal: totales.totalVentas - totalGastos,
   };

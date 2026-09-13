@@ -986,45 +986,20 @@ img {
   max-width: 260px;
 }
 
-.indicadores__svg--productos,
-.indicadores__svg--tendencia {
+/* Gráficos Chart.js (rediseño visual, Fase 6) -- un <canvas> con
+   responsive:true necesita un contenedor con altura explícita, si no
+   Chart.js lo estira sin límite. El donut queda más chico porque además
+   lleva su propia leyenda abajo (options.plugins.legend). */
+.indicadores__grafico--chartjs {
+  position: relative;
+  height: 260px;
   max-width: 100%;
 }
 
-.indicadores__grafico--donut {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.indicadores__svg--donut {
-  width: 160px;
-  max-width: 160px;
-  flex-shrink: 0;
-}
-
-.indicadores__leyenda-donut {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.indicadores__leyenda-donut li {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.indicadores__leyenda-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  flex-shrink: 0;
+.indicadores__grafico--donut-chartjs {
+  height: 220px;
+  max-width: 320px;
+  margin: 0 auto;
 }
 
 .indicadores__svg-valor {

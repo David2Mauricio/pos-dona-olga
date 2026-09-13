@@ -440,6 +440,12 @@
           </article>
 
           <article class="indicadores__tarjeta">
+            <h3 class="indicadores__etiqueta">Unidades vendidas</h3>
+            <p class="indicadores__descripcion">Solo productos por unidad (un producto por peso no suma a esta cifra, ver ADR 0022).</p>
+            <p id="indicadores-unidades-vendidas" class="indicadores__valor total numero">0</p>
+          </article>
+
+          <article class="indicadores__tarjeta">
             <h3 class="indicadores__etiqueta">Producto más vendido</h3>
             <p id="indicadores-producto-top" class="indicadores__valor"></p>
             <p id="indicadores-producto-top-monto" class="indicadores__detalle"></p>
@@ -466,18 +472,35 @@
         </div>
 
         <article class="indicadores__tarjeta indicadores__tarjeta--ancha">
-          <h3 class="indicadores__etiqueta">Top productos</h3>
-          <div id="grafico-productos" class="indicadores__grafico"></div>
+          <h3 class="indicadores__etiqueta">Tendencia de ventas</h3>
+          <div class="indicadores__grafico indicadores__grafico--chartjs">
+            <canvas id="grafico-tendencia" role="img" aria-label="Tendencia de ventas" aria-describedby="grafico-tendencia-resumen"></canvas>
+          </div>
+          <p id="grafico-tendencia-resumen" class="visualmente-oculto"></p>
         </article>
 
         <article class="indicadores__tarjeta indicadores__tarjeta--ancha">
-          <h3 class="indicadores__etiqueta">Tendencia de ventas</h3>
-          <div id="grafico-tendencia" class="indicadores__grafico"></div>
+          <h3 class="indicadores__etiqueta">Top productos</h3>
+          <div class="indicadores__grafico indicadores__grafico--chartjs">
+            <canvas id="grafico-productos" role="img" aria-label="Top productos" aria-describedby="grafico-productos-resumen"></canvas>
+          </div>
+          <p id="grafico-productos-resumen" class="visualmente-oculto"></p>
         </article>
 
         <article class="indicadores__tarjeta indicadores__tarjeta--ancha">
           <h3 class="indicadores__etiqueta">Ventas por medio de pago</h3>
-          <div id="grafico-medio-pago" class="indicadores__grafico indicadores__grafico--donut"></div>
+          <div class="indicadores__grafico indicadores__grafico--chartjs indicadores__grafico--donut-chartjs">
+            <canvas id="grafico-medio-pago" role="img" aria-label="Ventas por medio de pago" aria-describedby="grafico-medio-pago-resumen"></canvas>
+          </div>
+          <p id="grafico-medio-pago-resumen" class="visualmente-oculto"></p>
+        </article>
+
+        <article class="indicadores__tarjeta indicadores__tarjeta--ancha">
+          <h3 class="indicadores__etiqueta">Ventas por categoría</h3>
+          <div class="indicadores__grafico indicadores__grafico--chartjs indicadores__grafico--donut-chartjs">
+            <canvas id="grafico-categorias" role="img" aria-label="Ventas por categoría" aria-describedby="grafico-categorias-resumen"></canvas>
+          </div>
+          <p id="grafico-categorias-resumen" class="visualmente-oculto"></p>
         </article>
       </div>
     </section>
@@ -947,6 +970,7 @@
   </div>
 </div>
 
+<script src="/js/vendor/chart.umd.min.js"></script>
 <script type="module" src="/js/main.js"></script>
 </body>
 </html>
