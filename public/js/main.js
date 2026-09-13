@@ -295,11 +295,22 @@ botonCobrar.addEventListener('click', async () => {
 
 // --- Caja ---
 
+// El gate de "abrí la caja" tapa TODA la pantalla (.overlay, z-index 50)
+// -- por diseño solo tiene sentido sobre Mostrador, que es donde se
+// vende. Desde que Tablero es la pantalla de arranque (Fase 3 del
+// rediseño visual), un login sin caja abierta lo dejaba tapado apenas se
+// entraba, aunque Tablero ya tiene su propio aviso de "caja cerrada" en
+// una tarjeta (no necesita bloquear toda la pantalla para mostrarlo).
+function actualizarGateDeCaja() {
+  const enMostrador = !document.getElementById('vista-mostrador').hidden;
+  overlayCaja.hidden = !enMostrador || Boolean(cajaSesionActual);
+}
+
 async function verificarCaja() {
   cajaSesionActual = await api.obtenerCajaActual();
   actualizarEstadoCaja(elementoEstadoCaja, cajaSesionActual);
   establecerCajaSesionId(cajaSesionActual?.id ?? null);
-  overlayCaja.hidden = Boolean(cajaSesionActual);
+  actualizarGateDeCaja();
   actualizarEstadoBotonCobrar();
 }
 
@@ -320,6 +331,17 @@ formularioAbrirCaja.addEventListener('submit', async (evento) => {
   } finally {
     botonAbrir.disabled = false;
   }
+});
+
+// Sin esto, entrar a Mostrador sin caja abierta dejaba sin salida por el
+// nav (el gate tapa la sidebar) -- antes no hacía falta, Mostrador era la
+// única pantalla; ahora Tablero es la de arranque (Fase 3). Dispara
+// abrirTablero() igual que el click real del nav -- mostrarVista() sola
+// solo cambia qué sección se ve, no vuelve a pedir los datos, así que sin
+// esto el tablero se veía con lo que tenía cargado desde el login.
+document.getElementById('boton-volver-tablero').addEventListener('click', () => {
+  mostrarVista('tablero');
+  import('./tablero.js').then(({ abrirTablero }) => abrirTablero());
 });
 
 // --- Productos ---
@@ -393,6 +415,7 @@ export function mostrarVista(nombre) {
       boton.removeAttribute('aria-current');
     }
   });
+  actualizarGateDeCaja();
 }
 
 // --- Menú lateral en anchos chicos (ver ADR 0017, Bloque C) ---
@@ -430,6 +453,9 @@ navItems.forEach((boton) => {
     if (boton.disabled) return;
     cerrarMenu(); // navegar cierra el cajón -- sin esto, taparía la sección recién elegida
     const nombre = boton.dataset.vista;
+    if (nombre === 'tablero') {
+      import('./tablero.js').then(({ abrirTablero }) => abrirTablero());
+    }
     if (nombre === 'historial') {
       import('./historial.js').then(({ iniciarHistorial, abrirHistorial }) => {
         iniciarHistorial({ obtenerUsuarioActual });
@@ -543,7 +569,9 @@ iniciarAuth({
   alListo: async (usuario) => {
     actualizarNavegacionPorRol(usuario);
     await cargarModuloCierreCaja();
-    iniciarMostrador();
+    iniciarMostrador(); // precarga productos/caja/alertas en segundo plano, aunque Tablero sea lo primero que se ve
+    mostrarVista('tablero');
+    import('./tablero.js').then(({ abrirTablero }) => abrirTablero());
   },
   alCerrarSesion: () => {
     navHistorial.hidden = true;
@@ -553,7 +581,7 @@ iniciarAuth({
     navProveedores.hidden = true;
     navAuditoria.hidden = true;
     navGastos.hidden = true;
-    mostrarVista('mostrador');
+    mostrarVista('tablero');
     productosActivos = [];
     mapaProductos = new Map();
     cajaSesionActual = null;

@@ -61,7 +61,18 @@
 
     <ul class="nav-lateral__lista">
       <li>
-        <button id="nav-mostrador" type="button" class="nav-lateral__item" data-vista="mostrador" aria-current="page">
+        <button id="nav-tablero" type="button" class="nav-lateral__item" data-vista="tablero" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.2" />
+            <rect x="13" y="3.5" width="7.5" height="4.5" rx="1.2" />
+            <rect x="13" y="10" width="7.5" height="10.5" rx="1.2" />
+            <rect x="3.5" y="13" width="7.5" height="7.5" rx="1.2" />
+          </svg>
+          <span>Tablero</span>
+        </button>
+      </li>
+      <li>
+        <button id="nav-mostrador" type="button" class="nav-lateral__item" data-vista="mostrador">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
             <path d="M4 8.5l1.2-4h13.6l1.2 4" />
             <path d="M4 8.5h16v9.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8.5z" />
@@ -201,7 +212,46 @@
       </div>
     </header>
 
-    <section id="vista-mostrador" class="vista" aria-labelledby="titulo-vista-mostrador" data-vista-contenido>
+    <section id="vista-tablero" class="vista vista-secundaria" aria-labelledby="titulo-vista-tablero" data-vista-contenido>
+      <header class="tablero__cabecera">
+        <h2 id="titulo-vista-tablero">Avícola y Salsamentaria Doña Olga</h2>
+        <p>Resumen del día y accesos rápidos a lo que más se usa.</p>
+      </header>
+
+      <div class="tablero__accesos">
+        <button type="button" id="tablero-boton-cobrar" class="boton-primario">Cobrar en mostrador</button>
+        <button type="button" id="tablero-boton-nuevo-producto" class="boton-secundario" hidden>+ Nuevo producto</button>
+        <button type="button" id="tablero-boton-vencimientos" class="boton-secundario">Ver vencimientos</button>
+        <button type="button" id="tablero-boton-indicadores" class="boton-secundario" hidden>Ver indicadores</button>
+      </div>
+
+      <div class="tarjeta-kpi__grilla tablero__grilla" id="tablero-resumen-ventas" hidden>
+        <div class="tarjeta-kpi">
+          <p class="tarjeta-kpi__etiqueta">Total facturado hoy</p>
+          <p class="tarjeta-kpi__valor" id="tablero-total-facturado">$0</p>
+        </div>
+        <div class="tarjeta-kpi">
+          <p class="tarjeta-kpi__etiqueta">Transacciones</p>
+          <p class="tarjeta-kpi__valor" id="tablero-cantidad-ventas">0</p>
+        </div>
+        <div class="tarjeta-kpi">
+          <p class="tarjeta-kpi__etiqueta">Estado de caja</p>
+          <p class="tarjeta-kpi__valor" id="tablero-estado-caja">—</p>
+        </div>
+      </div>
+      <div class="tarjeta-kpi tarjeta-kpi--alerta" id="tablero-caja-cerrada-aviso" hidden>
+        <p class="tarjeta-kpi__etiqueta">Estado de caja</p>
+        <p class="tarjeta-kpi__valor">Cerrada</p>
+        <p class="tarjeta-kpi__detalle">Abrí la caja desde Mostrador para empezar a vender.</p>
+      </div>
+
+      <div class="tablero__tarjeta-alertas">
+        <h3>Alertas</h3>
+        <div id="tablero-lista-alertas"></div>
+      </div>
+    </section>
+
+    <section id="vista-mostrador" class="vista" aria-labelledby="titulo-vista-mostrador" data-vista-contenido hidden>
       <h2 id="titulo-vista-mostrador" class="visualmente-oculto">Mostrador</h2>
 
       <div class="contenido">
@@ -842,7 +892,10 @@
         <label for="input-monto-apertura">Monto inicial en caja</label>
         <input id="input-monto-apertura" type="number" inputmode="numeric" min="0" step="1" required />
       </div>
-      <button type="submit" class="boton-primario">Abrir caja</button>
+      <div class="overlay__acciones">
+        <button type="submit" class="boton-primario">Abrir caja</button>
+        <button type="button" id="boton-volver-tablero" class="boton-secundario">Volver al tablero</button>
+      </div>
     </form>
   </div>
 </div>

@@ -838,6 +838,76 @@ img {
   color: var(--color-peligro);
 }
 
+/* --- Tablero (rediseño visual, Fase 3) --- */
+
+.tablero__cabecera {
+  margin-bottom: 1.25rem;
+}
+
+.tablero__cabecera h2 {
+  margin: 0 0 0.25rem;
+}
+
+.tablero__cabecera p {
+  color: var(--color-texto-muted);
+  margin: 0;
+}
+
+.tablero__accesos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.tablero__grilla {
+  margin-bottom: 1.25rem;
+}
+
+.tablero__tarjeta-alertas {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-chico);
+  padding: 1.25rem;
+}
+
+.tablero__tarjeta-alertas h3 {
+  margin: 0 0 0.85rem;
+  font-size: 1rem;
+}
+
+.tablero__alertas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.tablero__alerta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+}
+
+/* Estado "sin alertas" (a propósito, no dejar la tarjeta vacía): un check
+   + mensaje positivo, para que no se lea como si el bloque estuviera roto
+   el día -normal- en que no hay ningún pendiente. */
+.tablero__sin-alertas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.5rem 1rem;
+  color: var(--color-texto-muted);
+}
+
+.tablero__sin-alertas-icono svg {
+  width: 40px;
+  height: 40px;
+  color: var(--color-exito);
+  margin-bottom: 0.6rem;
+}
+
 .indicadores__tarjeta--ancha {
   margin-top: 1rem;
 }
