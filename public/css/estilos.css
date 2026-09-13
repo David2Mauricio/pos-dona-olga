@@ -1179,7 +1179,7 @@ img {
 
 .catalogo__fila {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 5.5rem 1fr 5rem 6rem auto;
+  grid-template-columns: 1.5fr 1fr 5.5rem 1fr 8.5rem 6rem auto;
   align-items: center;
   gap: 1rem;
   padding: 0.75rem 1rem;
@@ -1231,6 +1231,57 @@ img {
 
 .catalogo__fila--gasto {
   grid-template-columns: 6.5rem 1.3fr 8rem 7rem 6rem auto;
+}
+
+/* Ajuste rápido +/-1 de stock en Productos (rediseño visual, Fase 4) --
+   mismo tamaño/molde que .item-carrito__paso del carrito (Fase 2). */
+.catalogo__fila-stock {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  justify-content: flex-end;
+}
+
+.catalogo__fila-paso {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--color-borde-fuerte);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.catalogo__fila-paso:hover {
+  border-color: var(--color-acento);
+  color: var(--color-acento);
+}
+
+.catalogo__fila-paso svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Tarjeta KPI "Stock crítico" (Productos/Inventario) duplica como filtro
+   rápido cuando hay al menos un producto por debajo del mínimo -- ver
+   catalogo.js:alternarFiltroStockCritico. Sin items no es clickeable
+   (no tiene sentido "filtrar por" una lista vacía). */
+.tarjeta-kpi--clickeable {
+  cursor: pointer;
+}
+
+.tarjeta-kpi--clickeable:hover {
+  border-color: var(--color-peligro);
+}
+
+.tarjeta-kpi--clickeable:focus-visible {
+  outline: 2px solid var(--color-acento);
+  outline-offset: 2px;
 }
 
 .auditoria__detalle summary {

@@ -36,6 +36,7 @@ import { mostrarToast } from './render.js';
 import { kilosTextoAGramos, gramosAKilosTexto } from './utils.js';
 import { obtenerUsuarioActual } from './auth.js';
 import { crearInfoTooltip } from './info-tooltip.js';
+import { iconoFlechaArriba, iconoFlechaAbajo, iconoEditar } from './icons.js';
 
 const formularioMovimiento = document.getElementById('formulario-movimiento-inventario');
 const inputMovimientoTipo = document.getElementById('input-movimiento-tipo');
@@ -54,6 +55,10 @@ const inputMovimientoCantidad = document.getElementById('input-movimiento-cantid
 const inputMovimientoMotivo = document.getElementById('input-movimiento-motivo');
 const inputMovimientoProveedor = document.getElementById('input-movimiento-proveedor');
 const tablaMovimientos = document.getElementById('tabla-movimientos-inventario');
+const kpiInventarioTotal = document.getElementById('kpi-inventario-total');
+const kpiInventarioStockCritico = document.getElementById('kpi-inventario-stock-critico');
+const kpiInventarioStockCriticoTarjeta = document.getElementById('kpi-inventario-stock-critico-tarjeta');
+const kpiInventarioStockCriticoCta = document.getElementById('kpi-inventario-stock-critico-cta');
 
 let mapaProductos = new Map();
 let mapaProveedores = new Map();
@@ -63,10 +68,13 @@ const MOTIVO_POR_DEFECTO = {
   ajuste: 'Corrección de conteo',
 };
 
+// Ícono direccional junto al badge de texto (rediseño visual, Fase 4) --
+// acompaña al badge, no lo reemplaza: el texto sigue siendo la fuente
+// principal de información para quien no distinga colores.
 const ETIQUETAS_TIPO = {
-  entrada: { texto: 'Entrada', clase: 'badge-alerta badge-alerta--exito' },
-  salida: { texto: 'Salida', clase: 'badge-alerta badge-alerta--peligro' },
-  ajuste: { texto: 'Ajuste', clase: 'badge-alerta' },
+  entrada: { texto: 'Entrada', clase: 'badge-alerta badge-alerta--exito', icono: iconoFlechaArriba },
+  salida: { texto: 'Salida', clase: 'badge-alerta badge-alerta--peligro', icono: iconoFlechaAbajo },
+  ajuste: { texto: 'Ajuste', clase: 'badge-alerta', icono: iconoEditar },
 };
 
 function mensajeDeError(error) {
@@ -169,7 +177,14 @@ function crearFilaMovimiento(movimiento) {
   const badge = document.createElement('span');
   const etiqueta = ETIQUETAS_TIPO[movimiento.tipo] ?? { texto: movimiento.tipo, clase: 'catalogo__fila-muted' };
   badge.className = etiqueta.clase;
-  badge.textContent = etiqueta.texto;
+  if (etiqueta.icono) {
+    const icono = document.createElement('span');
+    icono.className = 'icono';
+    icono.setAttribute('aria-hidden', 'true');
+    icono.innerHTML = etiqueta.icono;
+    badge.appendChild(icono);
+  }
+  badge.append(etiqueta.texto);
 
   const cantidad = document.createElement('span');
   cantidad.className = 'catalogo__fila-muted';
@@ -207,6 +222,46 @@ async function cargarMovimientos() {
   }
 }
 
+// Mismo criterio que catalogo.js:estaEnStockCritico -- cálculo en cliente
+// sobre la lista ya cargada, mismo umbral que ya usa el backend en
+// inventario.repository.js:obtenerAlertas.
+function estaEnStockCritico(producto) {
+  if (producto.stockMinimo == null) return false;
+  const stockActual = producto.tipoVenta === 'peso' ? producto.stockGramos : producto.stockUnidades;
+  return stockActual < producto.stockMinimo;
+}
+
+function renderizarKPIsInventario(productos) {
+  kpiInventarioTotal.textContent = String(productos.length);
+  const critico = productos.filter(estaEnStockCritico).length;
+  kpiInventarioStockCritico.textContent = String(critico);
+  kpiInventarioStockCriticoTarjeta.classList.toggle('tarjeta-kpi--alerta', critico > 0);
+  kpiInventarioStockCriticoTarjeta.classList.toggle('tarjeta-kpi--clickeable', critico > 0);
+  kpiInventarioStockCriticoTarjeta.setAttribute('role', critico > 0 ? 'button' : 'presentation');
+  kpiInventarioStockCriticoTarjeta.tabIndex = critico > 0 ? 0 : -1;
+  kpiInventarioStockCriticoCta.hidden = critico === 0;
+}
+
+// CTA: navega a Productos y activa el mismo filtro de stock crítico allá
+// (ver catalogo.js:activarFiltroStockCritico) -- no duplica el cálculo de
+// "quién está en stock crítico" en dos pantallas, solo el conteo para la
+// tarjeta.
+async function irAProductosConFiltroStockCritico() {
+  if (kpiInventarioStockCriticoTarjeta.getAttribute('role') !== 'button') return;
+  const [{ mostrarVista }, { abrirCatalogo, activarFiltroStockCritico }] = await Promise.all([import('./main.js'), import('./catalogo.js')]);
+  mostrarVista('productos');
+  await abrirCatalogo();
+  activarFiltroStockCritico();
+}
+
+kpiInventarioStockCriticoTarjeta.addEventListener('click', irAProductosConFiltroStockCritico);
+kpiInventarioStockCriticoTarjeta.addEventListener('keydown', (evento) => {
+  if (evento.key === 'Enter' || evento.key === ' ') {
+    evento.preventDefault();
+    irAProductosConFiltroStockCritico();
+  }
+});
+
 async function cargarInventario() {
   const usuarioActual = obtenerUsuarioActual();
   const esAdmin = usuarioActual?.rol === 'administrador';
@@ -217,6 +272,7 @@ async function cargarInventario() {
     mapaProductos = new Map(productos.map((producto) => [producto.id, producto]));
     poblarSelectProductos(productos);
     actualizarFormularioSegunTipo();
+    renderizarKPIsInventario(productos);
   } catch (error) {
     mostrarToast(mensajeDeError(error), 'error');
   }

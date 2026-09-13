@@ -339,6 +339,21 @@
       </div>
 
       <div id="panel-productos-lista" role="tabpanel">
+        <div class="tarjeta-kpi__grilla tablero__grilla">
+          <div class="tarjeta-kpi">
+            <p class="tarjeta-kpi__etiqueta">Total de referencias</p>
+            <p class="tarjeta-kpi__valor" id="kpi-productos-total">0</p>
+          </div>
+          <div class="tarjeta-kpi" id="kpi-productos-stock-critico-tarjeta">
+            <p class="tarjeta-kpi__etiqueta">Stock crítico</p>
+            <p class="tarjeta-kpi__valor" id="kpi-productos-stock-critico">0</p>
+          </div>
+          <div class="tarjeta-kpi">
+            <p class="tarjeta-kpi__etiqueta">Valorización total</p>
+            <p class="tarjeta-kpi__valor" id="kpi-productos-valorizacion">$0</p>
+          </div>
+        </div>
+
         <div class="catalogo__filtros">
           <label for="input-buscar-productos" class="visualmente-oculto">Buscar producto por nombre</label>
           <input id="input-buscar-productos" type="search" placeholder="Buscar por nombre…" autocomplete="off" />
@@ -467,6 +482,18 @@
       <header class="vista-secundaria__cabecera">
         <h2 id="titulo-vista-inventario">Inventario</h2>
       </header>
+
+      <div class="tarjeta-kpi__grilla tablero__grilla">
+        <div class="tarjeta-kpi">
+          <p class="tarjeta-kpi__etiqueta">Total de referencias</p>
+          <p class="tarjeta-kpi__valor" id="kpi-inventario-total">0</p>
+        </div>
+        <div class="tarjeta-kpi" id="kpi-inventario-stock-critico-tarjeta">
+          <p class="tarjeta-kpi__etiqueta">Stock crítico</p>
+          <p class="tarjeta-kpi__valor" id="kpi-inventario-stock-critico">0</p>
+          <p class="tarjeta-kpi__detalle" id="kpi-inventario-stock-critico-cta" hidden>Ver en Productos →</p>
+        </div>
+      </div>
 
       <form id="formulario-movimiento-inventario" class="inventario__formulario">
         <div class="campo">

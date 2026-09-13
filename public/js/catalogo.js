@@ -23,7 +23,7 @@
 import { api, ErrorApi } from './api.js';
 import { formatearMoneda, gramosAKilosTexto, kilosTextoAGramos } from './utils.js';
 import { mostrarToast } from './render.js';
-import { iconoEditar } from './icons.js';
+import { iconoEditar, iconoAgregar, iconoRestar } from './icons.js';
 import { crearInfoTooltip } from './info-tooltip.js';
 
 const tabProductos = document.getElementById('tab-productos');
@@ -37,6 +37,10 @@ const tablaProductos = document.getElementById('tabla-productos');
 const tablaCategorias = document.getElementById('tabla-categorias');
 const botonNuevoProducto = document.getElementById('boton-nuevo-producto');
 const botonNuevaCategoria = document.getElementById('boton-nueva-categoria');
+const kpiProductosTotal = document.getElementById('kpi-productos-total');
+const kpiProductosStockCritico = document.getElementById('kpi-productos-stock-critico');
+const kpiProductosStockCriticoTarjeta = document.getElementById('kpi-productos-stock-critico-tarjeta');
+const kpiProductosValorizacion = document.getElementById('kpi-productos-valorizacion');
 
 const overlayFormProducto = document.getElementById('overlay-form-producto');
 const tituloFormProducto = document.getElementById('titulo-form-producto');
@@ -223,6 +227,7 @@ formularioCategoria.addEventListener('submit', async (evento) => {
 // --- Productos ---
 
 let productosCargados = [];
+let soloStockCritico = false; // toggle del CTA en la tarjeta KPI "Stock crítico"
 
 async function cargarProductos() {
   tablaProductos.innerHTML = '';
@@ -236,12 +241,67 @@ async function cargarProductos() {
     if (selectFiltroCategoria.value) filtros.categoriaId = selectFiltroCategoria.value;
     if (selectFiltroActivo.value) filtros.activo = selectFiltroActivo.value;
     productosCargados = await api.listarProductosCatalogo(filtros);
+    renderizarKPIsProductos(productosCargados);
     renderizarProductosFiltrados();
   } catch (error) {
     tablaProductos.innerHTML = '';
     mostrarToast(mensajeDeError(error), 'error');
   }
 }
+
+// Cálculo en cliente sobre la lista ya cargada (confirmado explícito con
+// el cliente antes de esta fase: sin endpoint de agregados nuevo -- para
+// el tamaño real del catálogo de Doña Olga esto no tiene costo real de
+// rendimiento; si el catálogo creciera mucho, esto se movería al backend
+// recién ahí, no antes). "Stock crítico" usa el mismo criterio que ya usa
+// el backend en inventario.repository.js:obtenerAlertas (stock_minimo no
+// nulo y por debajo de él) -- no se reinventa el umbral acá.
+function estaEnStockCritico(producto) {
+  if (producto.stockMinimo == null) return false;
+  const stockActual = producto.tipoVenta === 'peso' ? producto.stockGramos : producto.stockUnidades;
+  return stockActual < producto.stockMinimo;
+}
+
+function renderizarKPIsProductos(productos) {
+  kpiProductosTotal.textContent = String(productos.length);
+
+  const critico = productos.filter(estaEnStockCritico).length;
+  kpiProductosStockCritico.textContent = String(critico);
+  kpiProductosStockCriticoTarjeta.classList.toggle('tarjeta-kpi--alerta', critico > 0);
+  kpiProductosStockCriticoTarjeta.classList.toggle('tarjeta-kpi--clickeable', critico > 0);
+  kpiProductosStockCriticoTarjeta.setAttribute('role', critico > 0 ? 'button' : 'presentation');
+  kpiProductosStockCriticoTarjeta.tabIndex = critico > 0 ? 0 : -1;
+
+  const valorizacion = productos.reduce((suma, producto) => {
+    const stockActual = producto.tipoVenta === 'peso' ? producto.stockGramos / 1000 : producto.stockUnidades;
+    return suma + producto.precioPublico * stockActual;
+  }, 0);
+  kpiProductosValorizacion.textContent = formatearMoneda(Math.round(valorizacion));
+}
+
+function alternarFiltroStockCritico() {
+  if (kpiProductosStockCriticoTarjeta.getAttribute('role') !== 'button') return;
+  soloStockCritico = !soloStockCritico;
+  kpiProductosStockCriticoTarjeta.setAttribute('aria-pressed', String(soloStockCritico));
+  renderizarProductosFiltrados();
+}
+
+// Exportado para el CTA de la tarjeta "Stock crítico" en Inventario (ver
+// inventario.js) -- navega acá y activa el mismo filtro, en vez de
+// duplicar el cálculo de qué está en stock crítico en dos módulos.
+export function activarFiltroStockCritico() {
+  soloStockCritico = true;
+  kpiProductosStockCriticoTarjeta.setAttribute('aria-pressed', 'true');
+  renderizarProductosFiltrados();
+}
+
+kpiProductosStockCriticoTarjeta.addEventListener('click', alternarFiltroStockCritico);
+kpiProductosStockCriticoTarjeta.addEventListener('keydown', (evento) => {
+  if (evento.key === 'Enter' || evento.key === ' ') {
+    evento.preventDefault();
+    alternarFiltroStockCritico();
+  }
+});
 
 // Mismo criterio que main.js: quita tildes/diéresis para que la búsqueda
 // no dependa de que el admin tipee los acentos.
@@ -255,9 +315,8 @@ function normalizar(texto) {
 
 function renderizarProductosFiltrados() {
   const consulta = normalizar(inputBuscarProductos.value);
-  const lista = consulta
-    ? productosCargados.filter((producto) => normalizar(producto.nombre).includes(consulta))
-    : productosCargados;
+  let lista = consulta ? productosCargados.filter((producto) => normalizar(producto.nombre).includes(consulta)) : productosCargados;
+  if (soloStockCritico) lista = lista.filter(estaEnStockCritico);
   renderizarProductos(lista);
 }
 
@@ -271,7 +330,7 @@ function renderizarProductos(lista) {
   if (lista.length === 0) {
     const vacio = document.createElement('p');
     vacio.className = 'catalogo__vacio';
-    vacio.textContent = 'No se encontraron productos con esos filtros.';
+    vacio.textContent = soloStockCritico ? 'Ningún producto está en stock crítico ahora mismo.' : 'No se encontraron productos con esos filtros.';
     tablaProductos.appendChild(vacio);
     return;
   }
@@ -297,8 +356,41 @@ function renderizarProductos(lista) {
     precios.textContent = formatearMoneda(producto.precioPublico);
 
     const stock = document.createElement('span');
-    stock.className = 'numero';
-    stock.textContent = formatearStock(producto);
+    stock.className = 'catalogo__fila-stock';
+
+    const stockValor = document.createElement('span');
+    stockValor.className = 'numero';
+    stockValor.textContent = formatearStock(producto);
+    stock.appendChild(stockValor);
+
+    // Ajuste rápido +/-1 SOLO para 'unidad' (rediseño visual, Fase 4) --
+    // mismo criterio que el stepper del carrito en Fase 2: un peso viene
+    // de la báscula, +/-1 no tiene sentido ahí. Dispara un movimiento de
+    // 'ajuste' real (mismo endpoint que ya usa Inventario) -- no es un
+    // atajo que edite productos.stock_unidades por su cuenta, así que el
+    // historial de movimientos sigue siendo la única fuente de verdad de
+    // cómo cambió el stock (ver ADR 0006 sobre lotes de vencimiento: ya
+    // establece que productos.stock_* es la fuente de verdad del stock
+    // actual, esto no crea una segunda). Convive con el ajuste manual
+    // completo de Inventario, que sigue siendo la vía para corregir a un
+    // número exacto.
+    if (producto.activo && producto.tipoVenta === 'unidad') {
+      const botonRestar = document.createElement('button');
+      botonRestar.type = 'button';
+      botonRestar.className = 'catalogo__fila-paso';
+      botonRestar.setAttribute('aria-label', `Restar una unidad de ${producto.nombre}`);
+      botonRestar.innerHTML = iconoRestar;
+      botonRestar.addEventListener('click', () => ajustarStockRapido(producto, -1));
+
+      const botonSumar = document.createElement('button');
+      botonSumar.type = 'button';
+      botonSumar.className = 'catalogo__fila-paso';
+      botonSumar.setAttribute('aria-label', `Sumar una unidad de ${producto.nombre}`);
+      botonSumar.innerHTML = iconoAgregar;
+      botonSumar.addEventListener('click', () => ajustarStockRapido(producto, 1));
+
+      stock.append(botonRestar, botonSumar);
+    }
 
     const estado = document.createElement('span');
     estado.className = producto.activo ? 'badge-alerta badge-alerta--exito' : 'badge-alerta badge-alerta--peligro';
@@ -314,6 +406,24 @@ function renderizarProductos(lista) {
     fila.append(nombre, categoria, tipoVenta, precios, stock, estado, botonEditar);
     tablaProductos.appendChild(fila);
   });
+}
+
+async function ajustarStockRapido(producto, delta) {
+  const stockActual = producto.stockUnidades;
+  const stockNuevo = Math.max(0, stockActual + delta);
+  if (stockNuevo === stockActual) return; // ya está en 0, restar no hace nada
+
+  try {
+    await api.crearMovimientoInventario({
+      tipo: 'ajuste',
+      productoId: producto.id,
+      stockNuevo,
+      motivo: 'Ajuste rápido desde Productos',
+    });
+    await cargarProductos();
+  } catch (error) {
+    mostrarToast(mensajeDeError(error), 'error');
+  }
 }
 
 inputBuscarProductos.addEventListener('input', renderizarProductosFiltrados);
