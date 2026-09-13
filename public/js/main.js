@@ -24,6 +24,7 @@ const botonTema = document.getElementById('boton-tema');
 const botonAlertas = document.getElementById('boton-alertas');
 const panelAlertas = document.getElementById('panel-alertas');
 const inputBusqueda = document.getElementById('input-busqueda');
+const chipsCategorias = document.getElementById('chips-categorias');
 const anuncioLector = document.getElementById('anuncio-lector');
 const grillaProductos = document.getElementById('grilla-productos');
 const listaCarrito = document.getElementById('lista-carrito');
@@ -52,6 +53,7 @@ const inputMontoApertura = document.getElementById('input-monto-apertura');
 
 let productosActivos = [];
 let mapaProductos = new Map();
+let categoriaSeleccionada = null; // null = "Todas"
 let cajaSesionActual = null;
 let ultimoIdAgregado = null;
 let cierreCajaEnProceso = false;
@@ -168,11 +170,49 @@ inputMontoRecibido.addEventListener('input', () => {
 
 function renderizarBusquedaActual() {
   const consulta = normalizar(inputBusqueda.value);
-  const resultado = consulta ? productosActivos.filter((producto) => normalizar(producto.nombre).includes(consulta)) : productosActivos;
+  let resultado = consulta ? productosActivos.filter((producto) => normalizar(producto.nombre).includes(consulta)) : productosActivos;
+  if (categoriaSeleccionada != null) {
+    resultado = resultado.filter((producto) => producto.categoriaId === categoriaSeleccionada);
+  }
   renderizarGrillaProductos(resultado, grillaProductos, agregarProductoAlCarrito);
 }
 
 inputBusqueda.addEventListener('input', debounce(renderizarBusquedaActual, 200));
+
+// --- Chips de categoría (rediseño visual, Fase 2): filtro en cliente
+// sobre productosActivos ya cargado, igual que el buscador de texto de
+// arriba -- se combinan los dos filtros, no son alternativos. ---
+function renderizarChipsCategorias(categorias) {
+  chipsCategorias.innerHTML = '';
+
+  const crearChip = (id, nombre) => {
+    const boton = document.createElement('button');
+    boton.type = 'button';
+    boton.className = categoriaSeleccionada === id ? 'chip chip--activo' : 'chip';
+    boton.textContent = nombre;
+    boton.setAttribute('aria-pressed', String(categoriaSeleccionada === id));
+    boton.addEventListener('click', () => {
+      categoriaSeleccionada = categoriaSeleccionada === id ? null : id;
+      renderizarChipsCategorias(categorias);
+      renderizarBusquedaActual();
+    });
+    return boton;
+  };
+
+  chipsCategorias.appendChild(crearChip(null, 'Todas'));
+  categorias.forEach((categoria) => chipsCategorias.appendChild(crearChip(categoria.id, categoria.nombre)));
+}
+
+async function cargarCategorias() {
+  try {
+    const categorias = await api.listarCategorias();
+    renderizarChipsCategorias(categorias);
+  } catch (error) {
+    // No bloquea el mostrador si falla -- el buscador de texto sigue
+    // funcionando igual sin los chips.
+    mostrarToast(mensajeDeError(error), 'error');
+  }
+}
 
 // --- Lector de código de barras (HID, ver ADR de la interfaz) ---
 
@@ -491,7 +531,7 @@ function actualizarNavegacionPorRol(usuario) {
 async function iniciarMostrador() {
   try {
     await cargarProductos(); // primero: renderizarAlertas necesita mapaProductos ya listo
-    await Promise.all([verificarCaja(), cargarAlertas()]);
+    await Promise.all([verificarCaja(), cargarAlertas(), cargarCategorias()]);
   } catch (error) {
     // Acá sí puede ser un error de red real (el servidor no respondió) —
     // ya no absorbe 401 de sesión, eso lo maneja auth.js antes de llegar acá.

@@ -33,6 +33,15 @@ export const iconoQuitar = `
   <path d="M6 6l12 12M18 6L6 18" />
 </svg>`;
 
+// Mismo molde que iconoAgregar (círculo + trazo), para el stepper +/- del
+// carrito -- iconoQuitar (la X) ya significa "sacar la línea completa del
+// carrito", no "restar una unidad", así que no se reusa para esto.
+export const iconoRestar = `
+<svg ${ATRIBUTOS_BASE}>
+  <circle cx="12" cy="12" r="9.5" />
+  <path d="M8 12h8" />
+</svg>`;
+
 export const iconoCheck = `
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" class="icono-check">
   <path d="M5 13l4 4L19 7" />
@@ -137,6 +146,26 @@ export const iconoInventario = `
   <path d="M3.5 8L12 3.5 20.5 8 12 12.5 3.5 8z" />
   <path d="M3.5 8v9L12 21.5 20.5 17V8" />
   <path d="M12 12.5V21.5" />
+</svg>`;
+
+export const iconoCarrito = `
+<svg ${ATRIBUTOS_BASE}>
+  <circle cx="9.5" cy="20" r="1.4" fill="currentColor" stroke="none" />
+  <circle cx="17.5" cy="20" r="1.4" fill="currentColor" stroke="none" />
+  <path d="M2.5 3.5h2.4l2.1 11.3a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6l1.4-7.8H6" />
+</svg>`;
+
+// Flechas direccionales para movimientos de inventario (rediseño visual):
+// entrada/salida se distinguen por color en CSS (--color-exito/--color-
+// peligro), el ícono es el mismo trazo salvo la dirección.
+export const iconoFlechaArriba = `
+<svg ${ATRIBUTOS_BASE}>
+  <path d="M12 19V5M6 11l6-6 6 6" />
+</svg>`;
+
+export const iconoFlechaAbajo = `
+<svg ${ATRIBUTOS_BASE}>
+  <path d="M12 5v14M6 13l6 6 6-6" />
 </svg>`;
 
 export function crearIcono(marcadoSvg, claseAdicional = '') {

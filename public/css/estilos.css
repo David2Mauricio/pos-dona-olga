@@ -1920,11 +1920,81 @@ img {
   height: 18px;
 }
 
+/* Stepper +/- (rediseño visual, Fase 2) -- solo aparece para 'unidad',
+   ver render.js:crearFilaCarrito. Mismo molde que .item-carrito__quitar,
+   más chico (28px) porque conviven tres controles en la misma fila. */
+.item-carrito__paso {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--color-borde-fuerte);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.item-carrito__paso:hover {
+  border-color: var(--color-acento);
+  color: var(--color-acento);
+}
+
+.item-carrito__paso svg {
+  width: 16px;
+  height: 16px;
+}
+
 .carrito-vacio {
   color: var(--color-texto-muted);
   text-align: center;
   padding: 2rem 1rem;
   font-size: 0.9rem;
+}
+
+.carrito-vacio__icono {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.carrito-vacio__icono svg {
+  width: 40px;
+  height: 40px;
+  color: var(--color-borde-fuerte);
+}
+
+/* --- Chips de categoría (rediseño visual, Fase 2): filtran la grilla del
+   Mostrador en cliente, sin endpoint nuevo -- ver main.js. --- */
+.chips-categorias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.chip {
+  border: 1px solid var(--color-borde-fuerte);
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  min-height: 36px;
+}
+
+.chip:hover {
+  border-color: var(--color-acento);
+}
+
+.chip--activo {
+  background: var(--color-acento);
+  border-color: var(--color-acento);
+  color: var(--color-texto-sobre-acento);
 }
 
 /* --- Panel de alertas (popover, no modal) --- */

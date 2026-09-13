@@ -208,13 +208,15 @@
         <section class="panel-productos" aria-labelledby="titulo-productos">
           <h2 id="titulo-productos" class="visualmente-oculto">Buscar y agregar productos</h2>
 
+          <div id="chips-categorias" class="chips-categorias" role="group" aria-label="Filtrar por categoría"></div>
+
           <div class="busqueda">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
               <circle cx="11" cy="11" r="7" />
               <path d="M20.5 20.5l-4.3-4.3" />
             </svg>
-            <label for="input-busqueda" class="visualmente-oculto">Buscar producto por nombre</label>
-            <input id="input-busqueda" type="search" placeholder="Buscar producto por nombre…" autocomplete="off" />
+            <label for="input-busqueda" class="visualmente-oculto">Buscar producto por nombre o escanear código de barras</label>
+            <input id="input-busqueda" type="search" placeholder="Buscar producto o escanear código de barras…" autocomplete="off" />
           </div>
 
           <!-- El lector de código de barras no tiene campo propio (ver

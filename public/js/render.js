@@ -3,7 +3,7 @@
 // insertan siempre con textContent, nunca con innerHTML interpolado:
 // aunque el backend es propio y confiable, es el hábito correcto.
 
-import { iconoQuitar, iconoAlerta, iconoCheck, iconoEditar } from './icons.js';
+import { iconoQuitar, iconoAlerta, iconoCheck, iconoEditar, iconoCarrito, iconoAgregar, iconoRestar } from './icons.js';
 import { formatearMoneda, gramosAKilosTexto, kilosTextoAGramos } from './utils.js';
 import { carrito } from './cart.js';
 import { crearInfoTooltip } from './info-tooltip.js';
@@ -91,7 +91,13 @@ export function renderizarCarrito({
   if (items.length === 0) {
     const vacio = document.createElement('li');
     vacio.className = 'carrito-vacio';
-    vacio.textContent = 'El carrito está vacío. Buscá o escaneá un producto para empezar.';
+    const icono = document.createElement('span');
+    icono.className = 'carrito-vacio__icono';
+    icono.innerHTML = iconoCarrito;
+    icono.setAttribute('aria-hidden', 'true');
+    const texto = document.createElement('p');
+    texto.textContent = 'El carrito está vacío. Buscá o escaneá un producto para empezar.';
+    vacio.append(icono, texto);
     contenedorLista.appendChild(vacio);
   } else {
     items.forEach((item) => {
@@ -193,7 +199,34 @@ function crearFilaCarrito(item, alCambiarCantidad, alQuitar, alAjustarPrecio, al
   unidad.className = 'item-carrito__unidad';
   unidad.textContent = esPeso ? 'kg' : 'u.';
 
-  detalle.append(etiqueta, inputCantidad, unidad);
+  // Stepper +/- SOLO para 'unidad' -- un peso viene de la báscula, no se
+  // "incrementa" de a pasos fijos (ver rediseño visual, Fase 2). Para
+  // 'peso' el campo se queda como texto libre en kg, igual que antes.
+  if (esPeso) {
+    detalle.append(etiqueta, inputCantidad, unidad);
+  } else {
+    const botonRestar = document.createElement('button');
+    botonRestar.type = 'button';
+    botonRestar.className = 'item-carrito__paso';
+    botonRestar.setAttribute('aria-label', `Restar una unidad de ${item.producto.nombre}`);
+    botonRestar.innerHTML = iconoRestar;
+    botonRestar.addEventListener('click', () => {
+      const actual = Number.parseInt(inputCantidad.value, 10) || item.cantidad;
+      if (actual > 1) alCambiarCantidad(item.producto.id, actual - 1);
+    });
+
+    const botonSumar = document.createElement('button');
+    botonSumar.type = 'button';
+    botonSumar.className = 'item-carrito__paso';
+    botonSumar.setAttribute('aria-label', `Sumar una unidad de ${item.producto.nombre}`);
+    botonSumar.innerHTML = iconoAgregar;
+    botonSumar.addEventListener('click', () => {
+      const actual = Number.parseInt(inputCantidad.value, 10) || item.cantidad;
+      alCambiarCantidad(item.producto.id, actual + 1);
+    });
+
+    detalle.append(etiqueta, botonRestar, inputCantidad, botonSumar, unidad);
+  }
   info.appendChild(detalle);
 
   const subtotal = document.createElement('span');
