@@ -283,6 +283,36 @@ img {
 #shell {
   display: flex;
   min-height: 100vh;
+  position: relative;
+}
+
+/* Relleno navy detrás de todo #shell, del mismo ancho que el nav
+   (rediseño visual, Fase 6 -- hallazgo real durante la verificación:
+   Indicadores pasó a medir más que una pantalla por las gráficas nuevas,
+   y ahí quedó expuesto que `.nav-lateral` -- sticky, height:100vh -- solo
+   pinta navy hasta el alto de la ventana, nunca el alto real del
+   documento. En el uso normal esto es invisible porque el sticky se ve
+   perfecto scrolleando: la franja de abajo nunca se ve "vacía" porque el
+   nav la va tapando en su recorrido. Pero cualquier captura de página
+   completa "aplanada" (Lighthouse/axe calculan contraste así) no puede
+   representar el sticky, y ahí sí se ve el hueco -- el fondo de la
+   página (--color-fondo) quedaba detrás del badge de usuario en vez de
+   navy, y eso es lo que Lighthouse marcó como bajo contraste al crecer
+   Indicadores. Este ::before, en cambio, mide el alto real de #shell
+   (100% de su propio contenido, no de la ventana) sin importar cuánto
+   mida la página, así que tapa ese hueco tanto para un usuario real como
+   para cualquier herramienta que aplane la página. background-color (no
+   background) a propósito: mantiene la transición de tema ya existente
+   (var(--duracion-tema)), algo que un gradient no puede animar. */
+#shell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 220px;
+  height: 100%;
+  background-color: var(--color-acento);
+  transition: background-color var(--duracion-tema) var(--easing);
 }
 
 /* Fondo navy sólido (--color-acento) en vez de --color-superficie: más
