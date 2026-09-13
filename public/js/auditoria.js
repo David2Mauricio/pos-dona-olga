@@ -12,7 +12,25 @@
 
 import { api, ErrorApi } from './api.js';
 import { mostrarToast } from './render.js';
+import {
+  iconoCaja,
+  iconoAnular,
+  iconoEditar,
+  iconoAgregar,
+  iconoQuitar,
+  iconoCambioRol,
+  iconoCandado,
+  iconoEliminar,
+  iconoGasto,
+} from './icons.js';
 
+// Lista verificada contra el código real (grep de registrarAuditoria en
+// src/, no la lista original del brief -- esa se quedó corta: le
+// faltaba baja_usuario, que sí existe desde ADR 0018/usuarios.service.js).
+// Si se agrega un accion nuevo en el backend y no se agrega acá, cae al
+// fallback (?? accion / sin ícono) en vez de romper -- pero eso debería
+// ser la excepción, no el estado esperado: cualquier accion nuevo debería
+// sumarse a este mapa a propósito, no quedarse en el fallback sin decidir.
 const ETIQUETAS_ACCION = {
   cierre_caja: 'Cierre de caja',
   anulacion_venta: 'Anulación de venta',
@@ -22,6 +40,34 @@ const ETIQUETAS_ACCION = {
   cambio_rol_usuario: 'Cambio de rol',
   reseteo_password: 'Reseteo de contraseña',
   ajuste_inventario: 'Ajuste de inventario',
+  eliminacion_usuario: 'Eliminación de usuario',
+  registro_gasto: 'Registro de gasto',
+  baja_gasto: 'Baja de gasto',
+};
+
+// Un ícono por tipo de acción (rediseño visual, Fase 7). Reutiliza el
+// vocabulario ya establecido en el resto de la app en vez de inventar uno
+// nuevo por entidad: iconoEditar ya significa "corrección manual de un
+// valor" (inventario.js lo usa para el tipo 'ajuste'), así que
+// ajuste_inventario y override_precio comparten ese mismo ícono a
+// propósito -- son la misma idea (alguien corrigió un número a mano)
+// aplicada a dos entidades distintas. Mismo criterio para baja_usuario/
+// baja_gasto con iconoQuitar (ambas son la misma acción -- desactivar,
+// reversible -- sobre entidades distintas). Solo se agregaron íconos
+// nuevos (iconoCaja, iconoCambioRol, iconoGasto) donde no había ninguno
+// reusable sin forzarlo.
+const ICONOS_ACCION = {
+  cierre_caja: iconoCaja,
+  anulacion_venta: iconoAnular,
+  override_precio: iconoEditar,
+  alta_usuario: iconoAgregar,
+  baja_usuario: iconoQuitar,
+  cambio_rol_usuario: iconoCambioRol,
+  reseteo_password: iconoCandado,
+  ajuste_inventario: iconoEditar,
+  eliminacion_usuario: iconoEliminar,
+  registro_gasto: iconoGasto,
+  baja_gasto: iconoQuitar,
 };
 
 const tablaAuditoria = document.getElementById('tabla-auditoria');
@@ -120,7 +166,15 @@ function crearFilaAuditoria(entrada) {
 
   const accion = document.createElement('span');
   accion.className = 'badge-alerta';
-  accion.textContent = etiquetaAccion(entrada.accion);
+  const iconoAccion = ICONOS_ACCION[entrada.accion];
+  if (iconoAccion) {
+    const icono = document.createElement('span');
+    icono.className = 'icono';
+    icono.setAttribute('aria-hidden', 'true');
+    icono.innerHTML = iconoAccion;
+    accion.appendChild(icono);
+  }
+  accion.append(etiquetaAccion(entrada.accion));
 
   const usuario = document.createElement('span');
   usuario.textContent = entrada.usuarioNombre ?? 'Sistema';

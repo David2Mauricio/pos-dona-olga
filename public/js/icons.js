@@ -180,6 +180,41 @@ export const iconoFlechaAbajo = `
   <path d="M12 5v14M6 13l6 6 6-6" />
 </svg>`;
 
+// Tres íconos nuevos para el mapa ícono↔tipo de acción de Auditoría
+// (rediseño visual, Fase 7) -- los demás tipos de acción reusan íconos ya
+// existentes (ver ETIQUETAS_ACCION/ICONOS_ACCION en auditoria.js), estos
+// tres no tenían un ícono con el que valiera la pena forzar la reutilización.
+
+// Cajón de caja registradora (cierre_caja) -- línea horizontal como la
+// unión de la fachada del cajón, "U" como el tirador. Deliberadamente
+// distinto de iconoCandado (arco arriba de un cuerpo, sin línea interna)
+// para no confundirse en la misma columna de la tabla de auditoría.
+export const iconoCaja = `
+<svg ${ATRIBUTOS_BASE}>
+  <rect x="2.5" y="7" width="19" height="12" rx="1.5" />
+  <path d="M2.5 12h19" />
+  <path d="M10 12v2.2a2 2 0 0 0 4 0V12" />
+</svg>`;
+
+// Dos flechas en sentido opuesto (cambio_rol_usuario) -- motivo estándar
+// de "intercambio", no una variación de iconoFlechaArriba/iconoFlechaAbajo
+// (esas son direccionales para entrada/salida de inventario, un
+// significado distinto).
+export const iconoCambioRol = `
+<svg ${ATRIBUTOS_BASE}>
+  <path d="M4 7h13M17 7l-3-3M17 7l-3 3" />
+  <path d="M20 17H7M7 17l3-3M7 17l3 3" />
+</svg>`;
+
+// Billete (registro_gasto) -- rectángulo + óvalo central, mismo molde que
+// un billete de banco genérico.
+export const iconoGasto = `
+<svg ${ATRIBUTOS_BASE}>
+  <rect x="2.5" y="6.5" width="19" height="11" rx="1.8" />
+  <circle cx="12" cy="12" r="2.5" />
+  <path d="M5.5 9.5h1M17.5 14.5h1" />
+</svg>`;
+
 export function crearIcono(marcadoSvg, claseAdicional = '') {
   const contenedor = document.createElement('span');
   contenedor.className = `icono ${claseAdicional}`.trim();
