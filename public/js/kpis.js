@@ -570,7 +570,14 @@ function renderizar(reporteActual, reporteAnterior, rangos) {
 
   elementoTicketPromedio.textContent =
     reporteActual.ticketPromedio === null ? '—' : formatearMoneda(reporteActual.ticketPromedio);
-  elementoUnidadesVendidas.textContent = String(reporteActual.unidadesVendidas);
+  // ?? 0, no reporteActual.unidadesVendidas directo: un bug real (ver
+  // incidente post-Fase 6) mostró qué pasa si este campo llega ausente --
+  // un servidor Node que no se reinició después de actualizar el código
+  // sigue sirviendo la forma vieja del reporte aunque el HTML/JS del
+  // navegador ya sean los nuevos. Sin el default, esto solo mostraba el
+  // texto "undefined"; con ventasPorCategoria (abajo) el mismo problema
+  // tumbaba el panel entero, no solo una tarjeta.
+  elementoUnidadesVendidas.textContent = String(reporteActual.unidadesVendidas ?? 0);
 
   const masVendido = reporteActual.topProductos[0];
   if (masVendido) {
@@ -590,7 +597,17 @@ function renderizar(reporteActual, reporteAnterior, rangos) {
   renderizarGraficoProductos(reporteActual.topProductos);
   renderizarGraficoTendencia(reporteActual.ventasPorDia);
   renderizarGraficoDonutMedioPago(reporteActual.desglosePorMedioPago);
-  renderizarGraficoDonutCategoria(reporteActual.ventasPorCategoria);
+  // ?? [], no reporteActual.ventasPorCategoria directo -- ver el comentario
+  // de unidadesVendidas arriba. Sin este default, un reporte sin este
+  // campo (por ejemplo un backend que todavía no se reinició tras
+  // actualizar) hace que .map() explote acá adentro; como el error queda
+  // atrapado por el catch de cargarIndicadores() sin loguearse (ver ese
+  // catch, también corregido en este mismo incidente), tumbaba TODO el
+  // panel -- ni siquiera las tarjetas que ya se habían pintado antes de
+  // esta línea llegaban a mostrarse, porque contenedorContenido recién se
+  // revela al final de esta función. Con el default, si falta el campo,
+  // el donut de categoría simplemente muestra su propio estado vacío.
+  renderizarGraficoDonutCategoria(reporteActual.ventasPorCategoria ?? []);
 
   rangoActualParaHistorial = rangos.actual;
   cargarYRenderizarDesglose(rangos.actual);
@@ -612,6 +629,13 @@ async function cargarIndicadores() {
     ]);
     renderizar(reporteActual, reporteAnterior, rangos);
   } catch (error) {
+    // console.error acá es nuevo (ver incidente post-Fase 6, ADR 0022):
+    // antes este catch atrapaba CUALQUIER excepción -- de la petición o de
+    // renderizar() completo -- sin dejar rastro real en la consola, solo
+    // este mensaje genérico. Un bug real (reporteActual llegando sin
+    // ventasPorCategoria) quedó invisible para el diagnóstico normal por
+    // esto mismo: no había nada que ver en DevTools más allá del toast.
+    console.error('Error al cargar Indicadores:', error);
     contenedorCargando.textContent = 'No se pudo cargar el panel de indicadores.';
     mostrarToast(mensajeDeError(error), 'error');
   }
