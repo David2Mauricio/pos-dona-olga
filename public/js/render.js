@@ -158,17 +158,36 @@ function crearFilaCarrito(item, alCambiarCantidad, alQuitar, alAjustarPrecio, al
     filaPrecio.appendChild(badge);
   }
 
-  info.appendChild(filaPrecio);
-  info.appendChild(crearAjustePrecio(item, alAjustarPrecio, alQuitarAjuste));
+  // Fase 9 (tarea 2, reorganización de la tarjeta): precio/kg y "Ajustar
+  // precio" comparten una misma fila (space-between) en vez de que el
+  // botón ocupe su propia línea completa -- mismo patrón para cualquier
+  // ítem del carrito, no algo puntual de un producto. El formulario
+  // expandible (crearAjustePrecio ahora devuelve {boton, formulario} por
+  // separado) sigue yendo debajo, a lo ancho, cuando se abre.
+  const { boton: botonAjustePrecio, formulario: formularioAjustePrecio } = crearAjustePrecio(item, alAjustarPrecio, alQuitarAjuste);
+  const filaPrecioYAjuste = document.createElement('div');
+  filaPrecioYAjuste.className = 'item-carrito__fila-precio';
+  filaPrecioYAjuste.append(filaPrecio, botonAjustePrecio);
+  info.append(filaPrecioYAjuste, formularioAjustePrecio);
 
   const detalle = document.createElement('div');
-  detalle.className = 'item-carrito__detalle';
+  detalle.className = esPeso ? 'item-carrito__detalle item-carrito__detalle--peso' : 'item-carrito__detalle';
 
   const idInput = `cantidad-item-${item.producto.id}`;
   const etiqueta = document.createElement('label');
   etiqueta.setAttribute('for', idInput);
-  etiqueta.className = 'visualmente-oculto';
-  etiqueta.textContent = esPeso ? `Peso de ${item.producto.nombre} en kilos` : `Cantidad de ${item.producto.nombre}`;
+  if (esPeso) {
+    // Visible ("Cantidad", Fase 9 tarea 2) en vez de depender solo del
+    // sufijo "kg" al lado del campo para que se entienda qué es. El
+    // nombre accesible completo (más específico, útil con varios ítems
+    // en el carrito) se mantiene vía aria-label, que le gana al texto
+    // visible del <label> al calcular el nombre accesible del input.
+    etiqueta.textContent = 'Cantidad';
+    etiqueta.setAttribute('aria-label', `Peso de ${item.producto.nombre} en kilos`);
+  } else {
+    etiqueta.className = 'visualmente-oculto';
+    etiqueta.textContent = `Cantidad de ${item.producto.nombre}`;
+  }
 
   const inputCantidad = document.createElement('input');
   inputCantidad.id = idInput;
@@ -203,7 +222,15 @@ function crearFilaCarrito(item, alCambiarCantidad, alQuitar, alAjustarPrecio, al
   // "incrementa" de a pasos fijos (ver rediseño visual, Fase 2). Para
   // 'peso' el campo se queda como texto libre en kg, igual que antes.
   if (esPeso) {
-    detalle.append(etiqueta, inputCantidad, unidad);
+    // "Cantidad" (la etiqueta visible) va arriba, en su propia línea;
+    // input + "kg" quedan en una fila propia debajo (Fase 9, tarea 2) --
+    // por eso van en un contenedor aparte, no sueltos junto a la etiqueta
+    // como en la variante por unidad (ahí el label sigue oculto, no hace
+    // falta una fila separada para él).
+    const filaInput = document.createElement('div');
+    filaInput.className = 'item-carrito__detalle-fila';
+    filaInput.append(inputCantidad, unidad);
+    detalle.append(etiqueta, filaInput);
   } else {
     const botonRestar = document.createElement('button');
     botonRestar.type = 'button';
@@ -250,10 +277,12 @@ function crearFilaCarrito(item, alCambiarCantidad, alQuitar, alAjustarPrecio, al
 // formulario es DOM directo (mismo criterio que el panel de alertas), no
 // dispara un re-render del carrito — solo confirmar/quitar el ajuste sí,
 // porque ahí cambia el precio/subtotal real.
+//
+// Devuelve {boton, formulario} por separado (antes: un único contenedor
+// con los dos adentro) desde Fase 9 (tarea 2): el botón ahora comparte
+// fila con el precio/kg, pero el formulario expandible sigue yendo a lo
+// ancho, debajo de esa fila -- crearFilaCarrito arma esa disposición.
 function crearAjustePrecio(item, alAjustarPrecio, alQuitarAjuste) {
-  const contenedor = document.createElement('div');
-  contenedor.className = 'item-carrito__ajuste';
-
   const botonAbrir = document.createElement('button');
   botonAbrir.type = 'button';
   botonAbrir.className = 'item-carrito__ajuste-boton';
@@ -328,8 +357,7 @@ function crearAjustePrecio(item, alAjustarPrecio, alQuitarAjuste) {
     alAjustarPrecio(item.producto.id, precio, motivo);
   });
 
-  contenedor.append(botonAbrir, formulario);
-  return contenedor;
+  return { boton: botonAbrir, formulario };
 }
 
 export function actualizarEstadoCaja(elemento, sesion) {

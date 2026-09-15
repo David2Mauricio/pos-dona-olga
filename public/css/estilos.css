@@ -2307,8 +2307,17 @@ img {
 
 /* --- Ajuste de precio (Fase 2, ver ADR 0011/0013) --- */
 
-.item-carrito__ajuste {
-  margin-top: 0.35rem;
+/* Precio/kg y "Ajustar precio" en la misma fila (Fase 9, tarea 2) --
+   antes el botón vivía en .item-carrito__ajuste, una fila propia debajo
+   del precio, ocupando espacio vertical de más. El formulario expandible
+   (.item-carrito__ajuste-form) queda afuera de esta fila a propósito:
+   sigue yendo a lo ancho, debajo, cuando se abre -- ver crearFilaCarrito
+   en render.js. */
+.item-carrito__fila-precio {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .item-carrito__ajuste-boton {
@@ -2320,6 +2329,7 @@ img {
   padding: 0;
   color: var(--color-acento);
   font-size: 0.75rem;
+  flex-shrink: 0;
   font-weight: 500;
 }
 
@@ -2367,6 +2377,27 @@ img {
   align-items: center;
   gap: 0.4rem;
   margin-top: 0.25rem;
+}
+
+/* Solo peso (Fase 9, tarea 2): "Cantidad" visible arriba, en su propia
+   línea, y la fila de input+"kg" debajo -- la variante por unidad se
+   queda con todo en una sola fila (label oculto, los botones +/- ya
+   hacen obvio qué es el campo, no hace falta el texto). */
+.item-carrito__detalle--peso {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+.item-carrito__detalle--peso label {
+  font-size: 0.75rem;
+  color: var(--color-texto-muted);
+}
+
+.item-carrito__detalle-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .item-carrito__unidad {
