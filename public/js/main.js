@@ -1,6 +1,7 @@
 import { api, ErrorApi } from './api.js';
 import { carrito } from './cart.js';
 import { iniciarTema } from './theme.js';
+import { iniciarAccesibilidad } from './accesibilidad.js';
 import { iniciarLectorCodigoBarras } from './barcode-scanner.js';
 import { renderizarGrillaProductos, renderizarCarrito, actualizarEstadoCaja, renderizarAlertas, mostrarToast } from './render.js';
 import { debounce, formatearMoneda } from './utils.js';
@@ -391,7 +392,8 @@ document.addEventListener('keydown', (evento) => {
 // lista (ver auth.js); una sesión que vence a mitad de uso la resuelve el
 // hook central de api.js (registrarOnSesionExpirada), no este bloque.
 
-iniciarTema([botonTema, botonAccesibilidadFlotante]);
+iniciarTema(botonTema);
+iniciarAccesibilidad(botonAccesibilidadFlotante);
 actualizarVisibilidadMontoRecibido();
 reRenderizarCarrito();
 

@@ -588,17 +588,52 @@
     </section>
   </main>
 
-  <!-- Tarea 3 (accesibilidad flotante, alcance reducido -- ver ADR): sin
-       panel de accesibilidad propio todavía (no existe, queda para una
-       tarea aparte), así que por ahora es un SEGUNDO toggle de tema,
-       sincronizado con #boton-tema vía theme.js:iniciarTema (acepta una
-       lista de botones). Fuera de <main>, hermano de nav-lateral y con
-       position:fixed -- queda visible en las 11 pantallas sin importar
-       qué .vista esté activa, y es el único de los dos toggles que sigue
-       visible en mobile (la sidebar se colapsa detrás del menú hamburguesa
-       por debajo de 768px, ver ADR 0017 Bloque C). z-index entre el
-       contenido normal y los overlays/menú móvil -- ver estilos.css. -->
-  <button id="boton-accesibilidad-flotante" type="button" class="boton-accesibilidad-flotante" aria-label="Cambiar tema"></button>
+  <!-- Reconvertido a botón de accesibilidad real (Fase 9, tarea 1, ver
+       ADR 0030) -- ya no togglea tema (eso vuelve a ser función exclusiva
+       de #boton-tema en la sidebar). Fuera de <main>, hermano de
+       nav-lateral y con position:fixed -- queda visible en las 11
+       pantallas sin importar qué .vista esté activa, y es el único
+       control que sigue alcanzable en mobile sin abrir el menú (la
+       sidebar se colapsa detrás del hamburguesa por debajo de 768px, ver
+       ADR 0017 Bloque C). z-index entre el contenido normal y los
+       overlays/menú móvil -- ver estilos.css. -->
+  <button id="boton-accesibilidad-flotante" type="button" class="boton-accesibilidad-flotante" aria-label="Accesibilidad">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9.5" />
+      <circle cx="12" cy="7.8" r="1.6" />
+      <path d="M12 10.6v5M8.3 12.4h7.4M9.6 20l2.4-4.4 2.4 4.4" />
+    </svg>
+  </button>
+</div>
+
+<div id="overlay-accesibilidad" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-overlay-accesibilidad" hidden>
+  <div class="overlay__panel">
+    <svg class="overlay__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9.5" />
+      <circle cx="12" cy="7.8" r="1.6" />
+      <path d="M12 10.6v5M8.3 12.4h7.4M9.6 20l2.4-4.4 2.4 4.4" />
+    </svg>
+    <h2 id="titulo-overlay-accesibilidad">Accesibilidad</h2>
+    <p>Ajustá el tamaño del texto y el contraste de la interfaz. El cambio se guarda para la próxima vez que entrés.</p>
+
+    <div class="campo">
+      <span class="campo-titulo" id="titulo-tamano-texto">Tamaño de texto</span>
+      <div class="selector-periodo" role="group" aria-labelledby="titulo-tamano-texto">
+        <button type="button" class="selector-periodo__boton selector-periodo__boton--activo" data-tamano="normal" aria-pressed="true">Normal</button>
+        <button type="button" class="selector-periodo__boton" data-tamano="grande" aria-pressed="false">Grande</button>
+        <button type="button" class="selector-periodo__boton" data-tamano="muy-grande" aria-pressed="false">Muy grande</button>
+      </div>
+    </div>
+
+    <div class="campo campo--switch">
+      <label for="input-alto-contraste">Alto contraste</label>
+      <input id="input-alto-contraste" type="checkbox" />
+    </div>
+
+    <div class="overlay__acciones">
+      <button type="button" id="boton-cerrar-accesibilidad" class="boton-primario">Listo</button>
+    </div>
+  </div>
 </div>
 
 <div id="overlay-login" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-overlay-login" hidden>

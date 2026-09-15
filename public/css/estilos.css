@@ -147,6 +147,33 @@
   }
 }
 
+/* Alto contraste (Fase 9, tarea 1 -- panel de accesibilidad, ver
+   accesibilidad.js y ADR 0030). Solo toca --color-borde y
+   --color-texto-muted: son los dos tokens que, medidos con la fórmula
+   WCAG real (mismo método que el resto de este archivo), quedan más
+   lejos de un contraste alto en el modo normal -- --color-borde ronda
+   1.27:1 (apenas decorativo, por diseño) y --color-texto-muted, aunque
+   ya pasa AA hoy (5.9-7.7:1 según tema), se lleva más cerca del texto
+   principal. El resto de la paleta (acento, botones, badges) ya cumple
+   AA con margen y no se toca -- alto contraste no es "otro tema", es un
+   refuerzo puntual de los dos puntos más débiles. */
+:root[data-alto-contraste='true'] {
+  --color-borde: #4a5261; /* 7.86:1 contra --color-superficie claro (antes 1.27:1) */
+  --color-texto-muted: #2b2f38; /* 13.41:1 contra superficie, 12.40:1 contra fondo */
+}
+
+:root[data-tema='oscuro'][data-alto-contraste='true'] {
+  --color-borde: #aab2c0; /* 8.41:1 contra --color-superficie oscuro (antes 1.26:1) */
+  --color-texto-muted: #d5dae2; /* 12.78:1 contra superficie, 13.94:1 contra fondo */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema='claro']):not([data-tema='oscuro'])[data-alto-contraste='true'] {
+    --color-borde: #aab2c0;
+    --color-texto-muted: #d5dae2;
+  }
+}
+
 /* ============================================================
    BASE — @font-face, reset, tipografía base, foco visible
    ============================================================ */
@@ -218,6 +245,22 @@
 
 html {
   color-scheme: light dark;
+}
+
+/* Tamaño de texto (Fase 9, tarea 1 -- panel de accesibilidad, ver
+   accesibilidad.js y ADR 0030): toda la interfaz mide tipografía,
+   padding y gaps en rem, que es relativo al font-size de <html> (acá, no
+   el de <body> -- ese solo afecta a quien mida en em contra su padre
+   directo). Un solo valor reescala proporcionalmente toda la app, mismo
+   mecanismo que el zoom nativo del navegador. "Normal" no necesita regla
+   propia: sin el atributo, <html> se queda en el tamaño por defecto del
+   navegador (16px), igual que siempre. */
+html[data-tamano-texto='grande'] {
+  font-size: 18px;
+}
+
+html[data-tamano-texto='muy-grande'] {
+  font-size: 20px;
 }
 
 body {
@@ -2100,7 +2143,8 @@ img {
   gap: 0.35rem;
 }
 
-.campo label {
+.campo label,
+.campo-titulo {
   font-size: 0.85rem;
   color: var(--color-texto-muted);
   font-weight: 500;
