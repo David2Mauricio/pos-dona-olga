@@ -697,13 +697,16 @@
       </div>
       <div class="campo" id="campo-producto-stock-nuevo" hidden>
         <span class="fila-con-ayuda">
-          <label for="input-producto-stock-nuevo" id="label-producto-stock-nuevo">Stock actual (formato nuevo)</label>
+          <label for="input-producto-stock-nuevo" id="label-producto-stock-nuevo">Stock actual</label>
           <span id="ayuda-producto-stock-nuevo"></span>
         </span>
         <input id="input-producto-stock-nuevo" type="number" inputmode="numeric" min="0" step="1" />
       </div>
       <div class="campo">
-        <label for="input-producto-stock-minimo" id="label-producto-stock-minimo">Stock mínimo para alerta (opcional)</label>
+        <span class="fila-con-ayuda">
+          <label for="input-producto-stock-minimo" id="label-producto-stock-minimo">Stock mínimo para alerta (opcional)</label>
+          <span id="ayuda-producto-stock-minimo"></span>
+        </span>
         <input id="input-producto-stock-minimo" type="text" inputmode="decimal" />
       </div>
       <div class="campo campo--switch" id="campo-producto-activo" hidden>
@@ -715,6 +718,28 @@
         <button type="button" id="boton-cancelar-producto" class="boton-secundario">Cancelar</button>
       </div>
     </form>
+
+    <!-- Fuera de <form id="formulario-producto"> a propósito (Tarea 6,
+         ajustar stock desde Producto): si viviera adentro, Enter en
+         cualquiera de estos dos campos dispararía el submit del
+         formulario de arriba (Guardar el producto), no el ajuste. Reusa
+         el mismo mecanismo de Inventario (POST /api/inventario/movimientos,
+         tipo:'ajuste') -- nunca edita productos.stock_* directo. -->
+    <div class="formulario__ajuste-stock" id="bloque-ajuste-stock" hidden>
+      <h3 class="formulario__grupo">Ajustar stock</h3>
+      <p class="formulario__ajuste-actual" id="texto-stock-actual-ajuste"></p>
+      <div class="campo">
+        <label for="input-ajuste-stock-nuevo" id="label-ajuste-stock-nuevo">Conteo físico real</label>
+        <input id="input-ajuste-stock-nuevo" type="number" inputmode="numeric" min="0" step="1" />
+      </div>
+      <div class="campo">
+        <label for="input-ajuste-stock-motivo">Motivo</label>
+        <input id="input-ajuste-stock-motivo" type="text" placeholder="Ej: Conteo físico mensual" />
+      </div>
+      <div class="overlay__acciones">
+        <button type="button" class="boton-secundario" id="boton-guardar-ajuste-stock">Guardar ajuste</button>
+      </div>
+    </div>
   </div>
 </div>
 

@@ -96,8 +96,30 @@ document.getElementById('ayuda-producto-stock-nuevo').appendChild(
   )
 );
 
+// Tarea 5 (aclaración de stock): este campo no tenía tooltip -- el label
+// ya es claro por sí solo, pero faltaba decir QUÉ pasa cuando el stock
+// cae por debajo de este número (dónde aparece la alerta).
+document.getElementById('ayuda-producto-stock-minimo').appendChild(
+  crearInfoTooltip(
+    'Cuando el stock actual baja de este número, el producto aparece en las alertas de stock bajo (Tablero y el ícono de alertas del Mostrador). Dejalo en blanco si no querés una alerta para este producto.',
+    'Ayuda sobre el stock mínimo'
+  )
+);
+
 const inputProductoActivo = document.getElementById('input-producto-activo');
 const botonCancelarProducto = document.getElementById('boton-cancelar-producto');
+
+// Tarea 6 (ajustar stock desde Producto): bloque fuera de <form
+// id="formulario-producto"> a propósito -- ver el comentario en
+// index.html junto a #bloque-ajuste-stock. Reusa el MISMO mecanismo de
+// Inventario (POST /api/inventario/movimientos, tipo:'ajuste'); nunca
+// edita productos.stock_* directo (ADR 0005).
+const bloqueAjusteStock = document.getElementById('bloque-ajuste-stock');
+const textoStockActualAjuste = document.getElementById('texto-stock-actual-ajuste');
+const labelAjusteStockNuevo = document.getElementById('label-ajuste-stock-nuevo');
+const inputAjusteStockNuevo = document.getElementById('input-ajuste-stock-nuevo');
+const inputAjusteStockMotivo = document.getElementById('input-ajuste-stock-motivo');
+const botonGuardarAjusteStock = document.getElementById('boton-guardar-ajuste-stock');
 
 const overlayFormCategoria = document.getElementById('overlay-form-categoria');
 const tituloFormCategoria = document.getElementById('titulo-form-categoria');
@@ -464,6 +486,22 @@ function abrirFormularioProducto(producto) {
   campoProductoActivo.hidden = esAlta;
   if (!esAlta) inputProductoActivo.checked = producto.activo;
 
+  // Ajustar stock (Tarea 6): solo en edición -- en alta el stock inicial
+  // ya lo pide el campo de arriba. Usa producto.tipoVenta (el valor YA
+  // guardado), no el select del formulario de arriba: esta acción dispara
+  // un movimiento aparte, de inmediato, independiente de si hay cambios
+  // sin guardar en el resto del formulario.
+  bloqueAjusteStock.hidden = esAlta;
+  if (!esAlta) {
+    textoStockActualAjuste.textContent = `Stock actual: ${formatearStock(producto)}`;
+    const esPesoAjuste = producto.tipoVenta === 'peso';
+    labelAjusteStockNuevo.textContent = esPesoAjuste ? 'Conteo físico real, en kg' : 'Conteo físico real, en unidades';
+    inputAjusteStockNuevo.type = esPesoAjuste ? 'text' : 'number';
+    inputAjusteStockNuevo.inputMode = esPesoAjuste ? 'decimal' : 'numeric';
+    inputAjusteStockNuevo.value = esPesoAjuste ? gramosAKilosTexto(producto.stockGramos) : String(producto.stockUnidades);
+    inputAjusteStockMotivo.value = '';
+  }
+
   overlayFormProducto.hidden = false;
   inputProductoCategoria.focus();
 }
@@ -474,6 +512,9 @@ function cerrarFormularioProducto() {
   advertenciaTipoVenta.hidden = true;
   campoProductoStockNuevo.hidden = true;
   inputProductoStockNuevo.required = false;
+  bloqueAjusteStock.hidden = true;
+  inputAjusteStockNuevo.value = '';
+  inputAjusteStockMotivo.value = '';
 }
 
 function actualizarCampoStockSegunTipo() {
@@ -499,7 +540,14 @@ function actualizarVisibilidadCambioTipoVenta() {
 
   if (cambioReal) {
     const esPeso = inputProductoTipoVenta.value === 'peso';
-    labelProductoStockNuevo.textContent = esPeso ? 'Stock actual, en kg (formato nuevo)' : 'Stock actual, en unidades (formato nuevo)';
+    // Sin "(formato nuevo)" -- era jerga interna (Tarea 5, aclaración de
+    // stock): no le dice nada a quien usa el sistema. La unidad (kg vs.
+    // unidades) sí importa acá mismo, al cargar el número -- eso se
+    // queda en el label. El POR QUÉ aparece este campo y reemplaza al
+    // valor anterior ya lo explica la advertencia visible arriba
+    // (#advertencia-tipo-venta) y el tooltip ⓘ de al lado, no hace falta
+    // repetirlo en el label.
+    labelProductoStockNuevo.textContent = esPeso ? 'Stock actual, en kg' : 'Stock actual, en unidades';
     inputProductoStockNuevo.type = esPeso ? 'text' : 'number';
     inputProductoStockNuevo.inputMode = esPeso ? 'decimal' : 'numeric';
     inputProductoStockNuevo.value = '';
@@ -517,6 +565,50 @@ inputProductoTipoVenta.addEventListener('change', () => {
 });
 botonNuevoProducto.addEventListener('click', () => abrirFormularioProducto(null));
 botonCancelarProducto.addEventListener('click', cerrarFormularioProducto);
+
+// Botón suelto (type="button"), no submit de #formulario-producto -- ver
+// el comentario junto a #bloque-ajuste-stock en index.html.
+botonGuardarAjusteStock.addEventListener('click', async () => {
+  if (!productoEnEdicion) return; // el bloque está oculto en alta; solo defensivo
+
+  const motivo = inputAjusteStockMotivo.value.trim();
+  if (!motivo) {
+    mostrarToast('Escribí un motivo para el ajuste', 'error');
+    inputAjusteStockMotivo.focus();
+    return;
+  }
+
+  const esPeso = productoEnEdicion.tipoVenta === 'peso';
+  const stockNuevo = esPeso ? kilosTextoAGramos(inputAjusteStockNuevo.value) : Number.parseInt(inputAjusteStockNuevo.value, 10);
+  if (!Number.isFinite(stockNuevo) || stockNuevo < 0) {
+    mostrarToast('Ingresá un conteo físico válido', 'error');
+    inputAjusteStockNuevo.focus();
+    return;
+  }
+
+  botonGuardarAjusteStock.disabled = true;
+  try {
+    await api.crearMovimientoInventario({
+      tipo: 'ajuste',
+      productoId: productoEnEdicion.id,
+      stockNuevo,
+      motivo,
+    });
+    mostrarToast('Stock ajustado');
+    await cargarProductos();
+    // Refresca productoEnEdicion con el dato recién guardado para que el
+    // bloque siga mostrando el stock real sin cerrar el overlay -- se
+    // puede seguir editando el producto o hacer otro ajuste.
+    productoEnEdicion = productosCargados.find((p) => p.id === productoEnEdicion.id) ?? productoEnEdicion;
+    textoStockActualAjuste.textContent = `Stock actual: ${formatearStock(productoEnEdicion)}`;
+    inputAjusteStockNuevo.value = esPeso ? gramosAKilosTexto(productoEnEdicion.stockGramos) : String(productoEnEdicion.stockUnidades);
+    inputAjusteStockMotivo.value = '';
+  } catch (error) {
+    mostrarToast(mensajeDeError(error), 'error');
+  } finally {
+    botonGuardarAjusteStock.disabled = false;
+  }
+});
 
 formularioProducto.addEventListener('submit', async (evento) => {
   evento.preventDefault();

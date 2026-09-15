@@ -1692,6 +1692,36 @@ img {
   align-items: center;
 }
 
+/* Ajustar stock desde Producto (Tarea 6) -- vive fuera de
+   #overlay-form-producto form (ver el comentario en index.html), así que
+   NO hereda el grid de 2 columnas de esa regla; se queda en 1 columna a
+   propósito, como una tarjeta aparte dentro del mismo panel ancho. */
+.formulario__ajuste-stock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  background: var(--color-fondo);
+  border-radius: var(--radio-chico);
+}
+
+.formulario__ajuste-stock .formulario__grupo {
+  margin: 0;
+  padding: 0;
+  border-top: none;
+}
+
+.formulario__ajuste-actual {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-texto-muted);
+}
+
+.formulario__ajuste-stock .overlay__acciones {
+  margin-top: 0;
+}
+
 /* --- Cierre de caja --- */
 
 .cierre-caja__resumen {
