@@ -2,8 +2,9 @@
 
 ## Estado
 
-Aceptado, cerrado (con una decisión pendiente marcada explícitamente al
-final — ver "Punto abierto").
+Aceptado, cerrado. El punto abierto (ver esa sección) se resolvió:
+el cliente confirmó que el botón flotante se queda como segundo toggle
+de tema — no se construye un panel de accesibilidad nuevo por ahora.
 
 ## Contexto
 
@@ -148,18 +149,24 @@ el botón vuelve al borde real izquierdo (`left: 20px`), sidebar
 colapsada confirmada. axe-core sin violaciones sobre `document.body`
 completo con el botón en su nueva posición.
 
-## Punto abierto — no resuelto en esta ronda
+## Punto abierto — resuelto
 
 El pedido original planteaba: *"si el selector de tema terminó flotando
 ahí... crear el botón de accesibilidad correctamente... que abra el
 panel ya construido"*. **No hay ningún panel ya construido** — se
-verificó de nuevo en esta misma ronda. Construir uno real es una tarea
+verificó de nuevo en esta misma ronda. Construir uno real era una tarea
 de alcance propio (qué opciones lleva: tamaño de texto, alto contraste,
-algo más) que no se define sola; no se inventó un panel ni se dejó de
-mencionar el hallazgo. Se corrigieron los dos bugs concretos y
-verificables (posición, y la causa raíz del scroll) sin tocar la
-decisión de alcance ya tomada en ADR 0026 hasta que el cliente confirme
-cómo seguir.
+algo más) que no se define sola, así que no se inventó un panel ni se
+dejó de mencionar el hallazgo — se presentaron 3 caminos al cliente:
+
+1. Dejarlo como está (segundo toggle de tema, ya corregido de posición).
+2. Quitar el flotante, volver el toggle de tema solo a la sidebar.
+3. Definir y construir un panel de accesibilidad real.
+
+**Decisión: opción 1.** El botón flotante se queda exactamente como
+quedó tras esta ronda de correcciones — toggle de tema, sincronizado con
+`#boton-tema` de la sidebar, ícono sol/luna, sin panel que abrir. No se
+programa nada adicional.
 
 ## Verificación
 
