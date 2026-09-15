@@ -600,14 +600,16 @@ img {
 
 /* Cada vista es display:flex; flex-direction:column; flex:1 — mismo
    contexto que .contenido ya esperaba cuando era hijo directo de #app.
-   Sin esto, el <section> intermedio (nuevo con la sidebar, ver ADR 0013)
-   no propaga la altura acotada hacia abajo: .panel-carrito pierde su
-   max-height calculado y #lista-carrito, con overflow-y:auto, termina
-   generando una región con scroll real pero sin ningún elemento
-   enfocable dentro que la habilite por teclado (axe-core:
-   scrollable-region-focusable). min-height:0 es lo que permite que un
-   hijo flex se achique por debajo de su contenido en vez de forzar al
-   padre a crecer. */
+   min-height:0 es lo que permite que un hijo flex se achique por debajo
+   de su contenido en vez de forzar al padre a crecer -- lo sigue
+   necesitando cualquier región con su propio overflow-y:auto anidada acá
+   adentro (ej. .grilla-productos). El carrito de Mostrador YA NO usa este
+   patrón (ver corrección de fondo sobre .panel-carrito/.lista-carrito más
+   abajo): tenía scroll interno propio, quedaba cramped con productos por
+   peso, y no crece con su contenido como se pidió -- ahora la página
+   entera scrollea si el carrito no entra, igual que ya hacía Indicadores
+   cuando sus gráficas lo hacen más alto que un viewport (ver fix del
+   fondo navy de la sidebar, Fase 6). */
 .vista {
   flex: 1;
   min-height: 0;
@@ -744,6 +746,25 @@ img {
   min-width: 0;
 }
 
+/* Corrección de fondo (Fase 9, tarea 1 -- reintento): el max-height de
+   acá abajo, combinado con el overflow-y:auto de .lista-carrito, era lo
+   que forzaba el scroll interno cramped que se pidió eliminar. La
+   primera corrección (Tarea 2 original) solo tocó el min-height de
+   .lista-carrito -- un cambio real, verificado en el archivo, pero que
+   NO quitaba el mecanismo de scroll en sí: con el pie de resumen
+   (~417px: total, medio de pago, monto, vuelto, Cobrar) restándole
+   espacio a un panel ya acotado a 100vh-7rem, la lista seguía quedando
+   con una ventana visible muy chica (~2 ítems por peso a la vez, cada
+   uno más alto por su fila extra de kg) -- confirmado midiendo el DOM
+   real, no adivinado. Acá se quita el max-height por completo: el panel
+   crece con su contenido. Sin techo propio que forzar, no hace falta
+   overflow-y:auto en .lista-carrito tampoco (ver esa regla). Si el
+   carrito tiene muchos ítems, scrollea la PÁGINA entera (ya lo hace sin
+   problema -- ningún ancestro de acá arriba tiene una altura fija que lo
+   impida, #shell/body solo ponen min-height:100vh, no height), igual que
+   ya pasa en Indicadores cuando sus gráficas hacen la pantalla más alta
+   que el viewport. position:sticky se mantiene: sigue siendo útil
+   mientras el carrito entra en el espacio disponible. */
 .panel-carrito {
   background: var(--color-superficie);
   border: 1px solid var(--color-borde);
@@ -754,7 +775,6 @@ img {
   gap: 1rem;
   position: sticky;
   top: 5.5rem;
-  max-height: calc(100vh - 7rem);
 }
 
 .grilla-productos {
@@ -765,20 +785,15 @@ img {
   padding-bottom: 1rem;
 }
 
+/* Sin overflow-y/flex/min-height propios a propósito (ver el comentario
+   en .panel-carrito, arriba): esta lista ya no scrollea por su cuenta,
+   crece con su contenido como pidió el cliente. display:flex column +
+   gap se mantienen -- son solo separación visual entre ítems, no tienen
+   nada que ver con el scroll que se quitó. */
 .lista-carrito {
   list-style: none;
   margin: 0;
   padding: 0;
-  overflow-y: auto;
-  flex: 1;
-  /* min-height:0 (no 3rem) a propósito -- mismo criterio que .vista más
-     arriba (ver su comentario): sin esto, un hijo flex con overflow no se
-     achica por debajo de su contenido, así que con varios ítems por peso
-     (más altos que uno por unidad, por la fila extra del campo en kg) la
-     lista crecía más allá del max-height de .panel-carrito en vez de
-     scrollear dentro de él -- confirmado midiendo scrollHeight/clientHeight
-     reales con 5 ítems por peso en el carrito (Tarea 2). */
-  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -1933,9 +1948,26 @@ img {
    contenido normal (10-30) pero por debajo del cajón móvil/su fondo
    (40/45) y de los overlays modales (50) -- nunca tapa ni queda tapado
    por ninguno de los dos. */
+/* Reposicionado (Fase 9, tarea 2 -- reintento): en bottom-RIGHT quedaba
+   montado sobre "Cobrar" en Mostrador -- confirmado con captura real
+   contra un viewport de laptop común (1366x700, más chico que el usado
+   en la verificación original de Tarea 3, que no lo detectó). "Cobrar"
+   es el único botón primario de las 11 pantallas que vive pegado a una
+   esquina inferior (por el pie fijo del carrito); el resto de las
+   pantallas tiene su botón primario en la cabecera (arriba). Por eso
+   bottom-LEFT es la esquina segura -- pero ahí abajo ya vive
+   #boton-tema/#boton-salir, dentro de la sidebar navy (ver
+   .nav-lateral__cuenta-acciones): en desktop, donde la sidebar ocupa
+   220px fijos de ancho real (no position:fixed, es un hijo flex de
+   #shell que le resta espacio al contenido), el botón se corre a la
+   derecha de esos 220px para no superponerse. En mobile (<=768px, mismo
+   corte que ya usa la sidebar para volverse cajón, ver ADR 0017 Bloque
+   C) la sidebar deja de ocupar espacio real (position:fixed, escondida
+   fuera de pantalla salvo que se abra el menú), así que ahí el botón
+   vuelve al borde real de la pantalla. */
 .boton-accesibilidad-flotante {
   position: fixed;
-  right: 1.25rem;
+  left: 1.25rem;
   bottom: 1.25rem;
   z-index: 35;
   width: 48px;
@@ -1948,6 +1980,12 @@ img {
   align-items: center;
   justify-content: center;
   box-shadow: var(--sombra);
+}
+
+@media (min-width: 769px) {
+  .boton-accesibilidad-flotante {
+    left: calc(220px + 1.25rem);
+  }
 }
 
 .boton-accesibilidad-flotante:hover {
