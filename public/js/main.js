@@ -21,6 +21,7 @@ let cierreCajaCargado = false;
 
 const elementoEstadoCaja = document.getElementById('estado-caja');
 const botonTema = document.getElementById('boton-tema');
+const botonAccesibilidadFlotante = document.getElementById('boton-accesibilidad-flotante');
 const botonAlertas = document.getElementById('boton-alertas');
 const panelAlertas = document.getElementById('panel-alertas');
 const inputBusqueda = document.getElementById('input-busqueda');
@@ -390,7 +391,7 @@ document.addEventListener('keydown', (evento) => {
 // lista (ver auth.js); una sesión que vence a mitad de uso la resuelve el
 // hook central de api.js (registrarOnSesionExpirada), no este bloque.
 
-iniciarTema(botonTema);
+iniciarTema([botonTema, botonAccesibilidadFlotante]);
 actualizarVisibilidadMontoRecibido();
 reRenderizarCarrito();
 

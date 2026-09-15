@@ -25,15 +25,22 @@ function actualizarBoton(boton, tema) {
   boton.setAttribute('aria-pressed', String(tema === 'oscuro'));
 }
 
-export function iniciarTema(boton) {
+// Acepta un botón o una lista -- Tarea 3 agregó un segundo botón (el
+// flotante de accesibilidad, ver index.html) que también togglea el
+// tema y necesita quedar sincronizado con el de la sidebar sin
+// duplicar la lógica de toggle en otro archivo.
+export function iniciarTema(botonOLista) {
+  const botones = Array.isArray(botonOLista) ? botonOLista : [botonOLista];
   const temaActual = document.documentElement.getAttribute('data-tema') === 'oscuro' ? 'oscuro' : 'claro';
-  actualizarBoton(boton, temaActual);
+  botones.forEach((boton) => actualizarBoton(boton, temaActual));
 
-  boton.addEventListener('click', () => {
-    const actual = document.documentElement.getAttribute('data-tema') === 'oscuro' ? 'oscuro' : 'claro';
-    const siguiente = actual === 'oscuro' ? 'claro' : 'oscuro';
-    document.documentElement.setAttribute('data-tema', siguiente);
-    actualizarBoton(boton, siguiente);
-    guardarTema(siguiente);
+  botones.forEach((boton) => {
+    boton.addEventListener('click', () => {
+      const actual = document.documentElement.getAttribute('data-tema') === 'oscuro' ? 'oscuro' : 'claro';
+      const siguiente = actual === 'oscuro' ? 'claro' : 'oscuro';
+      document.documentElement.setAttribute('data-tema', siguiente);
+      botones.forEach((b) => actualizarBoton(b, siguiente));
+      guardarTema(siguiente);
+    });
   });
 }

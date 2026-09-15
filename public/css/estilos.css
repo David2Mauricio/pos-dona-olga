@@ -1888,6 +1888,40 @@ img {
   height: 22px;
 }
 
+/* Botón flotante de accesibilidad (Tarea 3, alcance reducido -- ver ADR
+   e index.html): mismo ícono/rol que #boton-tema (togglea tema, ver
+   theme.js), pero position:fixed para quedar visible en las 11 pantallas
+   incluido mobile, donde la sidebar (y su propio botón de tema) se
+   esconde detrás del menú hamburguesa. z-index 35: por encima del
+   contenido normal (10-30) pero por debajo del cajón móvil/su fondo
+   (40/45) y de los overlays modales (50) -- nunca tapa ni queda tapado
+   por ninguno de los dos. */
+.boton-accesibilidad-flotante {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 35;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-acento);
+  color: var(--color-texto-sobre-acento);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--sombra);
+}
+
+.boton-accesibilidad-flotante:hover {
+  background: var(--color-acento-hover);
+}
+
+.boton-accesibilidad-flotante svg {
+  width: 22px;
+  height: 22px;
+}
+
 .boton-icono__contador {
   position: absolute;
   top: 2px;
