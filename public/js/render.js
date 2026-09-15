@@ -342,11 +342,16 @@ export function actualizarEstadoCaja(elemento, sesion) {
   }
 }
 
-export function renderizarAlertas({ reporte, mapaProductos, botonAlertas, panelAlertas }) {
-  const stockBajo = reporte.productosStockBajo ?? [];
-  const vencidos = reporte.lotesPorVencer?.vencidos ?? [];
-  const porVencer = reporte.lotesPorVencer?.porVencer ?? [];
-  const total = stockBajo.length + vencidos.length + porVencer.length;
+// Solo stock bajo (Tarea 1, retiro de Vencimientos de la interfaz -- ver
+// ADR correspondiente): esta función combinaba stock bajo + lotes por
+// vencer/vencidos en el mismo panel de alertas del header. El módulo de
+// Vencimientos se ocultó de la interfaz (la tabla lotes_vencimiento y el
+// endpoint /api/vencimientos siguen intactos, por si se reactiva más
+// adelante), así que no hay más una segunda fuente de alertas que
+// combinar acá.
+export function renderizarAlertas({ productosStockBajo, botonAlertas, panelAlertas }) {
+  const stockBajo = productosStockBajo ?? [];
+  const total = stockBajo.length;
 
   let contador = botonAlertas.querySelector('.boton-icono__contador');
   if (total > 0) {
@@ -382,23 +387,6 @@ export function renderizarAlertas({ reporte, mapaProductos, botonAlertas, panelA
       'Ningún producto por debajo de su mínimo.',
       undefined,
       crearInfoTooltip(TEXTO_AYUDA_STOCK, 'Ayuda sobre el formato de stock')
-    )
-  );
-
-  const lotes = [
-    ...vencidos.map((lote) => ({ ...lote, etiqueta: 'Vencido' })),
-    ...porVencer.map((lote) => ({ ...lote, etiqueta: 'Por vencer' })),
-  ];
-  panelAlertas.appendChild(
-    crearSeccionAlertas(
-      'Vencimientos',
-      lotes,
-      (lote) => lote.fechaVencimiento,
-      'Sin lotes próximos a vencer.',
-      (lote) => {
-        const nombre = mapaProductos.get(lote.productoId)?.nombre ?? `Producto #${lote.productoId}`;
-        return `${nombre} — ${lote.etiqueta}`;
-      }
     )
   );
 }

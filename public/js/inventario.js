@@ -1,5 +1,5 @@
 // Movimientos de inventario (Fase 4, ver ADR 0015). Mismo patrón que
-// vencimientos.js: módulo autocontenido, propio DOM, propias llamadas. De
+// usuarios.js: módulo autocontenido, propio DOM, propias llamadas. De
 // ambos roles en el backend para listar (inventario.routes.js: GET
 // /movimientos y /alertas sin requiereRol); crear un movimiento manual es
 // admin-only (POST /movimientos con requiereRol('administrador'), ya

@@ -1392,36 +1392,6 @@ img {
   grid-template-columns: 1.3fr 1fr 9rem 6rem auto;
 }
 
-.catalogo__fila--lote {
-  grid-template-columns: 1.3fr 7rem 7rem 7rem auto;
-}
-
-/* Agrupado por urgencia (rediseño visual, Fase 5): borde a la izquierda
-   de cada fila según el grupo -- refuerza al badge de texto que ya
-   existía, no lo reemplaza (mismo criterio de no depender solo del
-   color). */
-.vencimientos__grupo-titulo {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--color-texto-muted);
-  margin: 1.25rem 0 0.5rem;
-}
-
-.vencimientos__grupo-titulo:first-child {
-  margin-top: 0;
-}
-
-.catalogo__fila--vencido {
-  border-left: 3px solid var(--color-peligro);
-}
-
-.catalogo__fila--por-vencer {
-  border-left: 3px solid var(--color-alerta);
-}
-
-.catalogo__fila--vigente {
-  border-left: 3px solid var(--color-borde);
-}
 
 .catalogo__fila--proveedor {
   grid-template-columns: 1.2fr 8rem 11rem 1.3fr 6rem auto;

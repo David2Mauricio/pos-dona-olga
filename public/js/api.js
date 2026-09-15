@@ -105,19 +105,16 @@ export const api = {
     peticion(`/ventas/${id}/anular`, { method: 'PATCH', body: JSON.stringify({ motivoAnulacion }) }),
 
   // Reemplaza a GET /api/reportes/inventario (quedó solo-administrador
-  // desde Fase 1, ver ADR 0010): estos dos endpoints son de ambos roles,
-  // que es lo que necesita el indicador de alertas del mostrador.
+  // desde Fase 1, ver ADR 0010): este endpoint es de ambos roles, que es
+  // lo que necesita el indicador de alertas del mostrador.
   obtenerAlertasInventario: () => peticion('/inventario/alertas'),
-  obtenerAlertasVencimientos: () => peticion('/vencimientos/alertas'),
 
-  // Lotes de vencimiento (Fase 4, ver ADR 0013) — de ambos roles en el
-  // backend (app.js monta /api/vencimientos sin requiereRol, confirmado
-  // con el cliente: registrar un lote es documentación aditiva, no un
-  // caso con riesgo de ocultar una merma).
-  listarLotesVencimiento: () => peticion('/vencimientos/lotes'),
-  crearLoteVencimiento: (datos) => peticion('/vencimientos/lotes', { method: 'POST', body: JSON.stringify(datos) }),
-  actualizarLoteVencimiento: (id, cambios) =>
-    peticion(`/vencimientos/lotes/${id}`, { method: 'PATCH', body: JSON.stringify(cambios) }),
+  // Nota (Tarea 1, retiro de Vencimientos de la interfaz): los wrappers de
+  // /api/vencimientos/* que vivían acá se quitaron por quedar sin ningún
+  // llamador en el frontend -- el endpoint en sí sigue existiendo en el
+  // backend (app.js, sin tocar), solo la interfaz que lo consumía se
+  // ocultó. Si se reactiva la pantalla, estas 4 líneas se recuperan del
+  // historial de git.
 
   // Panel de Indicadores (Fase 4/Bloque 3, ver ADR 0013) — admin-only en
   // el backend (app.js monta /api/reportes con requiereRol('administrador')).

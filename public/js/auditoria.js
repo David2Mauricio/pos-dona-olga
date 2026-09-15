@@ -1,5 +1,5 @@
 // Registro de auditoría inmutable (ver ADR 0018). Mismo patrón que
-// usuarios.js/vencimientos.js: módulo autocontenido, propio DOM, propias
+// usuarios.js/inventario.js: módulo autocontenido, propio DOM, propias
 // llamadas. Módulo entero solo-administrador en el backend (app.js monta
 // /api/auditoria con requiereRol('administrador')) — la sección queda
 // oculta para cajero en la sidebar (main.js), pero eso es ayuda de UI, no

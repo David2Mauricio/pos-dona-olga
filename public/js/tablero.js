@@ -1,15 +1,17 @@
 // Tablero (rediseño visual, Fase 3): pantalla de arranque tras loguearse,
 // reemplaza a Mostrador en ese rol -- Mostrador sigue existiendo como una
 // sección más del nav (ver main.js). Mismo molde autocontenido que
-// inventario.js/vencimientos.js.
+// inventario.js.
 //
 // Todos los datos vienen de endpoints ya existentes y ya de ambos roles
 // (nunca /api/reportes/ventas, que es admin-only): GET /api/caja/actual +
 // GET /api/caja/:id (obtenerReporteCaja YA incluye totalVentas y
 // desglosePorMedioPago, y ninguna de las dos rutas de caja tiene
 // requiereRol -- confirmado leyendo caja.routes.js, no de memoria) para
-// el resumen de ventas, y las mismas dos alertas que ya usa el popover
-// del Mostrador para la tarjeta de Alertas.
+// el resumen de ventas, y la misma alerta de stock bajo que ya usa el
+// popover del Mostrador para la tarjeta de Alertas (ver Tarea 1, retiro
+// de Vencimientos de la interfaz -- esta tarjeta combinaba stock bajo +
+// vencimientos, ahora solo stock bajo).
 
 import { api, ErrorApi } from './api.js';
 import { obtenerUsuarioActual } from './auth.js';
@@ -18,7 +20,6 @@ import { iconoCheck, iconoAlerta } from './icons.js';
 
 const botonCobrar = document.getElementById('tablero-boton-cobrar');
 const botonNuevoProducto = document.getElementById('tablero-boton-nuevo-producto');
-const botonVencimientos = document.getElementById('tablero-boton-vencimientos');
 const botonIndicadores = document.getElementById('tablero-boton-indicadores');
 const resumenVentas = document.getElementById('tablero-resumen-ventas');
 const cajaCerradaAviso = document.getElementById('tablero-caja-cerrada-aviso');
@@ -47,7 +48,6 @@ function wireAccesosRapidos() {
   wireado = true;
 
   botonCobrar.addEventListener('click', () => navegarA('mostrador'));
-  botonVencimientos.addEventListener('click', () => navegarA('vencimientos'));
   botonIndicadores.addEventListener('click', () => navegarA('indicadores'));
   botonNuevoProducto.addEventListener('click', async () => {
     await navegarA('productos');
@@ -103,25 +103,11 @@ function crearItemAlerta(texto, tono) {
 async function cargarAlertas() {
   listaAlertas.innerHTML = '';
 
-  const [stockBajo, vencimientosResp, productos] = await Promise.all([
-    api.obtenerAlertasInventario(),
-    api.obtenerAlertasVencimientos(),
-    api.listarProductosActivos(),
-  ]);
-  const mapaProductos = new Map(productos.map((p) => [p.id, p]));
+  const stockBajo = await api.obtenerAlertasInventario();
 
-  const items = [];
-  stockBajo.forEach((producto) => {
-    items.push(crearItemAlerta(`${producto.nombre} — stock bajo (${formatearStock(producto)})`, 'alerta'));
-  });
-  (vencimientosResp.vencidos ?? []).forEach((lote) => {
-    const nombre = mapaProductos.get(lote.productoId)?.nombre ?? `Producto #${lote.productoId}`;
-    items.push(crearItemAlerta(`${nombre} — vencido (${lote.fechaVencimiento})`, 'peligro'));
-  });
-  (vencimientosResp.porVencer ?? []).forEach((lote) => {
-    const nombre = mapaProductos.get(lote.productoId)?.nombre ?? `Producto #${lote.productoId}`;
-    items.push(crearItemAlerta(`${nombre} — vence el ${lote.fechaVencimiento}`, 'alerta'));
-  });
+  const items = stockBajo.map((producto) =>
+    crearItemAlerta(`${producto.nombre} — stock bajo (${formatearStock(producto)})`, 'alerta')
+  );
 
   if (items.length === 0) {
     const vacio = document.createElement('div');
@@ -130,7 +116,7 @@ async function cargarAlertas() {
     icono.className = 'tablero__sin-alertas-icono';
     icono.innerHTML = iconoCheck;
     const texto = document.createElement('p');
-    texto.textContent = 'Todo en orden. Sin stock bajo ni vencimientos pendientes.';
+    texto.textContent = 'Todo en orden. Sin stock bajo pendiente.';
     vacio.append(icono, texto);
     listaAlertas.appendChild(vacio);
     return;

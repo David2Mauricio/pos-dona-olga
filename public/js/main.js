@@ -354,16 +354,15 @@ async function cargarProductos() {
 
 // --- Alertas ---
 // Fase 4/Bloque 1: GET /api/reportes/inventario quedó solo-administrador
-// desde Fase 1 (ADR 0010), así que un cajero recibiría 403 ahí. Se arma el
-// mismo shape que renderizarAlertas ya espera a partir de los dos
-// endpoints de alertas (de ambos roles), sin tocar render.js.
-
+// desde Fase 1 (ADR 0010), así que un cajero recibiría 403 ahí. Se usa
+// el endpoint de alertas de inventario (de ambos roles) en su lugar, sin
+// tocar render.js más de lo necesario.
+//
+// Tarea 1 (retiro de Vencimientos de la interfaz): este panel combinaba
+// stock bajo + lotes por vencer/vencidos -- ahora solo pide stock bajo.
 async function cargarAlertas() {
-  const [productosStockBajo, lotesPorVencer] = await Promise.all([
-    api.obtenerAlertasInventario(),
-    api.obtenerAlertasVencimientos(),
-  ]);
-  renderizarAlertas({ reporte: { productosStockBajo, lotesPorVencer }, mapaProductos, botonAlertas, panelAlertas });
+  const productosStockBajo = await api.obtenerAlertasInventario();
+  renderizarAlertas({ productosStockBajo, botonAlertas, panelAlertas });
 }
 
 botonAlertas.addEventListener('click', () => {
@@ -471,9 +470,6 @@ navItems.forEach((boton) => {
     if (nombre === 'indicadores') {
       import('./kpis.js').then(({ abrirIndicadores }) => abrirIndicadores());
     }
-    if (nombre === 'vencimientos') {
-      import('./vencimientos.js').then(({ abrirVencimientos }) => abrirVencimientos());
-    }
     if (nombre === 'proveedores') {
       import('./proveedores.js').then(({ abrirProveedores }) => abrirProveedores());
     }
@@ -537,12 +533,7 @@ async function cargarModuloCierreCaja() {
 // exportación CSV/gastos/redondeo/gráficos).
 // Inventario queda visible para ambos roles (ver inventario.routes.js:
 // listar/alertas es de ambos, solo crear un movimiento manual quedó
-// restringido a administrador). Vencimientos (nav-vencimientos, sin
-// `hidden` en el markup) tampoco pasa por esta función a propósito: es de
-// ambos roles en el backend (app.js monta /api/vencimientos sin
-// requiereRol) — confirmado con el cliente, registrar un lote es
-// documentación aditiva, sin el riesgo de ocultar una merma o un error que
-// sí tienen los casos restringidos arriba.
+// restringido a administrador).
 function actualizarNavegacionPorRol(usuario) {
   const esAdmin = usuario.rol === 'administrador';
   navHistorial.hidden = !esAdmin;
@@ -556,7 +547,7 @@ function actualizarNavegacionPorRol(usuario) {
 
 async function iniciarMostrador() {
   try {
-    await cargarProductos(); // primero: renderizarAlertas necesita mapaProductos ya listo
+    await cargarProductos(); // primero: la grilla de productos depende de mapaProductos ya listo
     await Promise.all([verificarCaja(), cargarAlertas(), cargarCategorias()]);
   } catch (error) {
     // Acá sí puede ser un error de red real (el servidor no respondió) —
