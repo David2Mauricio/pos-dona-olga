@@ -422,31 +422,41 @@
 
         <div id="indicadores-grilla" class="indicadores__grilla">
           <article class="indicadores__tarjeta indicadores__tarjeta--compacta">
-            <h3 class="indicadores__etiqueta">Ticket promedio</h3>
-            <p class="indicadores__descripcion">El monto promedio que dejó cada venta en este período.</p>
+            <span class="fila-con-ayuda">
+              <h3 class="indicadores__etiqueta">Ticket promedio</h3>
+              <span id="ayuda-indicadores-ticket-promedio"></span>
+            </span>
             <p id="indicadores-ticket-promedio" class="indicadores__valor total numero">$0</p>
             <p id="indicadores-ticket-promedio-variacion" class="indicadores__variacion"></p>
           </article>
 
           <article class="indicadores__tarjeta indicadores__tarjeta--compacta">
-            <h3 class="indicadores__etiqueta">Unidades vendidas</h3>
-            <p class="indicadores__descripcion">Solo productos por unidad (un producto por peso no suma a esta cifra, ver ADR 0022).</p>
+            <span class="fila-con-ayuda">
+              <h3 class="indicadores__etiqueta">Unidades vendidas</h3>
+              <span id="ayuda-indicadores-unidades-vendidas"></span>
+            </span>
             <p id="indicadores-unidades-vendidas" class="indicadores__valor total numero">0</p>
             <p id="indicadores-unidades-vendidas-variacion" class="indicadores__variacion"></p>
           </article>
 
           <article class="indicadores__tarjeta indicadores__tarjeta--compacta">
-            <h3 class="indicadores__etiqueta">Gastos del período</h3>
-            <p class="indicadores__descripcion">Proveedores, servicios, arriendo y otros gastos registrados en este período.</p>
+            <span class="fila-con-ayuda">
+              <h3 class="indicadores__etiqueta">Gastos del período</h3>
+              <span id="ayuda-indicadores-total-gastos"></span>
+            </span>
             <p id="indicadores-total-gastos" class="indicadores__valor total numero">$0</p>
             <p id="indicadores-total-gastos-variacion" class="indicadores__variacion"></p>
+            <p id="indicadores-total-gastos-advertencia" class="indicadores__advertencia" hidden></p>
           </article>
 
           <article class="indicadores__tarjeta indicadores__tarjeta--compacta">
-            <h3 class="indicadores__etiqueta">Ganancia real</h3>
-            <p class="indicadores__descripcion">Ventas totales menos gastos del período.</p>
+            <span class="fila-con-ayuda">
+              <h3 class="indicadores__etiqueta">Ganancia real</h3>
+              <span id="ayuda-indicadores-ganancia-real"></span>
+            </span>
             <p id="indicadores-ganancia-real" class="indicadores__valor total numero">$0</p>
             <p id="indicadores-ganancia-real-variacion" class="indicadores__variacion"></p>
+            <p id="indicadores-ganancia-real-advertencia" class="indicadores__advertencia" hidden></p>
           </article>
         </div>
 

@@ -19,7 +19,8 @@
 import { api, ErrorApi } from './api.js';
 import { mostrarToast } from './render.js';
 import { formatearMoneda } from './utils.js';
-import { iconoIndicadores, crearIcono } from './icons.js';
+import { iconoIndicadores, iconoFlechaArriba, iconoFlechaAbajo, iconoAlerta, crearIcono } from './icons.js';
+import { crearInfoTooltip } from './info-tooltip.js';
 
 const contenedorCargando = document.getElementById('indicadores-cargando');
 const contenedorContenido = document.getElementById('indicadores-contenido');
@@ -33,8 +34,10 @@ const elementoUnidadesVendidasVariacion = document.getElementById('indicadores-u
 const elementoComparativa = document.getElementById('indicadores-comparativa');
 const elementoTotalGastos = document.getElementById('indicadores-total-gastos');
 const elementoTotalGastosVariacion = document.getElementById('indicadores-total-gastos-variacion');
+const elementoTotalGastosAdvertencia = document.getElementById('indicadores-total-gastos-advertencia');
 const elementoGananciaReal = document.getElementById('indicadores-ganancia-real');
 const elementoGananciaRealVariacion = document.getElementById('indicadores-ganancia-real-variacion');
+const elementoGananciaRealAdvertencia = document.getElementById('indicadores-ganancia-real-advertencia');
 const graficoProductos = document.getElementById('grafico-productos');
 const graficoTendencia = document.getElementById('grafico-tendencia');
 const graficoMedioPago = document.getElementById('grafico-medio-pago');
@@ -48,6 +51,29 @@ const selectorPeriodo = document.getElementById('selector-periodo');
 const contenedorDesgloseVentas = document.getElementById('indicadores-desglose-ventas');
 const botonVerHistorialFiltrado = document.getElementById('boton-ver-historial-filtrado');
 const botonExportarCsv = document.getElementById('boton-exportar-csv');
+
+// Tarea 4 (Indicadores orientados a decisión): las 4 tarjetas compactas
+// tenían su explicación siempre visible como texto (<p
+// class="indicadores__descripcion">) -- se mueve a un tooltip ⓘ, mismo
+// componente y criterio que usa el resto de la app (catalogo.js,
+// usuarios.js), para que la tarjeta muestre la cifra primero y la
+// explicación quede a un click de distancia en vez de ocupar espacio
+// siempre. Se crean una sola vez acá, no en cada render().
+document.getElementById('ayuda-indicadores-ticket-promedio').appendChild(
+  crearInfoTooltip('El monto promedio que dejó cada venta en este período.', 'Ayuda sobre el ticket promedio')
+);
+document.getElementById('ayuda-indicadores-unidades-vendidas').appendChild(
+  crearInfoTooltip(
+    'Solo productos por unidad (un producto por peso no suma a esta cifra, ver ADR 0022).',
+    'Ayuda sobre unidades vendidas'
+  )
+);
+document.getElementById('ayuda-indicadores-total-gastos').appendChild(
+  crearInfoTooltip('Proveedores, servicios, arriendo y otros gastos registrados en este período.', 'Ayuda sobre gastos del período')
+);
+document.getElementById('ayuda-indicadores-ganancia-real').appendChild(
+  crearInfoTooltip('Ventas totales menos gastos del período.', 'Ayuda sobre ganancia real')
+);
 
 let periodoActual = 'dia';
 let rangoActualParaHistorial = null; // {desde,hasta} del período que se está viendo -- lo usa el link a Historial
@@ -156,10 +182,20 @@ function calcularVariacionPorcentual(totalActual, totalAnterior) {
   return Math.round(((totalActual - totalAnterior) / totalAnterior) * 100);
 }
 
-function crearBadgeVariacion(tono, texto) {
+// direccion: 'arriba'|'abajo'|null -- Tarea 4 (extender flechas de
+// variación a las 5 cifras, no solo el color del texto). null cuando no
+// hay una dirección real que mostrar (ej. "Igual que..."). Mismos íconos
+// que ya usa Inventario para entrada/salida: el significado es el mismo,
+// subió o bajó.
+function crearBadgeVariacion(tono, texto, direccion) {
   const badge = document.createElement('span');
   badge.className = tono ? `badge-alerta badge-alerta--${tono}` : 'badge-alerta';
-  badge.textContent = texto;
+  if (direccion) {
+    const icono = crearIcono(direccion === 'arriba' ? iconoFlechaArriba : iconoFlechaAbajo);
+    icono.setAttribute('aria-hidden', 'true');
+    badge.appendChild(icono);
+  }
+  badge.appendChild(document.createTextNode(texto));
   return badge;
 }
 
@@ -189,7 +225,9 @@ function renderizarVariacion(elemento, actual, anterior, etiquetaComparativa) {
     }
     const tono = diferencia > 0 ? 'exito' : 'peligro';
     const signo = diferencia > 0 ? '+' : '-';
-    elemento.appendChild(crearBadgeVariacion(tono, `${signo}${formatearMoneda(Math.abs(diferencia))} vs ${etiquetaComparativa}`));
+    elemento.appendChild(
+      crearBadgeVariacion(tono, `${signo}${formatearMoneda(Math.abs(diferencia))} vs ${etiquetaComparativa}`, diferencia > 0 ? 'arriba' : 'abajo')
+    );
     return;
   }
 
@@ -204,7 +242,57 @@ function renderizarVariacion(elemento, actual, anterior, etiquetaComparativa) {
 
   const tono = variacion > 0 ? 'exito' : variacion < 0 ? 'peligro' : '';
   const signo = variacion > 0 ? '+' : '';
-  elemento.appendChild(crearBadgeVariacion(tono, `${signo}${variacion}% vs ${etiquetaComparativa}`));
+  const direccion = variacion > 0 ? 'arriba' : variacion < 0 ? 'abajo' : null;
+  elemento.appendChild(crearBadgeVariacion(tono, `${signo}${variacion}% vs ${etiquetaComparativa}`, direccion));
+}
+
+// Advertencias automáticas (Tarea 4) -- distintas del badge de variación
+// de arriba, que solo informa el cambio numérico. Acá se marca cuándo esa
+// cifra amerita mirarla de cerca, sin que la persona tenga que hacer la
+// cuenta mental de "¿30% es mucho o poco?" cada vez que abre el panel.
+//
+// Alcance deliberadamente acotado a Ganancia real (el "margen" del pedido
+// original) y Gastos (su contraparte directa: lo que más rápido erosiona
+// el margen) -- Ticket promedio y Unidades vendidas también podrían bajar
+// sin que eso sea necesariamente malo (una venta grande sube el ticket un
+// día y lo baja al siguiente sin que pase nada raro); inventarles un
+// umbral "preocupante" ahí sería una alarma sin un criterio de negocio
+// real detrás. Si el cliente pide extenderlo, este es el patrón a copiar.
+const UMBRAL_CAIDA_GANANCIA = 0.3; // 30% -- ver comentario de renderizarVariacion sobre por qué Ganancia real no usa % cuando hay un negativo de por medio; acá el umbral solo aplica al caso positivo-a-positivo.
+const UMBRAL_SUBA_GASTOS = 0.4; // 40%
+
+function renderizarAdvertencia(elemento, texto, tono) {
+  elemento.innerHTML = '';
+  if (!texto) {
+    elemento.hidden = true;
+    return;
+  }
+  elemento.hidden = false;
+  elemento.className = tono === 'alerta' ? 'indicadores__advertencia indicadores__advertencia--alerta' : 'indicadores__advertencia';
+  const icono = crearIcono(iconoAlerta);
+  icono.setAttribute('aria-hidden', 'true');
+  elemento.appendChild(icono);
+  elemento.appendChild(document.createTextNode(texto));
+}
+
+function renderizarAdvertenciaGananciaReal(gananciaActual, gananciaAnterior, etiquetaComparativa) {
+  if (gananciaActual < 0) {
+    renderizarAdvertencia(elementoGananciaRealAdvertencia, 'Pérdida en este período', 'peligro');
+    return;
+  }
+  if (gananciaAnterior > 0 && gananciaActual < gananciaAnterior * (1 - UMBRAL_CAIDA_GANANCIA)) {
+    renderizarAdvertencia(elementoGananciaRealAdvertencia, `Bajó más de 30% vs ${etiquetaComparativa}`, 'alerta');
+    return;
+  }
+  renderizarAdvertencia(elementoGananciaRealAdvertencia, null);
+}
+
+function renderizarAdvertenciaGastos(gastosActual, gastosAnterior, etiquetaComparativa) {
+  if (gastosAnterior > 0 && gastosActual > gastosAnterior * (1 + UMBRAL_SUBA_GASTOS)) {
+    renderizarAdvertencia(elementoTotalGastosAdvertencia, `Subió más de 40% vs ${etiquetaComparativa}`, 'alerta');
+    return;
+  }
+  renderizarAdvertencia(elementoTotalGastosAdvertencia, null);
 }
 
 // Barras horizontales para el top de productos — el largo de los nombres
@@ -521,9 +609,14 @@ async function cargarYRenderizarDesglose(rango) {
     const activas = ventas.filter((venta) => venta.estado === 'activa');
 
     if (activas.length === 0) {
+      // Ícono + mensaje (Tarea 4), mismo criterio que mostrarResumenVacio()
+      // para los gráficos -- antes era solo texto plano acá.
       const vacio = document.createElement('p');
-      vacio.className = 'indicadores__desglose-vacio';
-      vacio.textContent = 'Sin ventas en este período.';
+      vacio.className = 'indicadores__desglose-vacio catalogo__vacio';
+      const icono = crearIcono(iconoIndicadores, 'indicadores__icono-vacio');
+      icono.setAttribute('aria-hidden', 'true');
+      vacio.appendChild(icono);
+      vacio.appendChild(document.createTextNode('Sin ventas en este período.'));
       contenedorDesgloseVentas.appendChild(vacio);
       return;
     }
@@ -612,6 +705,8 @@ function renderizar(reporteActual, reporteAnterior, rangos) {
   );
   renderizarVariacion(elementoTotalGastosVariacion, reporteActual.totalGastos, reporteAnterior.totalGastos, rangos.etiquetaComparativa);
   renderizarVariacion(elementoGananciaRealVariacion, reporteActual.gananciaReal, reporteAnterior.gananciaReal, rangos.etiquetaComparativa);
+  renderizarAdvertenciaGananciaReal(reporteActual.gananciaReal, reporteAnterior.gananciaReal, rangos.etiquetaComparativa);
+  renderizarAdvertenciaGastos(reporteActual.totalGastos, reporteAnterior.totalGastos, rangos.etiquetaComparativa);
 
   renderizarGraficoProductos(reporteActual.topProductos);
   renderizarGraficoTendencia(reporteActual.ventasPorDia);

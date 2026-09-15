@@ -944,12 +944,6 @@ img {
   margin-bottom: 0.5rem;
 }
 
-.indicadores__descripcion {
-  font-size: 0.8rem;
-  color: var(--color-texto-muted);
-  margin: -0.3rem 0 0.6rem;
-}
-
 .indicadores__valor,
 .tarjeta-kpi__valor {
   font-size: 1.75rem;
@@ -1138,6 +1132,49 @@ img {
   min-height: 1.5rem;
   display: flex;
   align-items: center;
+}
+
+/* Advertencia automática (Tarea 4): distinta del badge de variación de
+   arriba -- esa cuenta el cambio numérico (subió/bajó %), esta señala que
+   el valor actual amerita atención (pérdida del período, o una caída/suba
+   fuerte vs. el período anterior). Conviven las dos: la variación da el
+   contexto exacto, la advertencia lo resalta para que no haya que leer el
+   % para notar que algo requiere mirar más de cerca (ver kpis.js). */
+.indicadores__advertencia {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radio-chico);
+  background: var(--color-peligro-suave);
+  color: var(--color-peligro);
+  font-size: 0.75rem;
+  font-weight: 500;
+  width: fit-content;
+}
+
+/* Mismo bug de especificidad ya documentado en este archivo (ver
+   .overlay__panel form[hidden], .item-carrito__ajuste-form[hidden]):
+   display:inline-flex de arriba le gana al [hidden] del navegador si no
+   se pide explícito -- sin esto, kpis.js:renderizarAdvertencia() ponía
+   hidden=true pero la cápsula seguía pintándose vacía. */
+.indicadores__advertencia[hidden] {
+  display: none;
+}
+
+.indicadores__advertencia svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* Tono más suave para "bajó/subió fuerte pero todavía no es grave" --
+   el rojo (--color-peligro, default de arriba) queda reservado para el
+   caso más serio (pérdida real del período en Ganancia). */
+.indicadores__advertencia--alerta {
+  background: var(--color-alerta-suave);
+  color: var(--color-alerta);
 }
 
 .indicadores__tarjeta--distribucion {
@@ -2168,6 +2205,15 @@ img {
   background: var(--color-alerta-suave);
   color: var(--color-alerta);
   width: fit-content;
+}
+
+/* Flecha de dirección dentro del badge de variación (Tarea 4, Indicadores)
+   -- mismo ícono que ya usa Inventario para entrada/salida, reusado acá
+   porque el significado es el mismo: subió o bajó. */
+.badge-alerta svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 /* Variantes semánticas del mismo badge (ver historial de ventas). */
