@@ -771,7 +771,14 @@ img {
   padding: 0;
   overflow-y: auto;
   flex: 1;
-  min-height: 3rem;
+  /* min-height:0 (no 3rem) a propósito -- mismo criterio que .vista más
+     arriba (ver su comentario): sin esto, un hijo flex con overflow no se
+     achica por debajo de su contenido, así que con varios ítems por peso
+     (más altos que uno por unidad, por la fila extra del campo en kg) la
+     lista crecía más allá del max-height de .panel-carrito en vez de
+     scrollear dentro de él -- confirmado midiendo scrollHeight/clientHeight
+     reales con 5 ítems por peso en el carrito (Tarea 2). */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -2251,7 +2258,11 @@ img {
 
 .item-carrito__detalle input {
   width: 4.5rem;
-  min-height: 32px;
+  /* 40px, no 32px (Tarea 2): es el campo de peso en kg, se escribe a mano
+     en el mostrador -- necesita el mismo alto mínimo de toque que el
+     resto de los campos interactivos, no el de un elemento solo
+     decorativo. */
+  min-height: 40px;
   padding: 0 0.4rem;
   border-radius: var(--radio-chico);
   border: 1px solid var(--color-borde-fuerte);
