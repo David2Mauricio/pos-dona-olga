@@ -88,20 +88,38 @@ function enriquecerConDatosDeProducto(venta) {
 }
 
 // ADR 0007: imprimir es una acción POSTERIOR a la venta, nunca parte de
-// ella. Fire-and-forget a propósito (no se hace `await` de esta función
-// donde se llama): la venta ya se guardó, así que el cliente HTTP no debe
-// esperar a que la impresora termine (o falle) para recibir su respuesta.
-// El try/catch de acá es una segunda red de seguridad — impresionService
-// ya está escrito para no rechazar nunca — por si un error inesperado
-// ocurriera antes de ese punto (ej. armando el recibo).
+// ella. Fire-and-forget con respecto a la respuesta HTTP a propósito (no
+// se hace `await` de esto donde se llama a crear() la venta): la venta ya
+// se guardó, así que el cliente HTTP no debe esperar a que la impresora
+// termine (o falle) para recibir su respuesta. El try/catch de acá es una
+// segunda red de seguridad — impresionService ya está escrito para no
+// rechazar nunca — por si un error inesperado ocurriera antes de ese
+// punto (ej. armando el recibo).
+//
+// SÍ devuelve la promesa (a diferencia de antes): una venta en efectivo
+// dispara esto Y abrirCajonSiEsEfectivo() casi en el mismo instante --
+// investigando un reporte real de recibos que salían impresos por
+// duplicado, encontré que ambos mandaban su propio trabajo a la misma
+// impresora compartida (impresion.service.js:imprimir(), un `copy /b`
+// por Windows) sin ningún orden garantizado entre los dos: dos `exec()`
+// concurrentes contra el mismo puerto compartido es exactamente el tipo
+// de condición de carrera que una impresora térmica barata (sin manejo
+// de trabajos superpuestos) puede resolver mal -- reimprimiendo o
+// mezclando el segundo trabajo con el primero. Nunca antes se había hecho
+// tan evidente porque la mayoría de las pruebas de este proyecto no usan
+// una impresora física real. abrirCajonSiEsEfectivo ahora encadena
+// después de que ESTA promesa se resuelve (nunca rechaza, ver más abajo),
+// para que los dos trabajos lleguen a la impresora uno después del otro,
+// nunca los dos a la vez.
 function imprimirReciboDeVenta(venta) {
   try {
     const ventaParaImprimir = enriquecerConDatosDeProducto(venta);
-    impresionService.imprimirRecibo(ventaParaImprimir).catch((error) => {
+    return impresionService.imprimirRecibo(ventaParaImprimir).catch((error) => {
       logger.error(`Error inesperado imprimiendo el recibo de la venta ${venta.id}: ${error.message}`);
     });
   } catch (error) {
     logger.error(`No se pudo preparar el recibo de la venta ${venta.id} para imprimir: ${error.message}`);
+    return Promise.resolve();
   }
 }
 
@@ -112,18 +130,25 @@ function imprimirReciboDeVenta(venta) {
 // (TRIM(LOWER(medioPago))). Mismo try/catch defensivo que
 // imprimirReciboDeVenta: esto corre después del commit, así que un error
 // acá no puede llegar a tumbar la respuesta de una venta ya guardada.
-function abrirCajonSiEsEfectivo(venta) {
-  try {
-    if (venta.medioPago.trim().toLowerCase() !== 'efectivo') {
-      return;
-    }
+//
+// esperarAntes: la promesa de imprimirReciboDeVenta (o ya resuelta, si no
+// tocaba imprimir recibo) -- ver el comentario de esa función. Encadenar
+// con .then() acá, no llamar los dos en paralelo, es lo que evita mandar
+// dos trabajos a la vez a la impresora compartida.
+function abrirCajonSiEsEfectivo(venta, esperarAntes) {
+  return esperarAntes.then(() => {
+    try {
+      if (venta.medioPago.trim().toLowerCase() !== 'efectivo') {
+        return;
+      }
 
-    impresionService.abrirCajonMonedero().catch((error) => {
-      logger.error(`Error inesperado abriendo el cajón para la venta ${venta.id}: ${error.message}`);
-    });
-  } catch (error) {
-    logger.error(`No se pudo evaluar si abrir el cajón para la venta ${venta.id}: ${error.message}`);
-  }
+      return impresionService.abrirCajonMonedero().catch((error) => {
+        logger.error(`Error inesperado abriendo el cajón para la venta ${venta.id}: ${error.message}`);
+      });
+    } catch (error) {
+      logger.error(`No se pudo evaluar si abrir el cajón para la venta ${venta.id}: ${error.message}`);
+    }
+  });
 }
 
 // usuarioId: quién cobra (ver ADR 0018) -- solo se usa si la venta trae
@@ -258,10 +283,11 @@ function crear({ cajaSesionId, tipoPrecio, medioPago, montoRecibido, items, impr
   // impresión o el cajón de ahora en adelante no puede afectar la venta.
   // El cajón se abre igual aunque no se imprima recibo -- es sobre
   // entregar cambio en efectivo, no depende de si el cliente quiere papel.
-  if (imprimir) {
-    imprimirReciboDeVenta(venta);
-  }
-  abrirCajonSiEsEfectivo(venta);
+  // encadenado con .then() (ver los comentarios de ambas funciones), no
+  // los dos llamados sueltos: evita que el pulso del cajón le llegue a la
+  // impresora compartida mientras todavía está recibiendo el recibo.
+  const promesaImpresion = imprimir ? imprimirReciboDeVenta(venta) : Promise.resolve();
+  abrirCajonSiEsEfectivo(venta, promesaImpresion);
 
   return venta;
 }
