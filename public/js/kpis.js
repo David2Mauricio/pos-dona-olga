@@ -5,12 +5,10 @@
 // main.js oculta el nav para cajero, pero eso es ayuda de UI, no la
 // protección real.
 //
-// Sin librería de gráficos ni CDN: dos gráficos de barras dibujados a mano
-// con SVG, generados en JS a partir de los datos reales — mismo criterio
-// que los íconos SVG inline hechos a mano en el resto de la interfaz. El
-// backend (GET /api/reportes/ventas?desde&hasta) ya acepta cualquier rango
-// de fechas — el selector de período (día/semana/mes/trimestre) es
-// enteramente de cliente, sin cambios de backend.
+// Gráficas con Chart.js vendorizado (ver ADR 0022, sin CDN -- el sistema
+// es offline). El backend (GET /api/reportes/ventas?desde&hasta) ya
+// acepta cualquier rango de fechas — el selector de período (día/semana/
+// mes/trimestre) es enteramente de cliente, sin cambios de backend.
 //
 // ticketPromedio y la exclusión de anuladas ya vienen calculados por el
 // backend (reportes.service.js) — este módulo no repite esa aritmética.
@@ -21,8 +19,7 @@
 import { api, ErrorApi } from './api.js';
 import { mostrarToast } from './render.js';
 import { formatearMoneda } from './utils.js';
-
-const NS_SVG = 'http://www.w3.org/2000/svg';
+import { iconoIndicadores, crearIcono } from './icons.js';
 
 const contenedorCargando = document.getElementById('indicadores-cargando');
 const contenedorContenido = document.getElementById('indicadores-contenido');
@@ -30,14 +27,14 @@ const elementoEtiquetaVentas = document.getElementById('indicadores-etiqueta-ven
 const elementoTotalVentas = document.getElementById('indicadores-total-ventas');
 const elementoCantidadVentas = document.getElementById('indicadores-cantidad-ventas');
 const elementoTicketPromedio = document.getElementById('indicadores-ticket-promedio');
+const elementoTicketPromedioVariacion = document.getElementById('indicadores-ticket-promedio-variacion');
 const elementoUnidadesVendidas = document.getElementById('indicadores-unidades-vendidas');
-const elementoProductoTop = document.getElementById('indicadores-producto-top');
-const elementoProductoTopMonto = document.getElementById('indicadores-producto-top-monto');
-const elementoEtiquetaComparativa = document.getElementById('indicadores-etiqueta-comparativa');
+const elementoUnidadesVendidasVariacion = document.getElementById('indicadores-unidades-vendidas-variacion');
 const elementoComparativa = document.getElementById('indicadores-comparativa');
 const elementoTotalGastos = document.getElementById('indicadores-total-gastos');
+const elementoTotalGastosVariacion = document.getElementById('indicadores-total-gastos-variacion');
 const elementoGananciaReal = document.getElementById('indicadores-ganancia-real');
-const graficoComparativa = document.getElementById('grafico-comparativa');
+const elementoGananciaRealVariacion = document.getElementById('indicadores-ganancia-real-variacion');
 const graficoProductos = document.getElementById('grafico-productos');
 const graficoTendencia = document.getElementById('grafico-tendencia');
 const graficoMedioPago = document.getElementById('grafico-medio-pago');
@@ -46,6 +43,7 @@ const resumenProductos = document.getElementById('grafico-productos-resumen');
 const resumenTendencia = document.getElementById('grafico-tendencia-resumen');
 const resumenMedioPago = document.getElementById('grafico-medio-pago-resumen');
 const resumenCategorias = document.getElementById('grafico-categorias-resumen');
+const contenedorCategoriasLeyenda = document.getElementById('indicadores-categorias-leyenda');
 const selectorPeriodo = document.getElementById('selector-periodo');
 const contenedorDesgloseVentas = document.getElementById('indicadores-desglose-ventas');
 const botonVerHistorialFiltrado = document.getElementById('boton-ver-historial-filtrado');
@@ -158,118 +156,55 @@ function calcularVariacionPorcentual(totalActual, totalAnterior) {
   return Math.round(((totalActual - totalAnterior) / totalAnterior) * 100);
 }
 
-function renderizarComparativa(totalActual, totalAnterior, etiquetaComparativa) {
-  const variacion = calcularVariacionPorcentual(totalActual, totalAnterior);
+function crearBadgeVariacion(tono, texto) {
+  const badge = document.createElement('span');
+  badge.className = tono ? `badge-alerta badge-alerta--${tono}` : 'badge-alerta';
+  badge.textContent = texto;
+  return badge;
+}
 
-  elementoComparativa.innerHTML = '';
+// Badge de variación, reusado por la cifra hero (Ventas totales) y por
+// las 4 tarjetas compactas (mejoras visuales consolidadas -- antes solo
+// existía para el total general, en una tarjeta "Comparativa" aparte con
+// su propio gráfico de 2 barras; ese gráfico se retiró porque quedó
+// redundante con la línea de tendencia de la tarjeta hero, que ya muestra
+// la misma comparación de forma más rica). null (sin base para comparar)
+// muestra un texto neutro, nunca "0%" ni un signo inventado.
+//
+// Ganancia real es la única de las 5 cifras que puede ser negativa (un
+// período con más gastos que ventas) -- un % sobre una base negativa
+// miente: de -100 a -50 (mejoró, hay menos pérdida) el cálculo normal da
+// "-50%" y lo pinta de rojo, cuando en realidad mejoró. Con cualquiera de
+// los dos valores negativo se muestra la diferencia en pesos en vez de
+// un %, con el signo correcto según si la ganancia subió o bajó -- no
+// hay forma honesta de expresar eso como porcentaje.
+function renderizarVariacion(elemento, actual, anterior, etiquetaComparativa) {
+  elemento.innerHTML = '';
+
+  if (actual < 0 || anterior < 0) {
+    const diferencia = actual - anterior;
+    if (diferencia === 0) {
+      elemento.appendChild(crearBadgeVariacion('', `Igual que ${etiquetaComparativa}`));
+      return;
+    }
+    const tono = diferencia > 0 ? 'exito' : 'peligro';
+    const signo = diferencia > 0 ? '+' : '-';
+    elemento.appendChild(crearBadgeVariacion(tono, `${signo}${formatearMoneda(Math.abs(diferencia))} vs ${etiquetaComparativa}`));
+    return;
+  }
+
+  const variacion = calcularVariacionPorcentual(actual, anterior);
   if (variacion === null) {
     const texto = document.createElement('span');
     texto.className = 'indicadores__detalle';
-    texto.textContent = `Sin ventas registradas ${etiquetaComparativa}`;
-    elementoComparativa.appendChild(texto);
+    texto.textContent = `Sin datos ${etiquetaComparativa}`;
+    elemento.appendChild(texto);
     return;
   }
 
-  const badge = document.createElement('span');
   const tono = variacion > 0 ? 'exito' : variacion < 0 ? 'peligro' : '';
-  badge.className = tono ? `badge-alerta badge-alerta--${tono}` : 'badge-alerta';
   const signo = variacion > 0 ? '+' : '';
-  badge.textContent = `${signo}${variacion}% vs ${etiquetaComparativa}`;
-  elementoComparativa.appendChild(badge);
-}
-
-// --- Gráficos SVG (sin librería, sin CDN — ver cabecera del archivo) ---
-
-function crearElementoSvg(etiqueta, atributos) {
-  const elemento = document.createElementNS(NS_SVG, etiqueta);
-  Object.entries(atributos).forEach(([clave, valor]) => elemento.setAttribute(clave, valor));
-  return elemento;
-}
-
-function limpiarGrafico(contenedor, textoVacio) {
-  contenedor.innerHTML = '';
-  const vacio = document.createElement('p');
-  vacio.className = 'catalogo__vacio';
-  vacio.textContent = textoVacio;
-  contenedor.appendChild(vacio);
-}
-
-// Dos barras verticales: período anterior vs. período actual. aria-label
-// describe los valores reales (no solo "gráfico de barras") para que un
-// lector de pantalla obtenga la misma información que alguien viendo las
-// barras — mismo criterio de accesibilidad que el resto de la interfaz
-// (ver auditorías axe-core previas).
-function renderizarGraficoComparativa(totalAnterior, totalActual, etiquetaAnterior) {
-  graficoComparativa.innerHTML = '';
-
-  if (totalAnterior === 0 && totalActual === 0) {
-    limpiarGrafico(graficoComparativa, 'Sin ventas para graficar todavía.');
-    return;
-  }
-
-  const ANCHO = 220;
-  const ALTO = 130;
-  const ALTO_BARRAS = 90;
-  // Espacio reservado arriba para la etiqueta de monto, incluso encima de
-  // la barra más alta posible -- sin esto, cuando un valor toca el 100%
-  // de ALTO_BARRAS su etiqueta caía en y≈2, casi encima del borde del
-  // viewBox: quedaba cortada por el propio SVG y quedaba visualmente
-  // encimada con el badge "+X% vs..." que está arriba, fuera del SVG.
-  // Confirmado con una captura real antes de asumir la causa.
-  const MARGEN_ETIQUETA = 18;
-  const ALTO_BARRA_MAXIMO = ALTO_BARRAS - MARGEN_ETIQUETA;
-  const ANCHO_BARRA = 56;
-  const maximo = Math.max(totalAnterior, totalActual, 1);
-
-  const svg = crearElementoSvg('svg', {
-    viewBox: `0 0 ${ANCHO} ${ALTO}`,
-    role: 'img',
-    'aria-label': `Comparativa de ventas: ${formatearMoneda(totalAnterior)} ${etiquetaAnterior}, ${formatearMoneda(totalActual)} en el período actual.`,
-    class: 'indicadores__svg',
-  });
-
-  const barras = [
-    { valor: totalAnterior, etiqueta: etiquetaAnterior, x: 24, color: 'var(--color-texto-muted)' },
-    { valor: totalActual, etiqueta: 'actual', x: 24 + ANCHO_BARRA + 40, color: 'var(--color-acento)' },
-  ];
-
-  barras.forEach(({ valor, etiqueta, x, color }) => {
-    const alturaBarra = Math.max((valor / maximo) * ALTO_BARRA_MAXIMO, valor > 0 ? 3 : 0);
-    const y = ALTO_BARRAS - alturaBarra + 8;
-
-    const rect = crearElementoSvg('rect', {
-      x,
-      y,
-      width: ANCHO_BARRA,
-      height: alturaBarra,
-      rx: 4,
-      'aria-hidden': 'true',
-    });
-    rect.style.fill = color;
-    svg.appendChild(rect);
-
-    const etiquetaValor = crearElementoSvg('text', {
-      x: x + ANCHO_BARRA / 2,
-      y: y - 6,
-      'text-anchor': 'middle',
-      class: 'indicadores__svg-valor',
-      'aria-hidden': 'true',
-    });
-    etiquetaValor.textContent = formatearMoneda(valor);
-    svg.appendChild(etiquetaValor);
-
-    const etiquetaEje = crearElementoSvg('text', {
-      x: x + ANCHO_BARRA / 2,
-      y: ALTO_BARRAS + 24,
-      'text-anchor': 'middle',
-      class: 'indicadores__svg-etiqueta',
-      'aria-hidden': 'true',
-    });
-    etiquetaEje.textContent = etiqueta;
-    svg.appendChild(etiquetaEje);
-  });
-
-  graficoComparativa.appendChild(svg);
+  elemento.appendChild(crearBadgeVariacion(tono, `${signo}${variacion}% vs ${etiquetaComparativa}`));
 }
 
 // Barras horizontales para el top de productos — el largo de los nombres
@@ -280,10 +215,11 @@ function renderizarGraficoComparativa(totalAnterior, totalActual, etiquetaAnteri
 // Vendorizado como archivo estático local (public/js/vendor/chart.umd.min.js,
 // ver ADR 0022) -- reemplaza los gráficos grandes que antes eran SVG a
 // mano (tendencia, top productos, donut de medio de pago) y agrega el
-// donut nuevo de categoría. La comparativa chica (arriba) se queda como
-// estaba: un solo bloque de 2 barras no justificaba la dependencia, y ya
-// usa var(--color-x) directo en SVG (sí soportado ahí, a diferencia de
-// canvas) -- ya está en la misma paleta sin tocar nada.
+// donut nuevo de categoría. El bloque de 2 barras SVG que comparaba
+// contra el período anterior se retiró (mejoras visuales consolidadas):
+// la tarjeta hero de "Ventas totales" ahora muestra esa misma comparación
+// como badge de variación + la línea de tendencia completa, más rica que
+// dos barras sueltas.
 //
 // Un <canvas> no es accesible por sí solo (a diferencia del SVG a mano,
 // que llevaba su propio role="img"/aria-label) -- cada gráfico tiene un
@@ -314,6 +250,8 @@ function coloresDelTema() {
   const leer = (variable) => estilos.getPropertyValue(variable).trim();
   return {
     acento: leer('--color-acento'),
+    categoria1: leer('--color-categoria-1'),
+    categoria2: leer('--color-categoria-2'),
     exito: leer('--color-exito'),
     alerta: leer('--color-alerta'),
     peligro: leer('--color-peligro'),
@@ -323,12 +261,22 @@ function coloresDelTema() {
   };
 }
 
+// Ícono + texto en vez de solo texto plano (mejoras visuales consolidadas,
+// pedido explícito para el estado sin datos) -- reusa iconoIndicadores
+// (el mismo glifo de barras del nav) en vez de dibujar uno nuevo solo para
+// esto: ya es el símbolo que el propio sistema asocia a "esta es la
+// sección de indicadores", sirve igual de bien como ilustración de "acá
+// van los datos, todavía no hay".
 function mostrarResumenVacio(elementoResumen, canvas, textoVacio) {
   graficosChart.get(canvas.id)?.destroy();
   graficosChart.delete(canvas.id);
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  elementoResumen.textContent = textoVacio;
+  elementoResumen.innerHTML = '';
+  const icono = crearIcono(iconoIndicadores, 'indicadores__icono-vacio');
+  icono.setAttribute('aria-hidden', 'true');
+  elementoResumen.appendChild(icono);
+  elementoResumen.appendChild(document.createTextNode(textoVacio));
   elementoResumen.classList.remove('visualmente-oculto');
   elementoResumen.classList.add('catalogo__vacio');
 }
@@ -361,6 +309,19 @@ function renderizarGraficoProductos(topProductos) {
     options: {
       indexAxis: 'y',
       responsive: true,
+      // false, no el default true (mejoras visuales consolidadas --
+      // causa raíz real de un hallazgo visual, confirmada midiendo el
+      // DOM, no adivinada): con maintainAspectRatio en su default,
+      // Chart.js recalcula el ancho como alto×aspectRatio (2 para
+      // barra/línea, 1 para donut) en un resize interno que dispara
+      // poco después del primer dibujo -- el primer render se veía
+      // correcto (ancho = el del contenedor real) y unos ~150ms después
+      // se achicaba solo (barra de $30.000 dibujada como si fuera de
+      // $6.000, con el dato real intacto adentro). Con el alto ya fijo
+      // por CSS (.indicadores__grafico--chartjs/--donut-chartjs), no
+      // hace falta que Chart.js calcule nada por aspecto -- que llene el
+      // ancho real y ya.
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (item) => formatearMoneda(item.parsed.x) } },
@@ -421,6 +382,7 @@ function renderizarGraficoTendencia(ventasPorDia) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (item) => formatearMoneda(item.parsed.y) } },
@@ -437,22 +399,55 @@ function capitalizar(texto) {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
-// Paleta compartida por los dos donuts (medio de pago y categoría) -- los
-// mismos tonos semánticos ya establecidos en el resto del rediseño
-// visual, nunca los colores por defecto de Chart.js (pedido explícito del
-// cliente): azul de marca primero, después éxito/alerta/peligro, gris
-// neutro si sobran categorías.
+// Paleta compartida por los dos donuts (medio de pago y categoría) --
+// terracota/mostaza/oliva primero (mejoras visuales consolidadas: mismos
+// 3 colores que las tarjetas KPI del Tablero y los chips de Mostrador,
+// "que el sistema completo hable el mismo lenguaje de color"), después
+// éxito/alerta/peligro/gris neutro si sobran categorías. Nunca los
+// colores por defecto de Chart.js (pedido explícito del cliente).
 function paletaCategorica(colores) {
-  return [colores.acento, colores.exito, colores.alerta, colores.peligro, colores.textoMuted];
+  return [colores.acento, colores.categoria1, colores.categoria2, colores.exito, colores.alerta, colores.peligro, colores.textoMuted];
+}
+
+// Leyenda propia con % y valor visibles (mejoras visuales consolidadas --
+// antes esa info solo aparecía al pasar el mouse por el tooltip). Solo la
+// usa el donut de categoría (elementoLeyenda); medio de pago se queda con
+// la leyenda nativa de Chart.js (solo nombre + swatch), que ya alcanzaba
+// para ese caso y no tiene pedido explícito de cambiar.
+function renderizarLeyendaDonut(elementoLeyenda, items, paleta, total) {
+  elementoLeyenda.innerHTML = '';
+  items.forEach((item, indice) => {
+    const fila = document.createElement('li');
+    fila.className = 'indicadores__leyenda-fila';
+
+    const swatch = document.createElement('span');
+    swatch.className = 'indicadores__leyenda-swatch';
+    swatch.style.background = paleta[indice % paleta.length];
+    swatch.setAttribute('aria-hidden', 'true');
+
+    const etiqueta = document.createElement('span');
+    etiqueta.className = 'indicadores__leyenda-etiqueta';
+    etiqueta.textContent = item.etiqueta;
+
+    const valor = document.createElement('span');
+    valor.className = 'indicadores__leyenda-valor numero';
+    const porcentaje = Math.round((item.valor / total) * 100);
+    valor.textContent = `${porcentaje}% · ${formatearMoneda(item.valor)}`;
+
+    fila.append(swatch, etiqueta, valor);
+    elementoLeyenda.appendChild(fila);
+  });
 }
 
 // Donut genérico: medio de pago y categoría son la misma forma de datos
 // (lista de {etiqueta, valor}), solo cambia de dónde sale la lista -- ver
 // renderizarGraficoDonutMedioPago/renderizarGraficoDonutCategoria abajo.
-function crearGraficoDonut(canvas, elementoResumen, items, tituloResumen) {
+// elementoLeyenda es opcional -- ver renderizarLeyendaDonut arriba.
+function crearGraficoDonut(canvas, elementoResumen, items, tituloResumen, elementoLeyenda) {
   const total = items.reduce((suma, item) => suma + item.valor, 0);
   if (total === 0) {
     mostrarResumenVacio(elementoResumen, canvas, 'Sin ventas para graficar todavía.');
+    if (elementoLeyenda) elementoLeyenda.innerHTML = '';
     return;
   }
 
@@ -463,6 +458,8 @@ function crearGraficoDonut(canvas, elementoResumen, items, tituloResumen) {
     `${tituloResumen}: ${items.map((item) => `${item.etiqueta}: ${Math.round((item.valor / total) * 100)}% (${formatearMoneda(item.valor)})`).join('; ')}.`
   );
 
+  if (elementoLeyenda) renderizarLeyendaDonut(elementoLeyenda, items, paleta, total);
+
   crearOReemplazarChart(canvas, {
     type: 'doughnut',
     data: {
@@ -471,8 +468,9 @@ function crearGraficoDonut(canvas, elementoResumen, items, tituloResumen) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'bottom', labels: { color: colores.texto, boxWidth: 12, padding: 12 } },
+        legend: elementoLeyenda ? { display: false } : { position: 'bottom', labels: { color: colores.texto, boxWidth: 12, padding: 12 } },
         tooltip: {
           callbacks: {
             label: (item) => `${item.label}: ${formatearMoneda(item.parsed)} (${Math.round((item.parsed / total) * 100)}%)`,
@@ -496,7 +494,7 @@ function renderizarGraficoDonutMedioPago(desglosePorMedioPago) {
 // muchos productos chicos podría quedar subrepresentada.
 function renderizarGraficoDonutCategoria(ventasPorCategoria) {
   const items = ventasPorCategoria.map((item) => ({ etiqueta: item.nombre, valor: item.total }));
-  crearGraficoDonut(graficoCategorias, resumenCategorias, items, 'Distribución de ventas por categoría');
+  crearGraficoDonut(graficoCategorias, resumenCategorias, items, 'Distribución de ventas por categoría', contenedorCategoriasLeyenda);
 }
 
 // creadaEn: 'YYYY-MM-DD HH:MM:SS' (ver ventas.repository.js). Con el
@@ -563,6 +561,15 @@ async function cargarYRenderizarDesglose(rango) {
 }
 
 function renderizar(reporteActual, reporteAnterior, rangos) {
+  // Mostrar el contenido ANTES de crear los gráficos Chart.js, no
+  // después: por las dudas de que algún <canvas> se mida mientras su
+  // contenedor todavía está oculto (hidden=true mide ancho 0). No era la
+  // causa del hallazgo real de esta misma tanda de cambios (ver
+  // maintainAspectRatio más abajo), pero es la práctica correcta de
+  // todas formas y no cuesta nada dejarla así.
+  contenedorCargando.hidden = true;
+  contenedorContenido.hidden = false;
+
   elementoEtiquetaVentas.textContent = `Ventas totales (${rangos.etiquetaCorta})`;
   elementoTotalVentas.textContent = formatearMoneda(reporteActual.totalVentas);
   elementoCantidadVentas.textContent =
@@ -578,22 +585,34 @@ function renderizar(reporteActual, reporteAnterior, rangos) {
   // texto "undefined"; con ventasPorCategoria (abajo) el mismo problema
   // tumbaba el panel entero, no solo una tarjeta.
   elementoUnidadesVendidas.textContent = String(reporteActual.unidadesVendidas ?? 0);
-
-  const masVendido = reporteActual.topProductos[0];
-  if (masVendido) {
-    elementoProductoTop.textContent = masVendido.nombre;
-    elementoProductoTopMonto.textContent = `${formatearMoneda(masVendido.totalVendido)} vendidos`;
-  } else {
-    elementoProductoTop.textContent = 'Sin ventas registradas en este período';
-    elementoProductoTopMonto.textContent = '';
-  }
-
   elementoTotalGastos.textContent = formatearMoneda(reporteActual.totalGastos);
   elementoGananciaReal.textContent = formatearMoneda(reporteActual.gananciaReal);
 
-  elementoEtiquetaComparativa.textContent = `Comparativa contra ${rangos.etiquetaComparativa}`;
-  renderizarComparativa(reporteActual.totalVentas, reporteAnterior.totalVentas, rangos.etiquetaComparativa);
-  renderizarGraficoComparativa(reporteAnterior.totalVentas, reporteActual.totalVentas, rangos.etiquetaComparativa);
+  // Variación vs. período anterior en las 5 cifras que la tienen (mejoras
+  // visuales consolidadas -- antes solo "Ventas totales" la mostraba, en
+  // una tarjeta "Comparativa" aparte). reporteAnterior ya se pedía en
+  // paralelo para ese único uso; ahora se aprovecha para las 4 tarjetas
+  // compactas también, sin pedir nada nuevo al backend. "Producto más
+  // vendido" no entra acá: no es una cifra continua (comparar "Pechuga"
+  // contra "Pechuga" no es una variación %) -- ese dato ahora vive
+  // directamente en la barra de ranking de abajo, no repetido en una
+  // tarjeta de texto aparte.
+  renderizarVariacion(elementoComparativa, reporteActual.totalVentas, reporteAnterior.totalVentas, rangos.etiquetaComparativa);
+  renderizarVariacion(
+    elementoTicketPromedioVariacion,
+    reporteActual.ticketPromedio ?? 0,
+    reporteAnterior.ticketPromedio ?? 0,
+    rangos.etiquetaComparativa
+  );
+  renderizarVariacion(
+    elementoUnidadesVendidasVariacion,
+    reporteActual.unidadesVendidas ?? 0,
+    reporteAnterior.unidadesVendidas ?? 0,
+    rangos.etiquetaComparativa
+  );
+  renderizarVariacion(elementoTotalGastosVariacion, reporteActual.totalGastos, reporteAnterior.totalGastos, rangos.etiquetaComparativa);
+  renderizarVariacion(elementoGananciaRealVariacion, reporteActual.gananciaReal, reporteAnterior.gananciaReal, rangos.etiquetaComparativa);
+
   renderizarGraficoProductos(reporteActual.topProductos);
   renderizarGraficoTendencia(reporteActual.ventasPorDia);
   renderizarGraficoDonutMedioPago(reporteActual.desglosePorMedioPago);
@@ -603,17 +622,12 @@ function renderizar(reporteActual, reporteAnterior, rangos) {
   // actualizar) hace que .map() explote acá adentro; como el error queda
   // atrapado por el catch de cargarIndicadores() sin loguearse (ver ese
   // catch, también corregido en este mismo incidente), tumbaba TODO el
-  // panel -- ni siquiera las tarjetas que ya se habían pintado antes de
-  // esta línea llegaban a mostrarse, porque contenedorContenido recién se
-  // revela al final de esta función. Con el default, si falta el campo,
-  // el donut de categoría simplemente muestra su propio estado vacío.
+  // panel entero. Con el default, si falta el campo, el donut de
+  // categoría simplemente muestra su propio estado vacío.
   renderizarGraficoDonutCategoria(reporteActual.ventasPorCategoria ?? []);
 
   rangoActualParaHistorial = rangos.actual;
   cargarYRenderizarDesglose(rangos.actual);
-
-  contenedorCargando.hidden = true;
-  contenedorContenido.hidden = false;
 }
 
 async function cargarIndicadores() {

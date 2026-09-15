@@ -24,10 +24,38 @@
   --color-texto-sobre-acento: #ffffff;
   --color-texto-sobre-alerta: #ffffff;
 
-  /* Marca (navy) */
-  --color-acento: #14315d;
-  --color-acento-hover: #0d2140;
-  --color-acento-suave: #e6ecf5;
+  /* Marca (terracota, mejoras visuales consolidadas -- reemplaza el navy
+     anterior). #993C1D en vez del #D85A30 pedido: contraste real
+     verificado (fórmula WCAG) -- #D85A30 con texto blanco encima (botón
+     primario, sidebar) da 3.87:1, por debajo del 4.5:1 de texto AA que
+     sostiene el resto del sistema. #993C1D es exactamente el tono de
+     hover que se pidió (6.96:1) y pasa a ser el color de descanso en
+     tema claro. El hover, a su vez, no puede ser el #D85A30 pedido
+     tampoco (mismo problema: 3.87:1 con texto blanco) -- se oscurece un
+     paso más, #872F16 (8.58:1), siguiendo el mismo patrón de "hover más
+     oscuro" que ya usa el resto de los botones del sistema. El #D85A30
+     original SÍ se usa tal cual en usos decorativos sin texto encima
+     (borde de tarjeta KPI, punto del logo), donde solo aplica el mínimo
+     de 3:1 para elementos gráficos, no el de 4.5:1 de texto. En tema
+     oscuro el #D85A30 original sí cumple como color con texto encima
+     (5.06:1 contra el fondo oscuro), así que ahí se usa tal cual como
+     color de descanso — mismo criterio que ya existía para el
+     navy/azul-claro. */
+  --color-acento: #993c1d;
+  --color-acento-hover: #872f16;
+  --color-acento-suave: #fbe9e2;
+  --color-acento-vivo: #d85a30;
+
+  /* Categorías secundarias de dato (donut/chips, mejoras visuales
+     consolidadas) -- mismo ajuste de contraste que el acento: mostaza y
+     oliva pedidos tal cual solo pasan 2.17:1 / 3.44:1 en tema claro
+     (mostaza ni siquiera llega al mínimo de 3:1 para un elemento
+     gráfico) -- acá van versiones más oscuras del mismo tono,
+     verificadas ≥4.5:1 contra fondo y superficie claros. En tema oscuro
+     los tonos pedidos sí cumplen y se usan tal cual (ver bloque
+     data-tema='oscuro'). */
+  --color-categoria-1: #8f5c0d;
+  --color-categoria-2: #4a7113;
 
   /* Semántico: SIEMPRE distinto del acento de marca, para no confundir
      "esto es importante para el negocio" con "esto necesita atención". */
@@ -69,9 +97,16 @@
   --color-texto-sobre-acento: #0a0c10;
   --color-texto-sobre-alerta: #0a0c10;
 
-  --color-acento: #5b8dd9;
-  --color-acento-hover: #7fa8e3;
-  --color-acento-suave: #142131;
+  /* Terracota pedido tal cual: ya cumple AA acá (5.06:1 contra
+     --color-fondo oscuro). Hover más claro (no el hover de tema claro,
+     que quedaría casi ilegible tan cerca del fondo oscuro). */
+  --color-acento: #d85a30;
+  --color-acento-hover: #e17a52;
+  --color-acento-suave: #291710;
+  --color-acento-vivo: #d85a30;
+
+  --color-categoria-1: #ef9f27;
+  --color-categoria-2: #639922;
 
   --color-alerta: #e3a548;
   --color-alerta-suave: #3a2f18;
@@ -96,9 +131,12 @@
     --color-texto-muted: #9aa3b2;
     --color-texto-sobre-acento: #0a0c10;
     --color-texto-sobre-alerta: #0a0c10;
-    --color-acento: #5b8dd9;
-    --color-acento-hover: #7fa8e3;
-    --color-acento-suave: #142131;
+    --color-acento: #d85a30;
+    --color-acento-hover: #e17a52;
+    --color-acento-suave: #291710;
+    --color-acento-vivo: #d85a30;
+    --color-categoria-1: #ef9f27;
+    --color-categoria-2: #639922;
     --color-alerta: #e3a548;
     --color-alerta-suave: #3a2f18;
     --color-exito: #7fce93;
@@ -198,7 +236,7 @@ h1,
 h2,
 h3 {
   font-family: var(--fuente-ui);
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.2;
   margin: 0;
 }
@@ -223,6 +261,23 @@ select {
 
 button {
   cursor: pointer;
+}
+
+/* Quita el spinner nativo de incremento/decremento en todos los
+   type="number" del sistema (mejoras visuales consolidadas) -- no aporta
+   nada acá (difícil de usar con el mouse, y de cualquier forma se sigue
+   escribiendo/pegando el número normal). No afecta el stepper +/- de
+   Productos (Fase 4): ese es un par de botones propios en
+   catalogo.js/inventario.js, no un spinner de navegador -- no hay ningún
+   type="number" involucrado en ese control. */
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 img {
@@ -339,11 +394,25 @@ img {
   align-items: center;
   gap: 0.6rem;
   font-family: var(--fuente-ui);
-  font-weight: 800;
+  font-weight: 500;
   font-size: 1.15rem;
   padding: 0 0.5rem;
   margin-bottom: 1.5rem;
   color: var(--color-texto-sobre-acento);
+}
+
+/* Punto decorativo (mejoras visuales consolidadas) -- texto-sobre-acento,
+   no un color de la paleta nueva: el sidebar entero ya es terracota
+   (--color-acento), así que un punto también terracota/mostaza/oliva
+   quedaría casi invisible contra ese fondo (contraste ~1.2-1.8:1,
+   verificado). texto-sobre-acento ya es el tono que este mismo sidebar
+   usa para todo lo que necesita destacar sobre su propio fondo. */
+.nav-lateral__punto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-texto-sobre-acento);
+  flex-shrink: 0;
 }
 
 /* Altura fija, ancho libre (object-fit) — funciona igual con un isotipo
@@ -405,7 +474,7 @@ img {
 .nav-lateral__item[aria-current='page'] {
   background: var(--color-acento-suave);
   color: var(--color-acento);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 /* Sin opacity (ver comentario de arriba): el cursor y la etiqueta
@@ -418,7 +487,7 @@ img {
 .nav-lateral__etiqueta {
   margin-left: auto;
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--color-texto-sobre-acento);
@@ -732,7 +801,7 @@ img {
 
 .carrito__total .total {
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .overlay {
@@ -840,6 +909,26 @@ img {
   background: var(--color-alerta-suave);
 }
 
+/* Borde izquierdo de marca (mejoras visuales consolidadas) -- un color
+   distinto por tarjeta en el resumen de ventas del Tablero, no las tres
+   en terracota: reusa la misma familia de 3 colores que Indicadores y
+   los chips de Mostrador, para que las tarjetas más visibles del sistema
+   (lo primero que se ve al entrar) ya hablen ese lenguaje. Solo el borde
+   izquierdo, no toda la tarjeta -- a diferencia de --alerta/--advertencia
+   (que si tiñen toda la tarjeta porque son estados que requieren
+   atención), esto es identidad de marca, no una alerta. */
+.tarjeta-kpi--acento {
+  border-left: 3px solid var(--color-acento-vivo);
+}
+
+.tarjeta-kpi--categoria-1 {
+  border-left: 3px solid var(--color-categoria-1);
+}
+
+.tarjeta-kpi--categoria-2 {
+  border-left: 3px solid var(--color-categoria-2);
+}
+
 .indicadores__etiqueta,
 .tarjeta-kpi__etiqueta {
   font-size: 0.85rem;
@@ -857,7 +946,7 @@ img {
 .indicadores__valor,
 .tarjeta-kpi__valor {
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 500;
   font-family: var(--fuente-numerica);
 }
 
@@ -980,12 +1069,6 @@ img {
   margin-top: 0.75rem;
 }
 
-.indicadores__svg {
-  width: 100%;
-  height: auto;
-  max-width: 260px;
-}
-
 /* Gráficos Chart.js (rediseño visual, Fase 6) -- un <canvas> con
    responsive:true necesita un contenedor con altura explícita, si no
    Chart.js lo estira sin límite. El donut queda más chico porque además
@@ -1002,21 +1085,106 @@ img {
   margin: 0 auto;
 }
 
-.indicadores__svg-valor {
-  font-family: var(--fuente-ui);
-  font-size: 11px;
-  font-weight: 600;
-  fill: var(--color-texto);
+/* --- Reorganización de Indicadores (mejoras visuales consolidadas) ---
+   Fila superior: tarjeta hero (ventas totales + tendencia) más ancha,
+   junto a la tarjeta de distribución por categoría. Se apilan en una sola
+   columna por debajo de 900px -- el hero con su gráfica de línea necesita
+   más ancho real para leerse bien, no tiene sentido forzarlo a compartir
+   fila con el donut en una pantalla angosta. */
+.indicadores__hero-fila {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-.indicadores__svg-etiqueta {
-  font-family: var(--fuente-ui);
-  font-size: 11px;
-  fill: var(--color-texto-muted);
+@media (max-width: 900px) {
+  .indicadores__hero-fila {
+    grid-template-columns: 1fr;
+  }
 }
 
-.indicadores__svg-etiqueta--nombre {
-  dominant-baseline: middle;
+.indicadores__tarjeta--hero {
+  display: flex;
+  flex-direction: column;
+}
+
+.indicadores__hero-cifra {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.2rem;
+}
+
+.indicadores__hero-cifra .indicadores__valor {
+  margin: 0;
+}
+
+/* Badge de variación (mejoras visuales consolidadas) -- mismo
+   .badge-alerta que ya usan los estados de todo el sistema, solo se le
+   da un contenedor propio para que las tarjetas compactas lo ubiquen
+   siempre debajo de la cifra, sin importar si el texto es el badge o el
+   "Sin datos..." neutro. */
+.indicadores__variacion {
+  margin-top: 0.4rem;
+  min-height: 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.indicadores__tarjeta--distribucion {
+  display: flex;
+  flex-direction: column;
+}
+
+.indicadores__leyenda {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.indicadores__leyenda-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.indicadores__leyenda-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.indicadores__leyenda-etiqueta {
+  flex: 1;
+  color: var(--color-texto);
+}
+
+.indicadores__leyenda-valor {
+  color: var(--color-texto-muted);
+  font-size: 0.8rem;
+}
+
+/* Ícono en los estados sin datos (mejoras visuales consolidadas -- pedido
+   explícito: "no solo texto plano"). Mismo tamaño/tono apagado que ya usa
+   .tablero__sin-alertas-icono para su propio estado vacío -- consistente
+   en todo el sistema, un solo lenguaje visual para "acá no hay nada
+   todavía". */
+.catalogo__vacio .indicadores__icono-vacio {
+  display: block;
+  margin: 0 auto 0.5rem;
+}
+
+.indicadores__icono-vacio svg {
+  width: 32px;
+  height: 32px;
+  color: var(--color-texto-muted);
 }
 
 .selector-periodo {
@@ -1081,7 +1249,7 @@ img {
 }
 
 .historial__total {
-  font-weight: 700;
+  font-weight: 500;
   text-align: right;
 }
 
@@ -1144,7 +1312,7 @@ img {
 .catalogo__tab--activo {
   color: var(--color-acento);
   border-bottom-color: var(--color-acento);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .catalogo__filtros {
@@ -1234,7 +1402,7 @@ img {
    color). */
 .vencimientos__grupo-titulo {
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-texto-muted);
   margin: 1.25rem 0 0.5rem;
 }
@@ -1438,7 +1606,7 @@ img {
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-chico);
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: 500;
   text-align: center;
   letter-spacing: 0.03em;
   user-select: all;
@@ -1511,7 +1679,7 @@ img {
    wizard de varios pasos -- sigue siendo un único formulario que scrollea. */
 .formulario__grupo {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-texto-muted);
@@ -1586,7 +1754,7 @@ img {
   margin-top: 0.25rem;
   border-top: 1px solid var(--color-borde);
   color: var(--color-texto);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .cierre-caja__diferencia {
@@ -1680,7 +1848,7 @@ img {
 }
 
 .recuperar-password__pregunta {
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.85rem 1rem;
   background: var(--color-fondo);
   border-radius: var(--radio-chico);
@@ -1724,7 +1892,7 @@ img {
   background: var(--color-alerta);
   color: var(--color-texto-sobre-alerta);
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1938,7 +2106,7 @@ img {
 }
 
 .tarjeta-producto__precio {
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-acento);
   margin-top: auto;
 }
@@ -1953,7 +2121,7 @@ img {
   align-items: center;
   gap: 0.3rem;
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
   background: var(--color-alerta-suave);
@@ -2092,7 +2260,7 @@ img {
 }
 
 .item-carrito__subtotal {
-  font-weight: 700;
+  font-weight: 500;
   white-space: nowrap;
 }
 

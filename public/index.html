@@ -26,7 +26,7 @@
 </script>
 
 <link rel="preload" href="/fonts/montserrat-400.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="preload" href="/fonts/montserrat-700.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/fonts/montserrat-500.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/fonts/ibm-plex-mono-500.woff2" as="font" type="font/woff2" crossorigin />
 
 <!-- Un solo archivo (tokens+base+layout+componentes+animaciones, con
@@ -56,6 +56,7 @@
            código. Si no existe (hoy), onerror lo saca del documento y
            queda el nombre en texto como ya estaba. -->
       <img src="/img/logo.png" alt="" class="nav-lateral__logo" onerror="this.remove()" />
+      <span class="nav-lateral__punto" aria-hidden="true"></span>
       <span>Doña Olga</span>
     </div>
 
@@ -226,15 +227,15 @@
       </div>
 
       <div class="tarjeta-kpi__grilla tablero__grilla" id="tablero-resumen-ventas" hidden>
-        <div class="tarjeta-kpi">
+        <div class="tarjeta-kpi tarjeta-kpi--acento">
           <p class="tarjeta-kpi__etiqueta">Total facturado hoy</p>
           <p class="tarjeta-kpi__valor" id="tablero-total-facturado">$0</p>
         </div>
-        <div class="tarjeta-kpi">
+        <div class="tarjeta-kpi tarjeta-kpi--categoria-1">
           <p class="tarjeta-kpi__etiqueta">Transacciones</p>
           <p class="tarjeta-kpi__valor" id="tablero-cantidad-ventas">0</p>
         </div>
-        <div class="tarjeta-kpi">
+        <div class="tarjeta-kpi tarjeta-kpi--categoria-2">
           <p class="tarjeta-kpi__etiqueta">Estado de caja</p>
           <p class="tarjeta-kpi__valor" id="tablero-estado-caja">—</p>
         </div>
@@ -424,60 +425,61 @@
       <p id="indicadores-cargando" class="catalogo__vacio">Cargando…</p>
 
       <div id="indicadores-contenido" hidden>
-        <div id="indicadores-grilla" class="indicadores__grilla">
-          <article class="indicadores__tarjeta">
+        <div class="indicadores__hero-fila">
+          <article class="indicadores__tarjeta indicadores__tarjeta--hero">
             <h3 id="indicadores-etiqueta-ventas" class="indicadores__etiqueta">Ventas totales (hoy)</h3>
-            <p id="indicadores-total-ventas" class="indicadores__valor total numero">$0</p>
+            <div class="indicadores__hero-cifra">
+              <p id="indicadores-total-ventas" class="indicadores__valor indicadores__valor--hero total numero">$0</p>
+              <p id="indicadores-comparativa" class="indicadores__variacion"></p>
+            </div>
             <p id="indicadores-cantidad-ventas" class="indicadores__detalle"></p>
+            <div class="indicadores__grafico indicadores__grafico--chartjs">
+              <canvas id="grafico-tendencia" role="img" aria-label="Tendencia de ventas" aria-describedby="grafico-tendencia-resumen"></canvas>
+            </div>
+            <p id="grafico-tendencia-resumen" class="visualmente-oculto"></p>
             <div id="indicadores-desglose-ventas" class="indicadores__desglose"></div>
             <button type="button" id="boton-ver-historial-filtrado" class="boton-enlace">Ver detalle en Historial</button>
           </article>
 
-          <article class="indicadores__tarjeta">
-            <h3 class="indicadores__etiqueta">Ticket promedio</h3>
-            <p class="indicadores__descripcion">El monto promedio que dejó cada venta en este período.</p>
-            <p id="indicadores-ticket-promedio" class="indicadores__valor total numero">$0</p>
-          </article>
-
-          <article class="indicadores__tarjeta">
-            <h3 class="indicadores__etiqueta">Unidades vendidas</h3>
-            <p class="indicadores__descripcion">Solo productos por unidad (un producto por peso no suma a esta cifra, ver ADR 0022).</p>
-            <p id="indicadores-unidades-vendidas" class="indicadores__valor total numero">0</p>
-          </article>
-
-          <article class="indicadores__tarjeta">
-            <h3 class="indicadores__etiqueta">Producto más vendido</h3>
-            <p id="indicadores-producto-top" class="indicadores__valor"></p>
-            <p id="indicadores-producto-top-monto" class="indicadores__detalle"></p>
-          </article>
-
-          <article class="indicadores__tarjeta">
-            <h3 id="indicadores-etiqueta-comparativa" class="indicadores__etiqueta">Comparativa contra ayer</h3>
-            <p class="indicadores__descripcion">Cuánto más (o menos) se vendió comparado con el período anterior equivalente.</p>
-            <p id="indicadores-comparativa" class="indicadores__valor"></p>
-            <div id="grafico-comparativa" class="indicadores__grafico"></div>
-          </article>
-
-          <article class="indicadores__tarjeta">
-            <h3 class="indicadores__etiqueta">Gastos del período</h3>
-            <p class="indicadores__descripcion">Proveedores, servicios, arriendo y otros gastos registrados en este período.</p>
-            <p id="indicadores-total-gastos" class="indicadores__valor total numero">$0</p>
-          </article>
-
-          <article class="indicadores__tarjeta">
-            <h3 class="indicadores__etiqueta">Ganancia real</h3>
-            <p class="indicadores__descripcion">Ventas totales menos gastos del período.</p>
-            <p id="indicadores-ganancia-real" class="indicadores__valor total numero">$0</p>
+          <article class="indicadores__tarjeta indicadores__tarjeta--distribucion">
+            <h3 class="indicadores__etiqueta">Ventas por categoría</h3>
+            <div class="indicadores__grafico indicadores__grafico--chartjs indicadores__grafico--donut-chartjs">
+              <canvas id="grafico-categorias" role="img" aria-label="Ventas por categoría" aria-describedby="grafico-categorias-resumen"></canvas>
+            </div>
+            <p id="grafico-categorias-resumen" class="visualmente-oculto"></p>
+            <ul id="indicadores-categorias-leyenda" class="indicadores__leyenda"></ul>
           </article>
         </div>
 
-        <article class="indicadores__tarjeta indicadores__tarjeta--ancha">
-          <h3 class="indicadores__etiqueta">Tendencia de ventas</h3>
-          <div class="indicadores__grafico indicadores__grafico--chartjs">
-            <canvas id="grafico-tendencia" role="img" aria-label="Tendencia de ventas" aria-describedby="grafico-tendencia-resumen"></canvas>
-          </div>
-          <p id="grafico-tendencia-resumen" class="visualmente-oculto"></p>
-        </article>
+        <div id="indicadores-grilla" class="indicadores__grilla">
+          <article class="indicadores__tarjeta indicadores__tarjeta--compacta">
+            <h3 class="indicadores__etiqueta">Ticket promedio</h3>
+            <p class="indicadores__descripcion">El monto promedio que dejó cada venta en este período.</p>
+            <p id="indicadores-ticket-promedio" class="indicadores__valor total numero">$0</p>
+            <p id="indicadores-ticket-promedio-variacion" class="indicadores__variacion"></p>
+          </article>
+
+          <article class="indicadores__tarjeta indicadores__tarjeta--compacta">
+            <h3 class="indicadores__etiqueta">Unidades vendidas</h3>
+            <p class="indicadores__descripcion">Solo productos por unidad (un producto por peso no suma a esta cifra, ver ADR 0022).</p>
+            <p id="indicadores-unidades-vendidas" class="indicadores__valor total numero">0</p>
+            <p id="indicadores-unidades-vendidas-variacion" class="indicadores__variacion"></p>
+          </article>
+
+          <article class="indicadores__tarjeta indicadores__tarjeta--compacta">
+            <h3 class="indicadores__etiqueta">Gastos del período</h3>
+            <p class="indicadores__descripcion">Proveedores, servicios, arriendo y otros gastos registrados en este período.</p>
+            <p id="indicadores-total-gastos" class="indicadores__valor total numero">$0</p>
+            <p id="indicadores-total-gastos-variacion" class="indicadores__variacion"></p>
+          </article>
+
+          <article class="indicadores__tarjeta indicadores__tarjeta--compacta">
+            <h3 class="indicadores__etiqueta">Ganancia real</h3>
+            <p class="indicadores__descripcion">Ventas totales menos gastos del período.</p>
+            <p id="indicadores-ganancia-real" class="indicadores__valor total numero">$0</p>
+            <p id="indicadores-ganancia-real-variacion" class="indicadores__variacion"></p>
+          </article>
+        </div>
 
         <article class="indicadores__tarjeta indicadores__tarjeta--ancha">
           <h3 class="indicadores__etiqueta">Top productos</h3>
@@ -493,14 +495,6 @@
             <canvas id="grafico-medio-pago" role="img" aria-label="Ventas por medio de pago" aria-describedby="grafico-medio-pago-resumen"></canvas>
           </div>
           <p id="grafico-medio-pago-resumen" class="visualmente-oculto"></p>
-        </article>
-
-        <article class="indicadores__tarjeta indicadores__tarjeta--ancha">
-          <h3 class="indicadores__etiqueta">Ventas por categoría</h3>
-          <div class="indicadores__grafico indicadores__grafico--chartjs indicadores__grafico--donut-chartjs">
-            <canvas id="grafico-categorias" role="img" aria-label="Ventas por categoría" aria-describedby="grafico-categorias-resumen"></canvas>
-          </div>
-          <p id="grafico-categorias-resumen" class="visualmente-oculto"></p>
         </article>
       </div>
     </section>
